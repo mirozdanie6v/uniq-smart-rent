@@ -114,12 +114,12 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, { status: 204, headers: corsHeaders });
 
-    if (url.pathname.startsWith('/api/') && env.DB) {
+    if (env.DB) {
       try {
         await ensureDatabase(env.DB);
       } catch (error) {
         console.error('D1 bootstrap failed', error);
-        return json({ error: 'database_initialization_failed', d1: true }, 503, corsHeaders);
+        if (url.pathname.startsWith('/api/')) return json({ error: 'database_initialization_failed', d1: true }, 503, corsHeaders);
       }
     }
 
