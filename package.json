@@ -1,0 +1,23 @@
+{
+  "name": "uniq-smart-rent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/domain.test.mjs",
+    "test:e2e": "python tests/e2e.py",
+    "check": "npm run typecheck && npm run build && npm test",
+    "preview": "node scripts/preview.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "wrangler": "latest"
+  }
+}
