@@ -1,10 +1,8 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "uniq-smart-rent",
-  "compatibility_date": "2026-08-25",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  },
-  "observability": { "enabled": true }
+  "$schema":"./node_modules/wrangler/config-schema.json",
+  "name":"uniq-smart-rent",
+  "main":"src/worker.ts",
+  "compatibility_date":"2026-08-25",
+  "assets":{"directory":"./dist","binding":"ASSETS","not_found_handling":"single-page-application","run_worker_first":["/api/*"]},
+  "observability":{"enabled":true}
 }

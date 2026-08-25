@@ -1,22 +1,61 @@
 export type Language = 'ru' | 'en' | 'vi' | 'ko';
 export type Role = 'client' | 'team' | 'owner';
-export type VehicleCategory = 'scooter' | 'naked' | 'cruiser' | 'adventure';
-export type FleetStatus = 'available' | 'booked' | 'rented' | 'service';
-export type BookingStatus = 'request' | 'confirmed' | 'active' | 'returned';
+export type VehicleCategory = 'scooter' | 'naked' | 'cruiser' | 'sport';
+export type AvailabilityMode = 'manager_confirmation';
+export type BookingStatus =
+  | 'draft'
+  | 'new'
+  | 'contacted'
+  | 'awaiting_confirmation'
+  | 'confirmed'
+  | 'cancelled'
+  | 'vehicle_issued'
+  | 'active'
+  | 'return_due'
+  | 'returned'
+  | 'completed';
+
+export interface LocalizedText {
+  ru: string;
+  en: string;
+  vi: string;
+  ko: string;
+}
+
+export interface PriceTiers {
+  dailyVnd: number;
+  weeklyVnd: number;
+  monthlyVnd: number;
+  depositUsd: number;
+}
+
+export interface VehiclePhoto {
+  src: string;
+  alt: LocalizedText;
+  sourceUrl: string;
+}
 
 export interface Vehicle {
   id: string;
   slug: string;
+  brand: string;
   model: string;
   year: number;
   category: VehicleCategory;
-  pricePerDayVnd: number;
-  depositUsd: number;
-  status: FleetStatus;
-  nextEvent: string;
-  description: string;
+  engineLabel: string;
+  weightKg: number;
+  cruiseSpeed: string;
+  fuelUse: string;
+  capacity: string;
+  pricing: PriceTiers;
+  availability: AvailabilityMode;
+  descriptions: LocalizedText;
+  included: LocalizedText[];
+  requirements: LocalizedText[];
   tags: string[];
-  demoVisual: string;
+  photos: VehiclePhoto[];
+  sourceUrl: string;
+  verifiedAt: string;
 }
 
 export interface Booking {
@@ -26,5 +65,35 @@ export interface Booking {
   to: string;
   status: BookingStatus;
   client: string;
-  totalVnd: number;
+  contact: string;
+  channel: 'whatsapp' | 'telegram' | 'phone' | 'other';
+  deliveryLocation: string;
+  note: string;
+  estimatedTotalVnd: number;
+  createdAt: string;
+  persistence: 'session' | 'd1';
+}
+
+export interface Branch {
+  id: string;
+  name: LocalizedText;
+  address: string;
+  mapsUrl: string;
+}
+
+export interface BusinessInfo {
+  legalName: string;
+  brand: string;
+  phone: string;
+  phoneDisplay: string;
+  whatsappUrl: string;
+  telegramHandle: string;
+  telegramUrl: string;
+  zaloPhone: string;
+  website: string;
+  publicRating: number;
+  publicReviewCount: number;
+  publicFleetCount: number;
+  branches: Branch[];
+  verifiedAt: string;
 }

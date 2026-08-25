@@ -10,11 +10,8 @@ await mkdir(path.join(root, 'dist/assets'), { recursive: true });
 await copyFile(path.join(root, 'index.html'), path.join(root, 'dist/index.html'));
 await copyFile(path.join(root, 'styles.css'), path.join(root, 'dist/styles.css'));
 await cp(path.join(root, '.build'), path.join(root, 'dist/assets/modules'), { recursive: true });
-try {
-  await access(path.join(root, 'public'));
-  await cp(path.join(root, 'public'), path.join(root, 'dist'), { recursive: true });
-} catch {}
-const order = ['domain/catalog.js','domain/booking.js','domain/i18n.js','ui/icons.js','app.js'];
+try { await access(path.join(root, 'public')); await cp(path.join(root, 'public'), path.join(root, 'dist'), { recursive: true }); } catch {}
+const order = ['domain/catalog.js','domain/business.js','domain/booking.js','domain/i18n.js','api/client.js','ui/icons.js','app.js'];
 let bundle = '"use strict";\n';
 for (const rel of order) {
   let code = await readFile(path.join(root,'.build',rel),'utf8');
@@ -22,4 +19,4 @@ for (const rel of order) {
   bundle += `\n/* ${rel} */\n${code}\n`;
 }
 await writeFile(path.join(root,'dist/assets/app.bundle.js'),bundle,'utf8');
-console.log('Built dist/ with modular sources + browser bundle');
+console.log('Built dist/ with verified catalog + browser bundle + Worker source');
