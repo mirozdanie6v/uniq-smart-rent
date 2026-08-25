@@ -2,15 +2,9 @@ import { vehicles, getVehicle } from './domain/catalog.js';
 import { businessInfo } from './domain/business.js';
 import { calculateRentalTotal, isValidDateRange } from './domain/booking.js';
 import type { BookingStatus } from './domain/types.js';
+import { ensureDatabase } from './db/bootstrap.js';
+import type { D1DatabaseLike } from './db/bootstrap.js';
 
-type D1Result = { success?: boolean; results?: unknown[]; meta?: unknown };
-interface D1PreparedStatementLike {
-  bind(...values: unknown[]): D1PreparedStatementLike;
-  first<T = Record<string, unknown>>(): Promise<T | null>;
-  run(): Promise<D1Result>;
-  all<T = Record<string, unknown>>(): Promise<{ results?: T[] }>;
-}
-interface D1DatabaseLike { prepare(query: string): D1PreparedStatementLike; }
 interface AssetBinding { fetch(request: Request): Promise<Response>; }
 interface Env {
   ASSETS: AssetBinding;
@@ -95,7 +89,17 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, { status: 204, headers: corsHeaders });
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), verifiedCatalog: vehicles.length }, 200, corsHeaders);
+
+    if (url.pathname.startsWith('/api/') && env.DB) {
+      try {
+        await ensureDatabase(env.DB);
+      } catch (error) {
+        console.error('D1 bootstrap failed', error);
+        return json({ error: 'database_initialization_failed', d1: true }, 503, corsHeaders);
+      }
+    }
+
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 2 : null, verifiedCatalog: vehicles.length }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
