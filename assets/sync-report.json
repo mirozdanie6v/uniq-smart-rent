@@ -1,7 +1,12 @@
 {
-  "generatedAt": "2026-09-02T10:51:48.492Z",
+  "generatedAt": "2026-09-02T10:58:54.309Z",
   "vehicleCount": 89,
   "imageCount": 405,
   "failureCount": 0,
+  "typeCounts": {
+    "car": 7,
+    "motorcycle": 33,
+    "scooter": 49
+  },
   "failures": []
 }
