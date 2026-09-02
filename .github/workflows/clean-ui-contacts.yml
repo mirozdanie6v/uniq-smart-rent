@@ -1,0 +1,46 @@
+name: Clean production UI and contacts
+
+on:
+  push:
+    branches:
+      - fix/clean-production-ui-contacts
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-qa:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/clean-production-ui-contacts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply requested UI cleanup
+        run: node scripts/cleanup-production-ui.mjs
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Project checks
+        run: npm run check
+      - name: Candidate static audit
+        run: node scripts/audit-candidate.mjs
+      - name: Install browser driver
+        run: |
+          python -m pip install --quiet playwright
+          BROWSER=$(which google-chrome || which chromium || which chromium-browser || true)
+          test -n "$BROWSER"
+          echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$BROWSER" >> "$GITHUB_ENV"
+      - name: Browser E2E
+        run: python tests/e2e.py
+      - name: Deployable dist E2E
+        run: python tests/candidate_dist_e2e.py
+      - name: Commit requested production UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app-v2.js styles.css scripts/audit-candidate.mjs tests/e2e.py tests/candidate_dist_e2e.py scripts/capture-main-pages.py
+          git rm scripts/cleanup-production-ui.mjs .github/workflows/clean-ui-contacts.yml
+          git commit -m "Clean production UI and add UNIQ contacts map"
+          git push origin HEAD:fix/clean-production-ui-contacts
