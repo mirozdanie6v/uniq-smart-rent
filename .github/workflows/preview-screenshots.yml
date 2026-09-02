@@ -1,0 +1,45 @@
+name: Main page preview screenshots
+
+on:
+  push:
+    branches:
+      - prototype/local-assets-role-refresh
+    paths-ignore:
+      - 'preview/screenshots/**'
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prototype/local-assets-role-refresh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build deployable candidate
+        run: npm run build
+      - name: Install screenshot driver
+        run: |
+          python -m pip install --quiet playwright
+          BROWSER=$(which google-chrome || which chromium || which chromium-browser || true)
+          test -n "$BROWSER"
+          echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$BROWSER" >> "$GITHUB_ENV"
+      - name: Capture main pages
+        run: python scripts/capture-main-pages.py
+      - name: Commit screenshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add preview/screenshots
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged"
+          else
+            git commit -m "Update main page preview screenshots"
+            git push origin HEAD:prototype/local-assets-role-refresh
+          fi
