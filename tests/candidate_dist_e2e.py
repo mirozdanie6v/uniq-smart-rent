@@ -4,6 +4,16 @@ import subprocess, time, os, json
 
 root=Path(__file__).resolve().parents[1]
 dist=root/'dist'
+
+def assert_lazy_images(page, selector, limit=8):
+    images=page.locator(selector)
+    assert images.count() >= limit
+    for i in range(limit):
+        img=images.nth(i)
+        img.scroll_into_view_if_needed()
+        handle=img.element_handle()
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',handle,timeout=5000)
+
 server=subprocess.Popen(['python','-m','http.server','8766','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
 try:
@@ -27,11 +37,14 @@ try:
 
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(120)
             assert page.locator('.vehicle-card').count()==89, page.locator('.vehicle-card').count()
-            assert page.locator('.vehicle-card img').evaluate_all('(imgs)=>imgs.slice(0,8).every(i=>i.complete&&i.naturalWidth>0)'), 'local fleet images failed'
-            page.locator('[data-open]').first.click(); page.wait_for_timeout(100)
+            assert_lazy_images(page,'.vehicle-card img',8)
+            page.locator('[data-open]').first.scroll_into_view_if_needed(); page.locator('[data-open]').first.click(); page.wait_for_timeout(100)
             assert page.locator('.detail').count()==1
             assert page.locator('.rate-grid').count()==1
             assert page.locator('.main-photo img').count()==1
+            page.locator('.main-photo img').scroll_into_view_if_needed()
+            main_handle=page.locator('.main-photo img').element_handle()
+            page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',main_handle,timeout=5000)
             page.locator('[data-book]').first.click(); page.wait_for_timeout(80)
             form=page.locator('#bookForm'); assert form.count()==1
             form.locator('input[name="client"]').fill('QA Client')
