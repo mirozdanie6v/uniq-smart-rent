@@ -5,12 +5,13 @@ const SITE = 'https://uniqmoto.com';
 const ROOT = process.cwd();
 const OUT = path.resolve('assets');
 const FLEET_OUT = path.join(OUT, 'fleet');
-const UA = 'Mozilla/5.0 (compatible; UNIQSmartRentAssetSync/1.1)';
+const UA = 'Mozilla/5.0 (compatible; UNIQSmartRentAssetSync/1.2)';
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const uniq = values => [...new Set(values.filter(Boolean))];
 const clean = value => String(value ?? '').replace(/&nbsp;/g, ' ').replace(/&#x2F;/g, '/').replace(/&amp;/g, '&').replace(/\u0026/g, '&').replace(/\\u0026/g, '&');
 const strip = html => clean(html).replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const SCOOTER_MODEL = /(?:x[- ]?max|nvx|pcx|vision|latte|janus|candy|velia|vespa|venuxs|espero|shark|priti|evo\s*grand|adv[- ]?350|x[- ]?adv)/i;
 
 async function request(url, kind = 'text') {
   const response = await fetch(url, { headers: { 'user-agent': UA, 'accept-language': 'ru-RU,ru;q=0.9,en;q=0.8' } });
@@ -27,6 +28,14 @@ function detailLinks(html) {
 function titleFromHtml(html, fallback) {
   const match = clean(html).match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   return strip(match?.[1] || fallback);
+}
+
+function inferVehicleType(sourceUrl, pageSlug, title, text) {
+  if (sourceUrl.includes('/cars/')) return 'car';
+  const evidence = `${title} ${pageSlug} ${text.slice(0, 2200)}`;
+  if (/\bScooter\b|\bСкутер\b|\bскутер\b/i.test(evidence)) return 'scooter';
+  if (SCOOTER_MODEL.test(`${title} ${pageSlug}`)) return 'scooter';
+  return 'motorcycle';
 }
 
 function vndAfter(text, label) {
@@ -104,7 +113,7 @@ async function main() {
       const html = await request(sourceUrl);
       const text = strip(html);
       const title = titleFromHtml(html, pageSlug.replaceAll('-', ' '));
-      const type = sourceUrl.includes('/cars/') ? 'car' : (/Scooter|Скутер|скутер/i.test(text) ? 'scooter' : 'motorcycle');
+      const type = inferVehicleType(sourceUrl, pageSlug, title, text);
       const yearMatch = text.match(/\b(20\d{2})\b/);
       const sourceImages = originalImageUrls(html);
       const vehicleDir = path.join(FLEET_OUT, pageSlug);
@@ -126,7 +135,7 @@ async function main() {
         dailyVnd: vndAfter(text, 'Цена в день'), depositVnd: vndAfter(text, 'Депозит'), weeklyVnd: vndAfter(text, 'Неделя'), monthlyVnd: vndAfter(text, 'Месяц'),
         photos: localPhotos, sourcePhotoCount: sourceImages.length
       });
-      process.stdout.write(`\r${i + 1}/${pages.length} ${title} · ${localPhotos.length} photos`);
+      process.stdout.write(`\r${i + 1}/${pages.length} ${title} · ${type} · ${localPhotos.length} photos`);
       await sleep(60);
     } catch (error) {
       failures.push({ sourceUrl, error: String(error.message || error) });
@@ -135,12 +144,15 @@ async function main() {
 
   fleet.sort((a,b) => a.type.localeCompare(b.type) || a.title.localeCompare(b.title));
   const generatedAt = new Date().toISOString();
-  await writeFile(path.join(OUT, 'fleet-manifest.js'), `window.UNIQ_FLEET=${JSON.stringify(fleet)};\nwindow.UNIQ_ASSET_SYNC=${JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length })};\n`, 'utf8');
-  await writeFile(path.join(OUT, 'fleet-manifest.json'), JSON.stringify({ generatedAt, fleet }, null, 2), 'utf8');
-  await writeFile(path.join(OUT, 'sync-report.json'), JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length, failures }, null, 2), 'utf8');
+  const typeCounts = Object.fromEntries(['car','motorcycle','scooter'].map(type => [type, fleet.filter(v => v.type === type).length]));
+  await writeFile(path.join(OUT, 'fleet-manifest.js'), `window.UNIQ_FLEET=${JSON.stringify(fleet)};\nwindow.UNIQ_ASSET_SYNC=${JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length, typeCounts })};\n`, 'utf8');
+  await writeFile(path.join(OUT, 'fleet-manifest.json'), JSON.stringify({ generatedAt, typeCounts, fleet }, null, 2), 'utf8');
+  await writeFile(path.join(OUT, 'sync-report.json'), JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length, typeCounts, failures }, null, 2), 'utf8');
 
-  console.log(`\nSynced ${fleet.length} vehicles and ${imageCount} images; failures: ${failures.length}.`);
-  if (fleet.length < 89 || imageCount < 400 || failures.length) throw new Error(`Sync quality gate failed: ${fleet.length} vehicles / ${imageCount} images / ${failures.length} failures.`);
+  console.log(`\nSynced ${fleet.length} vehicles and ${imageCount} images; types: ${JSON.stringify(typeCounts)}; failures: ${failures.length}.`);
+  if (fleet.length < 89 || typeCounts.car !== 7 || typeCounts.scooter < 1 || typeCounts.motorcycle < 1 || imageCount < 400 || failures.length) {
+    throw new Error(`Sync quality gate failed: ${fleet.length} vehicles / ${imageCount} images / ${JSON.stringify(typeCounts)} / ${failures.length} failures.`);
+  }
 }
 
 main().catch(error => { console.error(error); process.exit(1); });
