@@ -10,6 +10,8 @@ assert (dist/'assets/fleet-manifest.js').exists()
 assert (dist/'brand/uniq-logo.svg').exists()
 assert (dist/'i18n.js').exists()
 assert (dist/'i18n.css').exists()
+assert (dist/'header-language.js').exists()
+assert (dist/'header-language.css').exists()
 
 def assert_lazy_images(page, selector, limit=6):
     images=page.locator(selector)
@@ -39,10 +41,11 @@ try:
             assert page.locator('[data-role="employee"]').count()==1
             assert page.locator('[data-role="owner"]').count()==1
             assert page.locator('#uniqLanguageSelect').count()==1
+            assert page.locator('.topbar .header-language-switcher select').count()==1
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'horizontal overflow at {w}x{h}'
 
             if w==375:
-                language=page.locator('#uniqLanguageSelect')
+                language=page.locator('.topbar .header-language-switcher select')
                 checks=[
                     ('vi','Toàn bộ đội xe UNIQ','vi'),
                     ('en','The entire UNIQ fleet','en'),
@@ -55,14 +58,15 @@ try:
                     page.wait_for_timeout(30)
                     assert page.get_by_text(text,exact=False).count()>=1,(code,text)
                     assert page.evaluate('document.documentElement.lang')==html_lang
-                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"ok"})
+                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header"})
 
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
+            assert page.locator('.topbar .header-language-switcher select').count()==1
             assert page.locator('.vehicle-card').count()==89
             assert_lazy_images(page,'.vehicle-card img',6)
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'catalog overflow at {w}x{h}'
             assert not errors, errors
-            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","overflow":"ok"})
+            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","header_language":"ok","overflow":"ok"})
             ctx.close()
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
@@ -73,6 +77,7 @@ try:
         page.locator('.vehicle-card').first.scroll_into_view_if_needed(); page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
         assert page.locator('.detail').count()==1
         assert page.locator('.rate-grid').count()==1
+        assert page.locator('.topbar .header-language-switcher select').count()==1
         page.locator('.main-photo img').scroll_into_view_if_needed()
         main_handle=page.locator('.main-photo img').element_handle()
         page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',arg=main_handle,timeout=5000)
@@ -85,6 +90,7 @@ try:
 
         page.locator('[data-role="employee"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=СОТРУДНИК').count()>=1
+        assert page.locator('.topbar .header-language-switcher select').count()==1
         page.locator('[data-go="requests"]').last.click(); page.wait_for_timeout(80)
         status=page.locator('[data-status]').first; assert status.count()==1
         status.select_option('confirmed'); page.wait_for_timeout(80)
@@ -98,15 +104,17 @@ try:
 
         page.locator('[data-role="client"]').click(); page.wait_for_timeout(80)
         page.locator('[data-go="contacts"]').last.click(); page.wait_for_timeout(120)
+        assert page.locator('.topbar .header-language-switcher select').count()==1
         assert page.locator('a[href="https://t.me/RikRent1"]').count()==1
         assert page.locator('a[href="https://zalo.me/84372112370"]').count()==1
         assert page.locator('.map-panel iframe').count()==1
         page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
+        assert page.locator('.topbar .header-language-switcher select').count()==1
         assert page.locator('text=Качество данных').count()==0
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
-        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","console_errors":errors})
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
