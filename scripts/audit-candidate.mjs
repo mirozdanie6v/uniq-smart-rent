@@ -11,11 +11,12 @@ const app=await read('public/app-v2.js');
 const css=await read('styles.css');
 const build=await read('scripts/build.mjs');
 const fleet=manifest.fleet||[];
+const counts=Object.fromEntries(['car','motorcycle','scooter'].map(type=>[type,fleet.filter(v=>v.type===type).length]));
 
 if(fleet.length!==89) fail(`Expected 89 vehicles, got ${fleet.length}`);
-if(fleet.filter(v=>v.type==='car').length!==7) fail('Expected 7 cars in synchronized fleet');
-if(!fleet.some(v=>v.type==='motorcycle')||!fleet.some(v=>v.type==='scooter')) fail('Motorcycle/scooter classification is incomplete');
-if(report.vehicleCount!==89||report.imageCount<400||report.failureCount!==0) fail(`Asset sync gate failed: ${JSON.stringify(report)}`);
+if(counts.car!==7||counts.motorcycle!==33||counts.scooter!==49) fail(`Unexpected source type split: ${JSON.stringify(counts)}`);
+if(report.vehicleCount!==89||report.imageCount!==405||report.failureCount!==0) fail(`Asset sync gate failed: ${JSON.stringify(report)}`);
+if(report.typeCounts?.car!==7||report.typeCounts?.motorcycle!==33||report.typeCounts?.scooter!==49) fail(`Sync report type split mismatch: ${JSON.stringify(report.typeCounts)}`);
 if(new Set(fleet.map(v=>v.id)).size!==fleet.length) fail('Duplicate vehicle ids');
 const badPrice=fleet.filter(v=>!Number.isFinite(v.dailyVnd)||v.dailyVnd<=0);
 if(badPrice.length) fail(`Invalid daily price: ${badPrice.map(v=>v.id).join(', ')}`);
@@ -47,4 +48,4 @@ if(!build.includes("access(path.join(root, 'assets'))")||!build.includes("access
 for(const rel of ['dist/index.html','dist/app-v2.js','dist/brand/uniq-logo.svg','dist/assets/fleet-manifest.js']) await access(path.join(root,rel));
 const sample=fleet.find(v=>v.photos?.length)?.photos?.[0];
 if(sample) await access(path.join(root,'dist',sample.replace(/^\.\//,'')));
-console.log(JSON.stringify({vehicles:fleet.length,cars:7,photos:checkedPhotos,syncFailures:report.failureCount,roles:['client','employee','owner'],clientPages:['home','catalog','vehicle','requests','contacts'],employeePages:['dashboard','requests','fleet','handover'],ownerPages:['overview','requests','fleet','system'],syntax:'ok',dist:'ok',localAssets:'ok',palette:'ok',storage:'session'},null,2));
+console.log(JSON.stringify({vehicles:fleet.length,types:counts,photos:checkedPhotos,syncFailures:report.failureCount,roles:['client','employee','owner'],clientPages:['home','catalog','vehicle','requests','contacts'],employeePages:['dashboard','requests','fleet','handover'],ownerPages:['overview','requests','fleet','system'],syntax:'ok',dist:'ok',localAssets:'ok',palette:'ok',storage:'session'},null,2));
