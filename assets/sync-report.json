@@ -1,13 +1,7 @@
 {
-  "generatedAt": "2026-09-02T10:38:23.548Z",
+  "generatedAt": "2026-09-02T10:39:53.734Z",
   "vehicleCount": 89,
-  "imageCount": 404,
-  "failureCount": 1,
-  "failures": [
-    {
-      "sourceUrl": "https://uniqmoto.com/ru/rentals/motorcycles/yamaha-nvx-155cc-2019-73210",
-      "image": "https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/73210/8.jpg",
-      "error": "The operation was aborted due to timeout"
-    }
-  ]
+  "imageCount": 405,
+  "failureCount": 0,
+  "failures": []
 }
