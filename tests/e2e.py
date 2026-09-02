@@ -1,56 +1,81 @@
 from pathlib import Path
 from playwright.sync_api import sync_playwright
-import json, os
+import subprocess, time, json, os
+
 root=Path(__file__).resolve().parents[1]
-html=(root/'dist/index.html').read_text(encoding='utf-8')
-css=(root/'dist/styles.css').read_text(encoding='utf-8')
-js=(root/'dist/assets/app.bundle.js').read_text(encoding='utf-8')
-html=html.replace('<link rel="stylesheet" href="./styles.css">',f'<style>{css}</style>')
-html=html.replace('<script src="./assets/app.bundle.js" defer></script>',f'<script>{js}</script>')
-viewports=[(320,568),(375,667),(390,844),(393,852),(430,932),(768,1024),(1024,1366),(1366,768),(1440,900),(1920,1080)]
+dist=root/'dist'
+assert (dist/'index.html').exists()
+assert (dist/'app-v2.js').exists()
+assert (dist/'assets/fleet-manifest.js').exists()
+assert (dist/'brand/uniq-logo.svg').exists()
+
+server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
-with sync_playwright() as p:
-    launch_kwargs={"headless":True,"args":["--no-sandbox"]}
-    executable=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
-    if executable: launch_kwargs['executable_path']=executable
-    browser=p.chromium.launch(**launch_kwargs)
-    for w,h in viewports:
-        page=browser.new_page(viewport={"width":w,"height":h},locale='en-US')
-        errors=[]
+try:
+    time.sleep(.5)
+    with sync_playwright() as p:
+        launch={"headless":True,"args":["--no-sandbox"]}
+        executable=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
+        if executable: launch['executable_path']=executable
+        browser=p.chromium.launch(**launch)
+        for w,h in [(320,568),(375,667),(390,844),(430,932),(768,1024),(1024,1366),(1440,900),(1920,1080)]:
+            ctx=browser.new_context(viewport={"width":w,"height":h},locale='ru-RU')
+            page=ctx.new_page(); errors=[]
+            page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
+            page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+            assert page.locator('.brand img').count()==1
+            assert page.locator('[data-role="client"]').count()==1
+            assert page.locator('[data-role="employee"]').count()==1
+            assert page.locator('[data-role="owner"]').count()==1
+            assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'horizontal overflow at {w}x{h}'
+            page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
+            assert page.locator('.vehicle-card').count()==89
+            assert page.locator('.vehicle-card img').evaluate_all('(imgs)=>imgs.slice(0,6).every(i=>i.complete&&i.naturalWidth>0)')
+            assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'catalog overflow at {w}x{h}'
+            assert not errors, errors
+            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","overflow":"ok"})
+            ctx.close()
+
+        ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
+        page=ctx.new_page(); errors=[]
         page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
-        page.set_content(html,wait_until='domcontentloaded')
-        assert page.locator('text=UNIQ').count()>=1
-        assert page.locator('#roleSelect').is_visible()
-        assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'horizontal overflow at {w}x{h}'
-        page.locator('[data-route="catalog"]').last.click()
-        assert page.locator('[data-vehicle="xmax-2024"]').count()>=1
-        page.locator('[data-vehicle="xmax-2024"]').first.click()
-        assert page.locator('text=X-Max 300').count()>=1
-        page.locator('[data-book="xmax-2024"]').click()
-        form=page.locator('#bookingForm')
-        assert form.count()==1
+        page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+        page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
+        page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
+        assert page.locator('.detail').count()==1
+        assert page.locator('.rate-grid').count()==1
+        page.locator('[data-book]').first.click(); page.wait_for_timeout(50)
+        form=page.locator('#bookForm'); assert form.count()==1
         form.locator('input[name="client"]').fill('QA Rider')
         form.locator('input[name="contact"]').fill('+84000000000')
-        form.locator('input[name="consent"]').check()
-        form.locator('button[type="submit"]').click()
-        page.wait_for_timeout(50)
-        assert page.locator('#bookingModal').count()==0
-        assert page.locator('text=QA Rider').count()==0
-        assert page.locator('text=X-Max 300').count()>=1
-        results.append({"viewport":f"{w}x{h}","console_errors":errors,"ok":not errors})
-        page.close()
-    page=browser.new_page(viewport={"width":1440,"height":900},locale='en-US')
-    errors=[]
-    page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
-    page.set_content(html,wait_until='domcontentloaded')
-    page.locator('#roleSelect').select_option('team')
-    assert page.locator('text=Operations layer').count()>=1
-    page.locator('#roleSelect').select_option('owner')
-    assert page.locator('text=Owner dashboard').count()>=1
-    page.locator('[data-lang="ru"]').click(); assert page.locator('text=Owner dashboard').count()>=1
-    page.locator('[data-lang="vi"]').click(); assert page.locator('text=Bảng điều khiển chủ').count()>=1
-    page.locator('[data-lang="ko"]').click(); assert page.locator('text=Owner dashboard').count()>=1
-    results.append({"scenario":"roles+i18n","console_errors":errors,"ok":not errors})
-    page.close();browser.close()
+        form.locator('button[type="submit"]').click(); page.wait_for_timeout(80)
+        assert page.locator('text=QA Rider').count()>=1
+
+        page.locator('[data-role="employee"]').click(); page.wait_for_timeout(80)
+        assert page.locator('text=EMPLOYEE').count()>=1
+        page.locator('[data-go="requests"]').last.click(); page.wait_for_timeout(80)
+        status=page.locator('[data-status]').first; assert status.count()==1
+        status.select_option('confirmed'); page.wait_for_timeout(80)
+        assert page.locator('text=Подтверждена').count()>=1
+        page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        fleet_state=page.locator('[data-fleet-state]').first; assert fleet_state.count()==1
+        fleet_state.select_option('ready'); page.wait_for_timeout(80)
+        assert page.locator('text=Готов к выдаче · DEMO').count()>=1
+        page.locator('[data-go="handover"]').last.click(); page.wait_for_timeout(80)
+        assert page.locator('text=QA Rider').count()>=1
+
+        page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
+        assert page.locator('text=Пульс бизнеса').count()>=1
+        assert page.locator('text=Качество данных').count()>=1
+        page.locator('[data-go="system"]').last.click(); page.wait_for_timeout(80)
+        assert page.locator('text=Cloudflare Worker').count()>=1
+        assert page.locator('text=D1 schema').count()>=1
+        assert page.locator('text=Telegram WebApp').count()>=1
+        assert not errors, errors
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","owner_system":"ok","console_errors":errors})
+        ctx.close(); browser.close()
+finally:
+    server.terminate(); server.wait(timeout=5)
+
 (root/'e2e-results.json').write_text(json.dumps(results,ensure_ascii=False,indent=2),encoding='utf-8')
 print(json.dumps(results,ensure_ascii=False))
