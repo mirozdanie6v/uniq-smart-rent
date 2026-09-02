@@ -6,12 +6,16 @@ on:
     branches:
       - prototype/local-assets-role-refresh
     paths:
-      - preview/**
-      - assets/**
-      - scripts/audit-preview-v2.mjs
-      - tests/preview_v2_e2e.py
-      - src/**
+      - index.html
       - styles.css
+      - public/**
+      - assets/**
+      - scripts/build.mjs
+      - scripts/audit-candidate.mjs
+      - tests/candidate_dist_e2e.py
+      - src/**
+      - tests/domain.test.mjs
+      - tests/e2e.py
       - package.json
       - tsconfig.json
       - .github/workflows/candidate-audit.yml
@@ -32,8 +36,10 @@ jobs:
           node-version: '22'
       - name: Install project dependencies
         run: npm install --no-audit --no-fund
-      - name: Existing project checks
+      - name: Existing project checks and build
         run: npm run check
+      - name: Candidate local asset and role audit
+        run: node scripts/audit-candidate.mjs
       - name: Install browser test driver
         run: |
           python -m pip install --quiet playwright
@@ -42,7 +48,5 @@ jobs:
           echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$BROWSER" >> "$GITHUB_ENV"
       - name: Existing app browser e2e
         run: npm run test:e2e
-      - name: Candidate v2 role and asset audit
-        run: node scripts/audit-preview-v2.mjs
-      - name: Candidate v2 browser e2e
-        run: python tests/preview_v2_e2e.py
+      - name: Deployable candidate browser e2e
+        run: python tests/candidate_dist_e2e.py
