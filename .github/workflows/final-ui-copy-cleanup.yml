@@ -1,0 +1,48 @@
+name: Final UI copy cleanup
+
+on:
+  push:
+    branches:
+      - fix/clean-production-ui-contacts
+
+permissions:
+  contents: write
+
+jobs:
+  final-cleanup:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/clean-production-ui-contacts
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Remove final visible technical copy
+        run: |
+          node scripts/final-ui-copy-cleanup.mjs
+          node scripts/final-test-copy-cleanup.mjs
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Project checks
+        run: npm run check
+      - name: Static audit
+        run: node scripts/audit-candidate.mjs
+      - name: Install browser driver
+        run: |
+          python -m pip install --quiet playwright
+          BROWSER=$(which google-chrome || which chromium || which chromium-browser || true)
+          test -n "$BROWSER"
+          echo "PLAYWRIGHT_CHROMIUM_EXECUTABLE=$BROWSER" >> "$GITHUB_ENV"
+      - name: Browser E2E
+        run: python tests/e2e.py
+      - name: Deployable dist E2E
+        run: python tests/candidate_dist_e2e.py
+      - name: Commit final production UI
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app-v2.js tests/e2e.py tests/candidate_dist_e2e.py
+          git rm scripts/final-ui-copy-cleanup.mjs scripts/final-test-copy-cleanup.mjs .github/workflows/final-ui-copy-cleanup.yml
+          git commit -m "Remove remaining technical UI copy"
+          git push origin HEAD:fix/clean-production-ui-contacts
