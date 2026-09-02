@@ -1,0 +1,37 @@
+name: Candidate functional audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - prototype/local-assets-role-refresh
+    paths:
+      - preview/**
+      - assets/**
+      - scripts/audit-preview.mjs
+      - src/**
+      - styles.css
+      - package.json
+      - tsconfig.json
+      - .github/workflows/candidate-audit.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: prototype/local-assets-role-refresh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Existing project checks
+        run: npm run check
+      - name: Candidate role and asset audit
+        run: node scripts/audit-preview.mjs
