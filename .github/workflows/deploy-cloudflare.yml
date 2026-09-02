@@ -1,6 +1,11 @@
 name: Deploy Cloudflare
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.deploy-production'
 permissions:
   contents: read
 jobs:
