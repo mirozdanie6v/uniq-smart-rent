@@ -9,6 +9,15 @@ assert (dist/'app-v2.js').exists()
 assert (dist/'assets/fleet-manifest.js').exists()
 assert (dist/'brand/uniq-logo.svg').exists()
 
+def assert_lazy_images(page, selector, limit=6):
+    images=page.locator(selector)
+    assert images.count() >= limit
+    for i in range(limit):
+        img=images.nth(i)
+        img.scroll_into_view_if_needed()
+        handle=img.element_handle()
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', handle, timeout=5000)
+
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
 try:
@@ -30,7 +39,7 @@ try:
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'horizontal overflow at {w}x{h}'
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
             assert page.locator('.vehicle-card').count()==89
-            assert page.locator('.vehicle-card img').evaluate_all('(imgs)=>imgs.slice(0,6).every(i=>i.complete&&i.naturalWidth>0)')
+            assert_lazy_images(page,'.vehicle-card img',6)
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'catalog overflow at {w}x{h}'
             assert not errors, errors
             results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","overflow":"ok"})
@@ -41,9 +50,12 @@ try:
         page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
-        page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
+        page.locator('.vehicle-card').first.scroll_into_view_if_needed(); page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
         assert page.locator('.detail').count()==1
         assert page.locator('.rate-grid').count()==1
+        page.locator('.main-photo img').scroll_into_view_if_needed()
+        main_handle=page.locator('.main-photo img').element_handle()
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',main_handle,timeout=5000)
         page.locator('[data-book]').first.click(); page.wait_for_timeout(50)
         form=page.locator('#bookForm'); assert form.count()==1
         form.locator('input[name="client"]').fill('QA Rider')
