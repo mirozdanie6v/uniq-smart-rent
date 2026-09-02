@@ -6,7 +6,7 @@ on:
     branches:
       - prototype/local-assets-role-refresh
     paths:
-      - scripts/sync-uniq-assets-v2.mjs
+      - scripts/sync-uniq-assets.mjs
       - .github/workflows/sync-uniq-assets.yml
 
 permissions:
@@ -21,16 +21,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: prototype/local-assets-role-refresh
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Download official UNIQ fleet assets
-        run: node scripts/sync-uniq-assets-v2.mjs
+        run: node scripts/sync-uniq-assets.mjs
       - name: Verify generated manifest
         run: |
           test -s assets/fleet-manifest.js
           test -s assets/sync-report.json
-          node -e "const r=require('./assets/sync-report.json'); if(r.vehicleCount<70||r.imageCount<50) process.exit(1); console.log(r)"
+          node -e "const r=require('./assets/sync-report.json'); if(r.vehicleCount<89||r.imageCount<400||r.failureCount>0) process.exit(1); console.log(r)"
       - name: Commit synchronized local assets
         run: |
           git config user.name "github-actions[bot]"
@@ -40,5 +41,6 @@ jobs:
             echo "No asset changes"
           else
             git commit -m "Sync official UNIQ fleet photos [skip ci]"
+            git pull --rebase origin prototype/local-assets-role-refresh
             git push origin HEAD:prototype/local-assets-role-refresh
           fi
