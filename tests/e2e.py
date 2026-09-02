@@ -8,6 +8,8 @@ assert (dist/'index.html').exists()
 assert (dist/'app-v2.js').exists()
 assert (dist/'assets/fleet-manifest.js').exists()
 assert (dist/'brand/uniq-logo.svg').exists()
+assert (dist/'i18n.js').exists()
+assert (dist/'i18n.css').exists()
 
 def assert_lazy_images(page, selector, limit=6):
     images=page.locator(selector)
@@ -36,7 +38,25 @@ try:
             assert page.locator('[data-role="client"]').count()==1
             assert page.locator('[data-role="employee"]').count()==1
             assert page.locator('[data-role="owner"]').count()==1
+            assert page.locator('#uniqLanguageSelect').count()==1
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'horizontal overflow at {w}x{h}'
+
+            if w==375:
+                language=page.locator('#uniqLanguageSelect')
+                checks=[
+                    ('vi','Toàn bộ đội xe UNIQ','vi'),
+                    ('en','The entire UNIQ fleet','en'),
+                    ('ko','UNIQ 전체 차량','ko'),
+                    ('zh','UNIQ 全部车队','zh-CN'),
+                    ('ru','Весь парк UNIQ','ru'),
+                ]
+                for code,text,html_lang in checks:
+                    language.select_option(code)
+                    page.wait_for_timeout(30)
+                    assert page.get_by_text(text,exact=False).count()>=1,(code,text)
+                    assert page.evaluate('document.documentElement.lang')==html_lang
+                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"ok"})
+
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
             assert page.locator('.vehicle-card').count()==89
             assert_lazy_images(page,'.vehicle-card img',6)
