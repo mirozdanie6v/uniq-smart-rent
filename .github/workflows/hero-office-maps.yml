@@ -1,0 +1,34 @@
+name: Hero office mini maps
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.hero-office-maps-trigger'
+permissions:
+  contents: write
+jobs:
+  patch-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply hero office maps
+        run: node scripts/hero-office-maps.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Project checks
+        run: npm run check
+      - name: Commit hero office maps
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/app-v2.js styles.css
+          if git diff --cached --quiet; then
+            echo "No UI changes"
+          else
+            git commit -m "Replace hero info cards with office mini maps"
+            git push origin HEAD:main
+          fi
