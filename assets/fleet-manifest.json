@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-02T10:39:53.734Z",
+  "generatedAt": "2026-09-02T10:43:02.364Z",
   "fleet": [
     {
       "id": "hyundai-elantra-2025-74404",
@@ -18,7 +18,7 @@
       "weeklyVnd": 8750000,
       "monthlyVnd": 24000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/hyundai-elantra-2025-74404/01.webp"
+        "./assets/fleet/hyundai-elantra-2025-74404/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -39,10 +39,10 @@
       "weeklyVnd": 12600000,
       "monthlyVnd": 30000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sedona-2021-75174/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sedona-2021-75174/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sedona-2021-75174/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sedona-2021-75174/04.jpg"
+        "./assets/fleet/kia-sedona-2021-75174/01.jpg",
+        "./assets/fleet/kia-sedona-2021-75174/02.jpg",
+        "./assets/fleet/kia-sedona-2021-75174/03.jpg",
+        "./assets/fleet/kia-sedona-2021-75174/04.jpg"
       ],
       "sourcePhotoCount": 4
     },
@@ -63,10 +63,10 @@
       "weeklyVnd": 12600000,
       "monthlyVnd": 30000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sorento-2023-74401/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sorento-2023-74401/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sorento-2023-74401/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kia-sorento-2023-74401/04.jpg"
+        "./assets/fleet/kia-sorento-2023-74401/01.jpg",
+        "./assets/fleet/kia-sorento-2023-74401/02.jpg",
+        "./assets/fleet/kia-sorento-2023-74401/03.jpg",
+        "./assets/fleet/kia-sorento-2023-74401/04.jpg"
       ],
       "sourcePhotoCount": 4
     },
@@ -87,11 +87,11 @@
       "weeklyVnd": 9100000,
       "monthlyVnd": 25500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-5-2022-74405/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-5-2022-74405/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-5-2022-74405/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-5-2022-74405/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-5-2022-74405/05.jpg"
+        "./assets/fleet/mazda-cx-5-2022-74405/01.jpg",
+        "./assets/fleet/mazda-cx-5-2022-74405/02.jpg",
+        "./assets/fleet/mazda-cx-5-2022-74405/03.jpg",
+        "./assets/fleet/mazda-cx-5-2022-74405/04.jpg",
+        "./assets/fleet/mazda-cx-5-2022-74405/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -112,12 +112,12 @@
       "weeklyVnd": 12600000,
       "monthlyVnd": 30000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/mazda-cx-8-2023-75173/06.jpg"
+        "./assets/fleet/mazda-cx-8-2023-75173/01.jpg",
+        "./assets/fleet/mazda-cx-8-2023-75173/02.jpg",
+        "./assets/fleet/mazda-cx-8-2023-75173/03.jpg",
+        "./assets/fleet/mazda-cx-8-2023-75173/04.jpg",
+        "./assets/fleet/mazda-cx-8-2023-75173/05.jpg",
+        "./assets/fleet/mazda-cx-8-2023-75173/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -138,7 +138,7 @@
       "weeklyVnd": 9450000,
       "monthlyVnd": 25500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-innova-7-seats-2021-74403/01.webp"
+        "./assets/fleet/toyota-innova-7-seats-2021-74403/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -159,11 +159,11 @@
       "weeklyVnd": 9100000,
       "monthlyVnd": 25500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-yaris-cross-2025-74402/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-yaris-cross-2025-74402/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-yaris-cross-2025-74402/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-yaris-cross-2025-74402/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/toyota-yaris-cross-2025-74402/05.jpg"
+        "./assets/fleet/toyota-yaris-cross-2025-74402/01.jpg",
+        "./assets/fleet/toyota-yaris-cross-2025-74402/02.jpg",
+        "./assets/fleet/toyota-yaris-cross-2025-74402/03.jpg",
+        "./assets/fleet/toyota-yaris-cross-2025-74402/04.jpg",
+        "./assets/fleet/toyota-yaris-cross-2025-74402/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -184,15 +184,15 @@
       "weeklyVnd": 10000000,
       "monthlyVnd": 25000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb500x-2023-73325/09.jpg"
+        "./assets/fleet/honda-cb500x-2023-73325/01.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/02.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/03.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/04.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/05.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/06.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/07.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/08.jpg",
+        "./assets/fleet/honda-cb500x-2023-73325/09.jpg"
       ],
       "sourcePhotoCount": 9
     },
@@ -213,14 +213,14 @@
       "weeklyVnd": 10000000,
       "monthlyVnd": 25000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cb650r-2022-73228/08.jpg"
+        "./assets/fleet/honda-cb650r-2022-73228/01.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/02.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/03.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/04.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/05.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/06.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/07.jpg",
+        "./assets/fleet/honda-cb650r-2022-73228/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -241,11 +241,11 @@
       "weeklyVnd": 3500000,
       "monthlyVnd": 7500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-150cc-2021-76481/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-150cc-2021-76481/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-150cc-2021-76481/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-150cc-2021-76481/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-150cc-2021-76481/05.jpg"
+        "./assets/fleet/honda-cbr-150cc-2021-76481/01.jpg",
+        "./assets/fleet/honda-cbr-150cc-2021-76481/02.jpg",
+        "./assets/fleet/honda-cbr-150cc-2021-76481/03.jpg",
+        "./assets/fleet/honda-cbr-150cc-2021-76481/04.jpg",
+        "./assets/fleet/honda-cbr-150cc-2021-76481/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -266,19 +266,18 @@
       "weeklyVnd": 10000000,
       "monthlyVnd": 25000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/10.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/11.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/12.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr-650r-2023-74143/13.jpg"
+        "./assets/fleet/honda-cbr-650r-2023-74143/01.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/02.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/03.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/05.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/06.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/07.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/08.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/09.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/10.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/11.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/12.jpg",
+        "./assets/fleet/honda-cbr-650r-2023-74143/13.jpg"
       ],
       "sourcePhotoCount": 13
     },
@@ -299,15 +298,15 @@
       "weeklyVnd": 10000000,
       "monthlyVnd": 25000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-cbr650r-2023-73229/09.jpg"
+        "./assets/fleet/honda-cbr650r-2023-73229/01.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/02.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/03.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/04.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/05.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/06.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/07.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/08.jpg",
+        "./assets/fleet/honda-cbr650r-2023-73229/09.jpg"
       ],
       "sourcePhotoCount": 9
     },
@@ -328,7 +327,7 @@
       "weeklyVnd": 12000000,
       "monthlyVnd": 27000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-nx-500cc-2025-76237/01.webp"
+        "./assets/fleet/honda-nx-500cc-2025-76237/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -349,7 +348,7 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 17500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2023/01.webp"
+        "./assets/fleet/honda-rebel-300-2023/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -370,15 +369,15 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 16500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-2022-77516/09.jpg"
+        "./assets/fleet/honda-rebel-300-2022-77516/01.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/02.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/03.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/04.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/05.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/06.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/07.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/08.jpg",
+        "./assets/fleet/honda-rebel-300-2022-77516/09.jpg"
       ],
       "sourcePhotoCount": 9
     },
@@ -399,7 +398,7 @@
       "weeklyVnd": 7700000,
       "monthlyVnd": 18600000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300-custom-2022-73224/01.webp"
+        "./assets/fleet/honda-rebel-300-custom-2022-73224/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -420,7 +419,7 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 17500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-75910/01.webp"
+        "./assets/fleet/honda-rebel-300cc-2021-75910/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -441,14 +440,14 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 17500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-73223/08.jpg"
+        "./assets/fleet/honda-rebel-300cc-2021-73223/01.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/02.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/03.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/04.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/05.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/06.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/07.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-73223/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -469,15 +468,15 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 17500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-300cc-2021-72543/09.jpg"
+        "./assets/fleet/honda-rebel-300cc-2021-72543/01.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/02.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/03.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/04.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/05.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/06.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/07.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/08.jpg",
+        "./assets/fleet/honda-rebel-300cc-2021-72543/09.jpg"
       ],
       "sourcePhotoCount": 9
     },
@@ -498,7 +497,7 @@
       "weeklyVnd": 9500000,
       "monthlyVnd": 22000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-rebel-500cc-2022-76790/01.webp"
+        "./assets/fleet/honda-rebel-500cc-2022-76790/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -519,26 +518,26 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 17500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/10.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/11.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/12.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/13.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/14.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/15.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/16.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/17.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/18.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/19.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-ninja-400cc-2019-73219/20.jpg"
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/01.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/02.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/03.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/04.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/05.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/06.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/07.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/08.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/09.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/10.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/11.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/12.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/13.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/14.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/15.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/16.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/17.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/18.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/19.jpg",
+        "./assets/fleet/kawasaki-ninja-400cc-2019-73219/20.jpg"
       ],
       "sourcePhotoCount": 20
     },
@@ -559,13 +558,12 @@
       "weeklyVnd": 14700000,
       "monthlyVnd": 30000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-versys-650-2024-73234/07.jpg"
+        "./assets/fleet/kawasaki-versys-650-2024-73234/02.jpg",
+        "./assets/fleet/kawasaki-versys-650-2024-73234/03.jpg",
+        "./assets/fleet/kawasaki-versys-650-2024-73234/04.jpg",
+        "./assets/fleet/kawasaki-versys-650-2024-73234/05.jpg",
+        "./assets/fleet/kawasaki-versys-650-2024-73234/06.jpg",
+        "./assets/fleet/kawasaki-versys-650-2024-73234/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -586,10 +584,10 @@
       "weeklyVnd": 9500000,
       "monthlyVnd": 22000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-vulcan-650s-2021-73230/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-vulcan-650s-2021-73230/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-vulcan-650s-2021-73230/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-vulcan-650s-2021-73230/04.jpg"
+        "./assets/fleet/kawasaki-vulcan-650s-2021-73230/01.jpg",
+        "./assets/fleet/kawasaki-vulcan-650s-2021-73230/02.jpg",
+        "./assets/fleet/kawasaki-vulcan-650s-2021-73230/03.jpg",
+        "./assets/fleet/kawasaki-vulcan-650s-2021-73230/04.jpg"
       ],
       "sourcePhotoCount": 4
     },
@@ -610,13 +608,13 @@
       "weeklyVnd": 12000000,
       "monthlyVnd": 23000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z-800-2019-73225/07.jpg"
+        "./assets/fleet/kawasaki-z-800-2019-73225/01.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/02.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/03.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/04.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/05.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/06.jpg",
+        "./assets/fleet/kawasaki-z-800-2019-73225/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -637,7 +635,7 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 16500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kawasaki-z400-2021-73222/01.webp"
+        "./assets/fleet/kawasaki-z400-2021-73222/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -658,7 +656,7 @@
       "weeklyVnd": 6500000,
       "monthlyVnd": 9000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-fz-25-2023-76888/01.webp"
+        "./assets/fleet/yamaha-fz-25-2023-76888/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -679,11 +677,11 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 16000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-03-2021-73216/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-03-2021-73216/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-03-2021-73216/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-03-2021-73216/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-03-2021-73216/05.jpg"
+        "./assets/fleet/yamaha-mt-03-2021-73216/01.jpg",
+        "./assets/fleet/yamaha-mt-03-2021-73216/02.jpg",
+        "./assets/fleet/yamaha-mt-03-2021-73216/03.jpg",
+        "./assets/fleet/yamaha-mt-03-2021-73216/04.jpg",
+        "./assets/fleet/yamaha-mt-03-2021-73216/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -704,11 +702,11 @@
       "weeklyVnd": 15050000,
       "monthlyVnd": 32100000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen-3-2023-77996/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen-3-2023-77996/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen-3-2023-77996/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen-3-2023-77996/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen-3-2023-77996/05.jpg"
+        "./assets/fleet/yamaha-mt-09-gen-3-2023-77996/01.jpg",
+        "./assets/fleet/yamaha-mt-09-gen-3-2023-77996/02.jpg",
+        "./assets/fleet/yamaha-mt-09-gen-3-2023-77996/03.jpg",
+        "./assets/fleet/yamaha-mt-09-gen-3-2023-77996/04.jpg",
+        "./assets/fleet/yamaha-mt-09-gen-3-2023-77996/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -729,16 +727,16 @@
       "weeklyVnd": 15500000,
       "monthlyVnd": 30000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-gen2-2022-74145/10.jpg"
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/01.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/02.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/03.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/04.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/05.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/06.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/07.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/08.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/09.jpg",
+        "./assets/fleet/yamaha-mt-09-gen2-2022-74145/10.jpg"
       ],
       "sourcePhotoCount": 10
     },
@@ -759,11 +757,11 @@
       "weeklyVnd": 15000000,
       "monthlyVnd": 32000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-sp-2023/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-sp-2023/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-sp-2023/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-sp-2023/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-09-sp-2023/05.jpg"
+        "./assets/fleet/yamaha-mt-09-sp-2023/01.jpg",
+        "./assets/fleet/yamaha-mt-09-sp-2023/02.jpg",
+        "./assets/fleet/yamaha-mt-09-sp-2023/03.jpg",
+        "./assets/fleet/yamaha-mt-09-sp-2023/04.jpg",
+        "./assets/fleet/yamaha-mt-09-sp-2023/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -784,12 +782,12 @@
       "weeklyVnd": 16500000,
       "monthlyVnd": 35000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-10-2021-73227/06.jpg"
+        "./assets/fleet/yamaha-mt-10-2021-73227/01.jpg",
+        "./assets/fleet/yamaha-mt-10-2021-73227/02.jpg",
+        "./assets/fleet/yamaha-mt-10-2021-73227/03.jpg",
+        "./assets/fleet/yamaha-mt-10-2021-73227/04.jpg",
+        "./assets/fleet/yamaha-mt-10-2021-73227/05.jpg",
+        "./assets/fleet/yamaha-mt-10-2021-73227/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -810,18 +808,18 @@
       "weeklyVnd": 3000000,
       "monthlyVnd": 7500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/10.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/11.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-76900/12.jpg"
+        "./assets/fleet/yamaha-mt-15-2019-76900/01.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/02.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/03.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/04.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/05.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/06.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/07.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/08.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/09.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/10.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/11.jpg",
+        "./assets/fleet/yamaha-mt-15-2019-76900/12.jpg"
       ],
       "sourcePhotoCount": 12
     },
@@ -842,7 +840,7 @@
       "weeklyVnd": 3000000,
       "monthlyVnd": 7500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-mt-15-2019-73221/01.webp"
+        "./assets/fleet/yamaha-mt-15-2019-73221/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -863,7 +861,7 @@
       "weeklyVnd": 3000000,
       "monthlyVnd": 6500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-r-15-2019-72524/01.webp"
+        "./assets/fleet/yamaha-r-15-2019-72524/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -884,7 +882,7 @@
       "weeklyVnd": 16000000,
       "monthlyVnd": 32000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-r7-2023/01.webp"
+        "./assets/fleet/yamaha-r7-2023/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -905,14 +903,14 @@
       "weeklyVnd": 3000000,
       "monthlyVnd": 6500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx-150cc-2021-76992/08.jpg"
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/01.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/02.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/03.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/04.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/05.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/06.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/07.jpg",
+        "./assets/fleet/yamaha-tfx-150cc-2021-76992/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -933,13 +931,13 @@
       "weeklyVnd": 3010000,
       "monthlyVnd": 6600000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tfx150-2022-76437/07.jpg"
+        "./assets/fleet/yamaha-tfx150-2022-76437/01.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/02.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/03.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/04.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/05.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/06.jpg",
+        "./assets/fleet/yamaha-tfx150-2022-76437/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -960,14 +958,14 @@
       "weeklyVnd": 16500000,
       "monthlyVnd": 35000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-tracer-9gt-2024-73226/08.jpg"
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/01.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/02.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/03.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/04.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/05.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/06.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/07.jpg",
+        "./assets/fleet/yamaha-tracer-9gt-2024-73226/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -988,7 +986,7 @@
       "weeklyVnd": 4200000,
       "monthlyVnd": 6480000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r15-2019-77450/01.webp"
+        "./assets/fleet/yamaha-yzf-r15-2019-77450/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1009,15 +1007,15 @@
       "weeklyVnd": 7000000,
       "monthlyVnd": 18000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-yzf-r3-300cc-2019-73220/09.jpg"
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/01.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/02.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/03.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/04.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/05.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/06.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/07.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/08.jpg",
+        "./assets/fleet/yamaha-yzf-r3-300cc-2019-73220/09.jpg"
       ],
       "sourcePhotoCount": 9
     },
@@ -1038,7 +1036,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/detech-espero-50cc-2024/01.webp"
+        "./assets/fleet/detech-espero-50cc-2024/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1059,13 +1057,13 @@
       "weeklyVnd": 9000000,
       "monthlyVnd": 20000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-adv-350cc-2025-76073/07.jpg"
+        "./assets/fleet/honda-adv-350cc-2025-76073/01.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/02.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/03.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/04.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/05.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/06.jpg",
+        "./assets/fleet/honda-adv-350cc-2025-76073/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1086,7 +1084,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4200000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-125cc-2018-76169/01.webp"
+        "./assets/fleet/honda-pcx-125cc-2018-76169/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1107,7 +1105,7 @@
       "weeklyVnd": 3000000,
       "monthlyVnd": 6000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2022-73073/01.webp"
+        "./assets/fleet/honda-pcx-150cc-2022-73073/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1128,13 +1126,13 @@
       "weeklyVnd": 3010000,
       "monthlyVnd": 6000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-pcx-150cc-2019-73211/07.jpg"
+        "./assets/fleet/honda-pcx-150cc-2019-73211/01.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/02.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/03.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/04.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/05.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/06.jpg",
+        "./assets/fleet/honda-pcx-150cc-2019-73211/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1155,13 +1153,13 @@
       "weeklyVnd": 2002000,
       "monthlyVnd": 3600000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-vision-125cc-2019-73076/07.jpg"
+        "./assets/fleet/honda-vision-125cc-2019-73076/01.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/02.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/03.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/04.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/05.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/06.jpg",
+        "./assets/fleet/honda-vision-125cc-2019-73076/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1182,13 +1180,13 @@
       "weeklyVnd": 16000000,
       "monthlyVnd": 32000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/honda-x-adv-750cc-2021-73214/07.jpg"
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/01.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/02.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/03.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/04.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/05.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/06.jpg",
+        "./assets/fleet/honda-x-adv-750cc-2021-73214/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1209,7 +1207,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-candy-50cc-2020-78317/01.webp"
+        "./assets/fleet/kymco-candy-50cc-2020-78317/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1230,7 +1228,7 @@
       "weeklyVnd": 2450000,
       "monthlyVnd": 3990000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-candy-50cc-2020-80404/01.webp"
+        "./assets/fleet/kymco-candy-50cc-2020-80404/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1251,7 +1249,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4020000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-candy-50cc-2020-77344/01.webp"
+        "./assets/fleet/kymco-candy-50cc-2020-77344/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1272,7 +1270,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-candy-50cc-2020-78410/01.webp"
+        "./assets/fleet/kymco-candy-50cc-2020-78410/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1293,7 +1291,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-candy-50cc-2024-78440/01.webp"
+        "./assets/fleet/kymco-candy-50cc-2024-78440/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1314,7 +1312,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymco-velia-50cc-2019-77341/01.webp"
+        "./assets/fleet/kymco-velia-50cc-2019-77341/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1335,7 +1333,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymso-candy-50cc-2020-77369/01.webp"
+        "./assets/fleet/kymso-candy-50cc-2020-77369/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1356,7 +1354,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymso-candy-50cc-2023-77368/01.webp"
+        "./assets/fleet/kymso-candy-50cc-2023-77368/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1377,7 +1375,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymso-candy-50cc-2020-77088/01.webp"
+        "./assets/fleet/kymso-candy-50cc-2020-77088/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1398,7 +1396,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/kymso-candy-50cc-2020-77087/01.webp"
+        "./assets/fleet/kymso-candy-50cc-2020-77087/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1419,7 +1417,7 @@
       "weeklyVnd": 3010000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-priti-so-50cc-2025-77649/01.webp"
+        "./assets/fleet/sym-priti-so-50cc-2025-77649/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1440,21 +1438,21 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/10.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/11.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/12.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/13.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/14.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-2020/15.jpg"
+        "./assets/fleet/sym-shark-2020/01.jpg",
+        "./assets/fleet/sym-shark-2020/02.jpg",
+        "./assets/fleet/sym-shark-2020/03.jpg",
+        "./assets/fleet/sym-shark-2020/04.jpg",
+        "./assets/fleet/sym-shark-2020/05.jpg",
+        "./assets/fleet/sym-shark-2020/06.jpg",
+        "./assets/fleet/sym-shark-2020/07.jpg",
+        "./assets/fleet/sym-shark-2020/08.jpg",
+        "./assets/fleet/sym-shark-2020/09.jpg",
+        "./assets/fleet/sym-shark-2020/10.jpg",
+        "./assets/fleet/sym-shark-2020/11.jpg",
+        "./assets/fleet/sym-shark-2020/12.jpg",
+        "./assets/fleet/sym-shark-2020/13.jpg",
+        "./assets/fleet/sym-shark-2020/14.jpg",
+        "./assets/fleet/sym-shark-2020/15.jpg"
       ],
       "sourcePhotoCount": 15
     },
@@ -1475,7 +1473,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/sym-shark-50cc-2024-76944/01.webp"
+        "./assets/fleet/sym-shark-50cc-2024-76944/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1496,7 +1494,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/venuxs-50cc-2024/01.webp"
+        "./assets/fleet/venuxs-50cc-2024/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1517,7 +1515,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/venuxs-50cc-2024-77372/01.webp"
+        "./assets/fleet/venuxs-50cc-2024-77372/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1538,7 +1536,7 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/vespa-50cc-2023/01.webp"
+        "./assets/fleet/vespa-50cc-2023/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1559,7 +1557,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/vespa-50cc-2018-77515/01.webp"
+        "./assets/fleet/vespa-50cc-2018-77515/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1580,7 +1578,7 @@
       "weeklyVnd": 3150000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/vespa-50cc-2018-77373/01.webp"
+        "./assets/fleet/vespa-50cc-2018-77373/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1601,7 +1599,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/vinfast-evo-grand-2026-80283/01.webp"
+        "./assets/fleet/vinfast-evo-grand-2026-80283/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1622,7 +1620,7 @@
       "weeklyVnd": 2520000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/vinfast-evo-grand-2026-80284/01.webp"
+        "./assets/fleet/vinfast-evo-grand-2026-80284/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1643,7 +1641,7 @@
       "weeklyVnd": 2000000,
       "monthlyVnd": 3500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2022-73077/01.webp"
+        "./assets/fleet/yamaha-janus-125cc-2022-73077/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -1664,16 +1662,16 @@
       "weeklyVnd": 2002000,
       "monthlyVnd": 3600000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-janus-125cc-2017-73985/10.jpg"
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/01.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/02.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/03.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/04.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/05.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/06.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/07.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/08.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/09.jpg",
+        "./assets/fleet/yamaha-janus-125cc-2017-73985/10.jpg"
       ],
       "sourcePhotoCount": 10
     },
@@ -1694,13 +1692,12 @@
       "weeklyVnd": 2000000,
       "monthlyVnd": 3500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-latte-125cc-2022-73075/07.jpg"
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/01.jpg",
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/02.jpg",
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/03.jpg",
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/04.jpg",
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/06.jpg",
+        "./assets/fleet/yamaha-latte-125cc-2022-73075/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1721,12 +1718,12 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76889/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76889/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -1747,13 +1744,13 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-76887/07.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-76887/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1774,13 +1771,13 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73208/07.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73208/07.jpg"
       ],
       "sourcePhotoCount": 7
     },
@@ -1801,11 +1798,11 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73074/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73074/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73074/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73074/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73074/05.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73074/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73074/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73074/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73074/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73074/05.jpg"
       ],
       "sourcePhotoCount": 5
     },
@@ -1826,14 +1823,14 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73209/08.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/07.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73209/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -1854,14 +1851,14 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73210/08.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/07.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73210/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -1882,12 +1879,11 @@
       "weeklyVnd": 2800000,
       "monthlyVnd": 4800000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-77252/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-77252/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-77252/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-77252/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-77252/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-77252/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -1908,14 +1904,14 @@
       "weeklyVnd": 2450000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73984/08.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/07.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73984/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -1936,12 +1932,12 @@
       "weeklyVnd": 2450000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73996/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73996/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -1962,12 +1958,12 @@
       "weeklyVnd": 2450000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73299/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73299/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -1988,12 +1984,12 @@
       "weeklyVnd": 2450000,
       "monthlyVnd": 4050000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-2019-73078/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-2019-73078/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -2014,16 +2010,16 @@
       "weeklyVnd": 3500000,
       "monthlyVnd": 8500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/08.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/09.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/10.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/07.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/08.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/09.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-barracuda-2019-76945/10.jpg"
       ],
       "sourcePhotoCount": 10
     },
@@ -2044,14 +2040,14 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4500000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/06.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/07.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/08.jpg"
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/06.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/07.jpg",
+        "./assets/fleet/yamaha-nvx-155cc-carbon-2019-73300/08.jpg"
       ],
       "sourcePhotoCount": 8
     },
@@ -2072,12 +2068,12 @@
       "weeklyVnd": 2500000,
       "monthlyVnd": 4000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/01.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/02.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/03.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/04.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/05.jpg",
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-nvx-155cx-2019-74142/06.jpg"
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/01.jpg",
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/02.jpg",
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/03.jpg",
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/04.jpg",
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/05.jpg",
+        "./assets/fleet/yamaha-nvx-155cx-2019-74142/06.jpg"
       ],
       "sourcePhotoCount": 6
     },
@@ -2098,7 +2094,7 @@
       "weeklyVnd": 8000000,
       "monthlyVnd": 17000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-x-max-2024-76826/01.webp"
+        "./assets/fleet/yamaha-x-max-2024-76826/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -2119,7 +2115,7 @@
       "weeklyVnd": 8000000,
       "monthlyVnd": 17000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-x-max-300cc-2024-76842/01.webp"
+        "./assets/fleet/yamaha-x-max-300cc-2024-76842/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -2140,7 +2136,7 @@
       "weeklyVnd": 8000000,
       "monthlyVnd": 17000000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-x-max-300cc-2022-73212/01.webp"
+        "./assets/fleet/yamaha-x-max-300cc-2022-73212/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -2161,7 +2157,7 @@
       "weeklyVnd": 8050000,
       "monthlyVnd": 17100000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-x-max-300cc-2023-76657/01.webp"
+        "./assets/fleet/yamaha-x-max-300cc-2023-76657/01.webp"
       ],
       "sourcePhotoCount": 1
     },
@@ -2182,7 +2178,7 @@
       "weeklyVnd": 8050000,
       "monthlyVnd": 17100000,
       "photos": [
-        ".//home/runner/work/uniq-smart-rent/uniq-smart-rent/assets/fleet/yamaha-x-max-300cc-2024-77448/01.webp"
+        "./assets/fleet/yamaha-x-max-300cc-2024-77448/01.webp"
       ],
       "sourcePhotoCount": 1
     }

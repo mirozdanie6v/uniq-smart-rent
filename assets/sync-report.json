@@ -1,7 +1,28 @@
 {
-  "generatedAt": "2026-09-02T10:39:53.734Z",
+  "generatedAt": "2026-09-02T10:43:02.364Z",
   "vehicleCount": 89,
-  "imageCount": 405,
-  "failureCount": 0,
-  "failures": []
+  "imageCount": 401,
+  "failureCount": 4,
+  "failures": [
+    {
+      "sourceUrl": "https://uniqmoto.com/ru/rentals/motorcycles/honda-cbr-650r-2023-74143",
+      "image": "https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/74143/4.jpg",
+      "error": "The operation was aborted due to timeout"
+    },
+    {
+      "sourceUrl": "https://uniqmoto.com/ru/rentals/motorcycles/yamaha-latte-125cc-2022-73075",
+      "image": "https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/73075/5.jpg",
+      "error": "The operation was aborted due to timeout"
+    },
+    {
+      "sourceUrl": "https://uniqmoto.com/ru/rentals/motorcycles/yamaha-nvx-155cc-2019-77252",
+      "image": "https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/77252/5.jpg",
+      "error": "The operation was aborted due to timeout"
+    },
+    {
+      "sourceUrl": "https://uniqmoto.com/ru/rentals/motorcycles/kawasaki-versys-650-2024-73234",
+      "image": "https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/73234/1.jpg",
+      "error": "The operation was aborted due to timeout"
+    }
+  ]
 }
