@@ -2,38 +2,20 @@ import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const SITE = 'https://uniqmoto.com';
+const ROOT = process.cwd();
 const OUT = path.resolve('assets');
 const FLEET_OUT = path.join(OUT, 'fleet');
 const UA = 'Mozilla/5.0 (compatible; UNIQSmartRentAssetSync/1.1)';
-const TIMEOUT = 15000;
 
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const uniq = values => [...new Set(values.filter(Boolean))];
 const clean = value => String(value ?? '').replace(/&nbsp;/g, ' ').replace(/&#x2F;/g, '/').replace(/&amp;/g, '&').replace(/\u0026/g, '&').replace(/\\u0026/g, '&');
 const strip = html => clean(html).replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-const cleanSpec = value => String(value || '').replace(/\s+0\s+1(?:\s+0\s+\d+)+.*$/,'').trim();
 
-async function fetchWithRetry(url, options = {}, attempts = 3) {
-  let lastError;
-  for (let attempt = 1; attempt <= attempts; attempt++) {
-    try {
-      const response = await fetch(url, {
-        ...options,
-        signal: AbortSignal.timeout(TIMEOUT),
-        headers: { 'user-agent': UA, 'accept-language': 'ru-RU,ru;q=0.9,en;q=0.8', ...(options.headers || {}) }
-      });
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
-      return response;
-    } catch (error) {
-      lastError = error;
-      if (attempt < attempts) await sleep(250 * attempt);
-    }
-  }
-  throw lastError;
-}
-
-async function request(url) {
-  return (await fetchWithRetry(url)).text();
+async function request(url, kind = 'text') {
+  const response = await fetch(url, { headers: { 'user-agent': UA, 'accept-language': 'ru-RU,ru;q=0.9,en;q=0.8' } });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
+  return kind === 'buffer' ? Buffer.from(await response.arrayBuffer()) : await response.text();
 }
 
 function detailLinks(html) {
@@ -56,8 +38,8 @@ function vndAfter(text, label) {
 }
 
 function specAfter(text, label) {
-  const re = new RegExp(`${label}\\s+([^|]{1,55}?)(?=\\s+(?:Weight|Cruise speed|Fuel use|Capacity|Color|Цена|Депозит|Неделя|Месяц|Профиль|Engine)|$)`, 'i');
-  return cleanSpec(text.match(re)?.[1] || '');
+  const re = new RegExp(`${label}\\s+([^|]{1,45}?)(?=\\s+(?:Weight|Cruise speed|Fuel use|Capacity|Цена|Депозит|Неделя|Месяц|Профиль|Engine)|$)`, 'i');
+  return text.match(re)?.[1]?.trim() || '';
 }
 
 function originalImageUrls(html) {
@@ -81,12 +63,20 @@ function extFor(url, contentType = '') {
 }
 
 async function downloadImage(url, targetBase) {
-  const response = await fetchWithRetry(url, { headers: { referer: `${SITE}/ru` } }, 3);
+  const response = await fetch(url, { headers: { 'user-agent': UA, referer: `${SITE}/ru` } });
+  if (!response.ok) throw new Error(`${response.status} ${url}`);
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.startsWith('image/')) throw new Error(`Not image: ${contentType} ${url}`);
-  const target = `${targetBase}${extFor(url, contentType)}`;
+  const ext = extFor(url, contentType);
+  const target = `${targetBase}${ext}`;
   await writeFile(target, Buffer.from(await response.arrayBuffer()));
-  return path.relative(process.cwd(), target).replaceAll('\\', '/');
+  return target;
+}
+
+function localWebPath(absoluteFile) {
+  const rel = path.relative(ROOT, absoluteFile).replaceAll('\\', '/');
+  if (rel.startsWith('../') || path.isAbsolute(rel)) throw new Error(`Asset escaped project root: ${absoluteFile}`);
+  return `./${rel}`;
 }
 
 async function main() {
@@ -97,8 +87,11 @@ async function main() {
   const catalogs = [`${SITE}/ru/rentals/motorcycles`, `${SITE}/ru/rentals/cars`];
   const catalogHtml = await Promise.all(catalogs.map(url => request(url)));
   let pages = uniq(catalogHtml.flatMap(detailLinks));
-  if (pages.length < 70) pages = uniq([...pages, ...detailLinks(await request(`${SITE}/ru`))]);
-  if (pages.length < 89) throw new Error(`Only ${pages.length} vehicle detail links discovered; refusing incomplete sync.`);
+  if (pages.length < 70) {
+    const home = await request(`${SITE}/ru`);
+    pages = uniq([...pages, ...detailLinks(home)]);
+  }
+  if (pages.length < 70) throw new Error(`Only ${pages.length} vehicle detail links discovered; refusing incomplete sync.`);
 
   const fleet = [];
   const failures = [];
@@ -111,7 +104,7 @@ async function main() {
       const html = await request(sourceUrl);
       const text = strip(html);
       const title = titleFromHtml(html, pageSlug.replaceAll('-', ' '));
-      const type = sourceUrl.includes('/cars/') ? 'car' : (/Scooter|скутер/i.test(text) ? 'scooter' : 'motorcycle');
+      const type = sourceUrl.includes('/cars/') ? 'car' : (/Scooter|Скутер|скутер/i.test(text) ? 'scooter' : 'motorcycle');
       const yearMatch = text.match(/\b(20\d{2})\b/);
       const sourceImages = originalImageUrls(html);
       const vehicleDir = path.join(FLEET_OUT, pageSlug);
@@ -120,7 +113,7 @@ async function main() {
       for (let p = 0; p < sourceImages.length; p++) {
         try {
           const local = await downloadImage(sourceImages[p], path.join(vehicleDir, String(p + 1).padStart(2, '0')));
-          localPhotos.push(`./${local}`);
+          localPhotos.push(localWebPath(local));
           imageCount++;
         } catch (error) {
           failures.push({ sourceUrl, image: sourceImages[p], error: String(error.message || error) });
@@ -129,14 +122,12 @@ async function main() {
       fleet.push({
         id: pageSlug, slug: pageSlug, sourceUrl, type, title,
         year: yearMatch ? Number(yearMatch[1]) : null,
-        engine: specAfter(text, 'Engine'), weight: specAfter(text, 'Weight'),
-        cruiseSpeed: specAfter(text, 'Cruise speed'), fuelUse: specAfter(text, 'Fuel use'), capacity: specAfter(text, 'Capacity'),
-        dailyVnd: vndAfter(text, 'Цена в день'), depositVnd: vndAfter(text, 'Депозит'),
-        weeklyVnd: vndAfter(text, 'Неделя'), monthlyVnd: vndAfter(text, 'Месяц'),
+        engine: specAfter(text, 'Engine'), weight: specAfter(text, 'Weight'), cruiseSpeed: specAfter(text, 'Cruise speed'), fuelUse: specAfter(text, 'Fuel use'), capacity: specAfter(text, 'Capacity'),
+        dailyVnd: vndAfter(text, 'Цена в день'), depositVnd: vndAfter(text, 'Депозит'), weeklyVnd: vndAfter(text, 'Неделя'), monthlyVnd: vndAfter(text, 'Месяц'),
         photos: localPhotos, sourcePhotoCount: sourceImages.length
       });
       process.stdout.write(`\r${i + 1}/${pages.length} ${title} · ${localPhotos.length} photos`);
-      await sleep(40);
+      await sleep(60);
     } catch (error) {
       failures.push({ sourceUrl, error: String(error.message || error) });
     }
@@ -144,10 +135,10 @@ async function main() {
 
   fleet.sort((a,b) => a.type.localeCompare(b.type) || a.title.localeCompare(b.title));
   const generatedAt = new Date().toISOString();
-  const summary = { generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length };
-  await writeFile(path.join(OUT, 'fleet-manifest.js'), `window.UNIQ_FLEET=${JSON.stringify(fleet)};\nwindow.UNIQ_ASSET_SYNC=${JSON.stringify(summary)};\n`, 'utf8');
+  await writeFile(path.join(OUT, 'fleet-manifest.js'), `window.UNIQ_FLEET=${JSON.stringify(fleet)};\nwindow.UNIQ_ASSET_SYNC=${JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length })};\n`, 'utf8');
   await writeFile(path.join(OUT, 'fleet-manifest.json'), JSON.stringify({ generatedAt, fleet }, null, 2), 'utf8');
-  await writeFile(path.join(OUT, 'sync-report.json'), JSON.stringify({ ...summary, failures }, null, 2), 'utf8');
+  await writeFile(path.join(OUT, 'sync-report.json'), JSON.stringify({ generatedAt, vehicleCount: fleet.length, imageCount, failureCount: failures.length, failures }, null, 2), 'utf8');
+
   console.log(`\nSynced ${fleet.length} vehicles and ${imageCount} images; failures: ${failures.length}.`);
   if (fleet.length < 89 || imageCount < 400 || failures.length) throw new Error(`Sync quality gate failed: ${fleet.length} vehicles / ${imageCount} images / ${failures.length} failures.`);
 }
