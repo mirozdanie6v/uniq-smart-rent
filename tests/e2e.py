@@ -16,7 +16,7 @@ def assert_lazy_images(page, selector, limit=6):
         img=images.nth(i)
         img.scroll_into_view_if_needed()
         handle=img.element_handle()
-        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', handle, timeout=5000)
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', arg=handle, timeout=5000)
 
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
@@ -55,7 +55,7 @@ try:
         assert page.locator('.rate-grid').count()==1
         page.locator('.main-photo img').scroll_into_view_if_needed()
         main_handle=page.locator('.main-photo img').element_handle()
-        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',main_handle,timeout=5000)
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',arg=main_handle,timeout=5000)
         page.locator('[data-book]').first.click(); page.wait_for_timeout(50)
         form=page.locator('#bookForm'); assert form.count()==1
         form.locator('input[name="client"]').fill('QA Rider')
