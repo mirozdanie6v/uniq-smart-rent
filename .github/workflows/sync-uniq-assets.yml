@@ -6,7 +6,7 @@ on:
     branches:
       - prototype/local-assets-role-refresh
     paths:
-      - scripts/sync-uniq-assets.mjs
+      - scripts/sync-uniq-assets-v2.mjs
       - .github/workflows/sync-uniq-assets.yml
 
 permissions:
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: '22'
       - name: Download official UNIQ fleet assets
-        run: node scripts/sync-uniq-assets.mjs
+        run: node scripts/sync-uniq-assets-v2.mjs
       - name: Verify generated manifest
         run: |
           test -s assets/fleet-manifest.js
