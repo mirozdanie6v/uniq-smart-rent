@@ -53,7 +53,7 @@ try:
             assert page.locator('text=QA Client').count()>=1
 
             page.locator('[data-role="employee"]').click(); page.wait_for_timeout(100)
-            assert page.locator('text=EMPLOYEE').count()>=1
+            assert page.locator('text=СОТРУДНИК').count()>=1
             page.locator('[data-go="requests"]').last.click(); page.wait_for_timeout(80)
             status=page.locator('[data-status]').first; assert status.count()==1
             status.select_option('confirmed'); page.wait_for_timeout(80)
@@ -70,7 +70,7 @@ try:
             assert page.locator('a[href="https://zalo.me/84372112370"]').count()==1
             assert page.locator('.map-panel iframe').count()==1
             page.locator('[data-role="owner"]').click(); page.wait_for_timeout(100)
-            assert page.locator('text=OWNER').count()>=1
+            assert page.locator('text=ВЛАДЕЛЕЦ').count()>=1
             assert page.locator('.owner-metrics').count()==1
             assert page.locator('text=Качество данных').count()==0
             assert page.locator('[data-go="system"]').count()==0

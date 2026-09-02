@@ -125,7 +125,7 @@
   function employeeDashboard() {
     const open=requests.filter(r=>!['completed','cancelled'].includes(r.status));
     const ready=Object.values(fleetState).filter(x=>x==='ready').length;
-    return hero('EMPLOYEE','Рабочий стол сотрудника.','Заявки, парк и выдачи в одном мобильном интерфейсе.')+
+    return hero('СОТРУДНИК','Рабочий стол сотрудника.','Заявки, парк и выдачи в одном мобильном интерфейсе.')+
       `<section class="metrics">${metric('Открытые заявки',open.length)}${metric('Парк',fleet.length)}${metric('Готовы к выдаче',ready)}</section>`+
       `<section class="section"><div class="section-head"><div><span class="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button class="text" data-go="requests">Все →</button></div>${open.length?`<div class="request-list">${open.slice(-5).reverse().map(requestCard).join('')}</div>`:`<div class="empty">Новых заявок нет</div>`}</section>`;
   }
@@ -144,7 +144,7 @@
     const confirmed=requests.filter(r=>['confirmed','issued','active','returned','completed'].includes(r.status)).length;
     const open=requests.filter(r=>!['completed','cancelled'].includes(r.status)).length;
     const estimate=requests.filter(r=>r.status!=='cancelled').reduce((s,r)=>s+(r.estimate||0),0);
-    return hero('OWNER','Пульс бизнеса — со смартфона.','Ключевые показатели по парку и заявкам в одном экране.')+
+    return hero('ВЛАДЕЛЕЦ','Пульс бизнеса — со смартфона.','Ключевые показатели по парку и заявкам в одном экране.')+
       `<section class="metrics owner-metrics">${metric('Парк',fleet.length,'единиц техники')}${metric('Открытые заявки',open)}${metric('Подтверждены',confirmed)}${metric('Потенциал заявок',money(estimate),'по текущим тарифам')}</section>`+
       `<section class="panel"><span class="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2>${statusBreakdown()}</section>`;
   }
@@ -179,8 +179,8 @@
 
   function openBooking(id) {
     const v=fleet.find(x=>x.id===id); if(!v)return;
-    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">BOOKING DEMO</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${dateISO(fromDefault)}" required></label><label>Возврат<input name="to" type="date" value="${dateISO(toDefault)}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Создать демо-заявку</button></form><small>Демо-заявка хранится только в текущем сеансе и сразу становится видна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString()};requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
+    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">БРОНИРОВАНИЕ</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${dateISO(fromDefault)}" required></label><label>Возврат<input name="to" type="date" value="${dateISO(toDefault)}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Отправить заявку</button></form><small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString()};requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
   }
 
-  if (!fleet.length) root.innerHTML='<div class="fatal"><b>Каталог ещё не синхронизирован.</b><span>Ожидается локальный assets/fleet-manifest.js.</span></div>'; else render();
+  if (!fleet.length) root.innerHTML='<div class="fatal"><b>Каталог временно недоступен.</b><span>Обновите страницу или свяжитесь с менеджером UNIQ.</span></div>'; else render();
 })();

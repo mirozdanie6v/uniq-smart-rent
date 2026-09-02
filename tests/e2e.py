@@ -64,7 +64,7 @@ try:
         assert page.locator('text=QA Rider').count()>=1
 
         page.locator('[data-role="employee"]').click(); page.wait_for_timeout(80)
-        assert page.locator('text=EMPLOYEE').count()>=1
+        assert page.locator('text=СОТРУДНИК').count()>=1
         page.locator('[data-go="requests"]').last.click(); page.wait_for_timeout(80)
         status=page.locator('[data-status]').first; assert status.count()==1
         status.select_option('confirmed'); page.wait_for_timeout(80)
