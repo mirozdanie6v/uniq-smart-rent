@@ -61,17 +61,23 @@ try:
             page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(100)
             fleet_state=page.locator('[data-fleet-state]').first; assert fleet_state.count()==1
             fleet_state.select_option('ready'); page.wait_for_timeout(80)
-            assert page.locator('text=Готов к выдаче · DEMO').count()>=1
+            assert page.locator('text=Готов к выдаче').count()>=1
 
+            image_hosts.clear()
+            page.locator('[data-role="client"]').click(); page.wait_for_timeout(80)
+            page.locator('[data-go="contacts"]').last.click(); page.wait_for_timeout(120)
+            assert page.locator('a[href="https://t.me/RikRent1"]').count()==1
+            assert page.locator('a[href="https://zalo.me/84372112370"]').count()==1
+            assert page.locator('.map-panel iframe').count()==1
             page.locator('[data-role="owner"]').click(); page.wait_for_timeout(100)
             assert page.locator('text=OWNER').count()>=1
             assert page.locator('.owner-metrics').count()==1
-            page.locator('[data-go="system"]').last.click(); page.wait_for_timeout(80)
-            assert page.locator('text=Cloudflare Worker').count()==1
+            assert page.locator('text=Качество данных').count()==0
+            assert page.locator('[data-go="system"]').count()==0
             assert not errors, errors
             external_images=[u for u in image_hosts if not u.startswith('http://127.0.0.1:8766/')]
             assert not external_images, external_images
-            results.append({'viewport':f'{width}x{height}','cards':89,'logo':'local','fleet_images':'local','client_booking':'ok','employee_request_status':'ok','employee_fleet_status':'ok','owner_dashboard':'ok','owner_system':'ok','console_errors':errors})
+            results.append({'viewport':f'{width}x{height}','cards':89,'logo':'local','fleet_images':'local','client_booking':'ok','employee_request_status':'ok','employee_fleet_status':'ok','owner_dashboard':'ok','contacts':'ok','owner_clean':'ok','console_errors':errors})
             ctx.close()
         browser.close()
 finally:

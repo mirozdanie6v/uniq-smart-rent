@@ -56,9 +56,11 @@ try:
         page.wait_for_timeout(200)
         snap(page, '07-owner-overview.png')
 
-        page.locator('[data-go="system"]').last.click()
+        page.locator('[data-role="client"]').click()
         page.wait_for_timeout(200)
-        snap(page, '08-owner-system.png')
+        page.locator('[data-go="contacts"]').last.click()
+        page.wait_for_timeout(500)
+        snap(page, '08-client-contacts.png')
 
         ctx.close()
         browser.close()

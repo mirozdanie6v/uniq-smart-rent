@@ -37,8 +37,9 @@ for(const marker of ['./assets/fleet-manifest.js','./app-v2.js','./styles.css'])
 for(const marker of [
   "client: [['home','Главная']","employee: [['dashboard','Рабочий стол']","owner: [['overview','Обзор']",
   'function clientHome()','function catalog()','function vehicleDetail()','function requestsPage()','function contacts()',
+  'https://t.me/RikRent1','https://zalo.me/84372112370','output=embed',
   'function employeeDashboard()','function employeeFleet()','function handover()',
-  'function ownerOverview()','function ownerFleet()','function systemPage()','function openBooking(id)',
+  'function ownerOverview()','function ownerFleet()','function openBooking(id)',
   "sessionStorage.getItem('uniq-role-v2')",'[data-status]','[data-fleet-state]'
 ]) if(!app.includes(marker)) fail(`Candidate marker missing: ${marker}`);
 if(app.includes('localStorage')) fail('Candidate app must keep demo operations session-scoped');
@@ -48,4 +49,4 @@ if(!build.includes("access(path.join(root, 'assets'))")||!build.includes("access
 for(const rel of ['dist/index.html','dist/app-v2.js','dist/brand/uniq-logo.svg','dist/assets/fleet-manifest.js']) await access(path.join(root,rel));
 const sample=fleet.find(v=>v.photos?.length)?.photos?.[0];
 if(sample) await access(path.join(root,'dist',sample.replace(/^\.\//,'')));
-console.log(JSON.stringify({vehicles:fleet.length,types:counts,photos:checkedPhotos,syncFailures:report.failureCount,roles:['client','employee','owner'],clientPages:['home','catalog','vehicle','requests','contacts'],employeePages:['dashboard','requests','fleet','handover'],ownerPages:['overview','requests','fleet','system'],syntax:'ok',dist:'ok',localAssets:'ok',palette:'ok',storage:'session'},null,2));
+console.log(JSON.stringify({vehicles:fleet.length,types:counts,photos:checkedPhotos,syncFailures:report.failureCount,roles:['client','employee','owner'],clientPages:['home','catalog','vehicle','requests','contacts'],employeePages:['dashboard','requests','fleet','handover'],ownerPages:['overview','requests','fleet'],syntax:'ok',dist:'ok',localAssets:'ok',palette:'ok',storage:'session'},null,2));

@@ -72,19 +72,21 @@ try:
         page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
         fleet_state=page.locator('[data-fleet-state]').first; assert fleet_state.count()==1
         fleet_state.select_option('ready'); page.wait_for_timeout(80)
-        assert page.locator('text=Готов к выдаче · DEMO').count()>=1
+        assert page.locator('text=Готов к выдаче').count()>=1
         page.locator('[data-go="handover"]').last.click(); page.wait_for_timeout(80)
         assert page.locator('text=QA Rider').count()>=1
 
+        page.locator('[data-role="client"]').click(); page.wait_for_timeout(80)
+        page.locator('[data-go="contacts"]').last.click(); page.wait_for_timeout(120)
+        assert page.locator('a[href="https://t.me/RikRent1"]').count()==1
+        assert page.locator('a[href="https://zalo.me/84372112370"]').count()==1
+        assert page.locator('.map-panel iframe').count()==1
         page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
-        assert page.locator('text=Качество данных').count()>=1
-        page.locator('[data-go="system"]').last.click(); page.wait_for_timeout(80)
-        assert page.locator('text=Cloudflare Worker').count()>=1
-        assert page.locator('text=D1 schema').count()>=1
-        assert page.locator('text=Telegram WebApp').count()>=1
+        assert page.locator('text=Качество данных').count()==0
+        assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
-        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","owner_system":"ok","console_errors":errors})
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
