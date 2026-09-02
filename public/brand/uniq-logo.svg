@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 104" role="img" aria-labelledby="t d">
+  <title id="t">UNIQ Nha Trang Rent Bike</title>
+  <desc id="d">Локальная версия типографического логотипа, используемого в шапке uniqmoto.com.</desc>
+  <rect width="390" height="104" rx="16" fill="none"/>
+  <g fill="#f5f8f6" font-family="Arial,Helvetica,sans-serif">
+    <text x="4" y="62" font-size="58" font-weight="900" letter-spacing="-5">UNIQ</text>
+    <circle cx="168" cy="33" r="7" fill="#20e38f"/>
+    <text x="192" y="38" font-size="20" font-weight="800" letter-spacing="2">NHA TRANG</text>
+    <text x="192" y="63" font-size="14" font-weight="700" letter-spacing="4" fill="#9aa7a1">RENT BIKE</text>
+  </g>
+</svg>
