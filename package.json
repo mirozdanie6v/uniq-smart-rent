@@ -9,7 +9,7 @@
     "clean": "node scripts/clean.mjs",
     "lint": "node scripts/lint.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "vite build",
+    "build": "tsc -p tsconfig.json && vite build",
     "test": "node --test tests/domain.test.mjs",
     "test:e2e": "python tests/e2e.py",
     "check": "npm run lint && npm run typecheck && npm run build && npm test",
