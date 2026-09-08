@@ -46,3 +46,15 @@ test('stage 2 migration contains required operational and finance tables',async(
   assert.match(sql,/integration-sbp/);
   assert.match(sql,/integration-yookassa/);
 });
+
+
+test('stage 3 owner fleet management contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0004_owner_fleet_management.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/ownerFleetWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');
+  assert.ok(migration.includes('owner_managed'));
+  assert.ok(worker.includes('/api/fleet-overrides'));
+  assert.ok(worker.includes('owner_saved'));
+  assert.ok(ui.includes('Добавить технику'));
+  assert.ok(ui.includes('data-owner-save'));
+});

@@ -1,29 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { OwnerFleetManager } from '../fleet/OwnerFleetManager';
+import { fetchFleetOverrides } from '../../api/ownerFleet';
+import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
 type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'handover';
 type OwnerRoute = 'overview' | 'requests' | 'fleet';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
-type VehicleType = 'car' | 'scooter' | 'motorcycle';
-type FleetState = 'manager' | 'ready' | 'service' | 'hold';
 type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
-
-interface FleetVehicle {
-  id: string;
-  title: string;
-  type: VehicleType;
-  year?: number | string;
-  engine?: string;
-  weight?: string;
-  cruiseSpeed?: string;
-  dailyVnd?: number;
-  weeklyVnd?: number;
-  monthlyVnd?: number;
-  depositVnd?: number;
-  photos?: string[];
-  sourceUrl?: string;
-}
 
 interface RentalRequest {
   id: string;
@@ -176,7 +161,8 @@ function ScrollTop() {
 }
 
 export function PrototypeApp() {
-  const fleet = useMemo(() => Array.isArray(window.UNIQ_FLEET) ? window.UNIQ_FLEET : [], []);
+  const baseFleet = useMemo<FleetVehicle[]>(() => (Array.isArray(window.UNIQ_FLEET) ? window.UNIQ_FLEET : []).map(normalizeBaseVehicle), []);
+  const [fleet, setFleet] = useState<FleetVehicle[]>(baseFleet);
   const initialRole = (() => {
     try {
       const saved = sessionStorage.getItem(roleKey) as Role | null;
@@ -195,10 +181,15 @@ export function PrototypeApp() {
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
 
   useEffect(() => { window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.(); }, []);
+  useEffect(() => {
+    let active = true;
+    fetchFleetOverrides().then((overrides) => { if (active) setFleet(mergeFleetOverrides(baseFleet, overrides)); });
+    return () => { active = false; };
+  }, [baseFleet]);
   useEffect(() => { persistSession(requestKey, requests); }, [requests]);
   useEffect(() => { persistSession(fleetStateKey, fleetStates); }, [fleetStates]);
 
-  const effectiveFleetState = (id: string): FleetState => fleetStates[id] ?? 'manager';
+  const effectiveFleetState = (id: string): FleetState => fleetStates[id] ?? fleet.find((vehicle) => vehicle.id === id)?.status ?? 'manager';
   const go = (next: Route) => { setRoute(next); setSelectedId(null); setMainPhotoIndex(0); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const switchRole = (next: Role) => {
     setRole(next);
@@ -211,7 +202,9 @@ export function PrototypeApp() {
 
   if (!fleet.length) return <div className="fatal"><b>Каталог временно недоступен.</b><span>Обновите страницу или свяжитесь с менеджером UNIQ.</span></div>;
 
-  const filteredFleet = fleet.filter((vehicle) => {
+  const clientFleet = selectPublicFleet(fleet);
+  const operationalFleet = activeOperationalFleet(fleet);
+  const filteredFleet = clientFleet.filter((vehicle) => {
     const q = query.toLowerCase().trim();
     return (type === 'all' || vehicle.type === type) && (!q || `${vehicle.title} ${vehicle.engine ?? ''} ${vehicle.year ?? ''}`.toLowerCase().includes(q));
   });
@@ -233,10 +226,10 @@ export function PrototypeApp() {
   }
 
   function clientHome() {
-    const featured = fleet.filter((vehicle) => (vehicle.photos?.length ?? 0) > 0).slice(0, 6);
+    const featured = clientFleet.filter((vehicle) => (vehicle.photos?.length ?? 0) > 0).slice(0, 6);
     return <>
       <Hero label="UNIQ SMART RENT · NHA TRANG" title="Весь парк UNIQ — прямо в Telegram." text="Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App." aside={
-        <div className="hero-card"><b>{fleet.length}</b><span>единиц техники</span><div className="hero-office-maps">
+        <div className="hero-card"><b>{clientFleet.length}</b><span>единиц техники</span><div className="hero-office-maps">
           <a className="hero-office-map" href="https://maps.app.goo.gl/qr3FNiVVxAdThVBV6" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 312 Đ. 2/4 — открыть в Google Maps"><iframe title="UNIQ Moto — 312 Đ. 2/4" src="https://www.google.com/maps?q=UNIQ%20Moto%20312%20%C4%90.%202%2F4%20Nha%20Trang&output=embed" loading="lazy" tabIndex={-1}></iframe><span><b>312 Đ. 2/4</b><small>Северный филиал · Google Maps ↗</small></span></a>
           <a className="hero-office-map" href="https://maps.app.goo.gl/sJdMndLRPz9b228J7" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 254 Nguyễn Thị Minh Khai — открыть в Google Maps"><iframe title="UNIQ Moto — 254 Nguyễn Thị Minh Khai" src="https://www.google.com/maps?q=UNIQ%20Moto%20254%20Nguyen%20Thi%20Minh%20Khai%20Nha%20Trang&output=embed" loading="lazy" tabIndex={-1}></iframe><span><b>254 Nguyễn Thị Minh Khai</b><small>Центр города · Google Maps ↗</small></span></a>
         </div></div>} />
@@ -249,7 +242,7 @@ export function PrototypeApp() {
   function catalogPage() {
     return <>
       <Hero label="КАТАЛОГ UNIQ" title="Выберите технику." text="Все позиции из публичного парка клиента с реальными фотографиями и опубликованной дневной ставкой." />
-      <section className="filters"><input id="fleetSearch" placeholder="Поиск: Yamaha, Rebel, 50cc…" value={query} onChange={(event) => setQuery(event.target.value)}/><select id="typeFilter" value={type} onChange={(event) => setType(event.target.value as 'all' | VehicleType)}><option value="all">Вся техника</option><option value="motorcycle">Мотоциклы</option><option value="scooter">Скутеры</option><option value="car">Авто</option></select><span>{filteredFleet.length} из {fleet.length}</span></section>
+      <section className="filters"><input id="fleetSearch" placeholder="Поиск: Yamaha, Rebel, 50cc…" value={query} onChange={(event) => setQuery(event.target.value)}/><select id="typeFilter" value={type} onChange={(event) => setType(event.target.value as 'all' | VehicleType)}><option value="all">Вся техника</option><option value="motorcycle">Мотоциклы</option><option value="scooter">Скутеры</option><option value="car">Авто</option></select><span>{filteredFleet.length} из {clientFleet.length}</span></section>
       <section className="grid catalog-grid">{filteredFleet.map((vehicle) => <VehicleCard key={vehicle.id} vehicle={vehicle} fleetState={effectiveFleetState(vehicle.id)} onOpen={() => { setSelectedId(vehicle.id); setMainPhotoIndex(0); }} onBook={() => setBookingVehicleId(vehicle.id)}/>)}</section>
     </>;
   }
@@ -283,11 +276,11 @@ export function PrototypeApp() {
   function employeeDashboard() {
     const open = requests.filter((item) => !['completed','cancelled'].includes(item.status));
     const ready = Object.values(fleetStates).filter((item) => item === 'ready').length;
-    return <><Hero label="СОТРУДНИК" title="Рабочий стол сотрудника." text="Заявки, парк и выдачи в одном мобильном интерфейсе."/><section className="metrics"><Metric label="Открытые заявки" value={open.length}/><Metric label="Парк" value={fleet.length}/><Metric label="Готовы к выдаче" value={ready}/></section><section className="section"><div className="section-head"><div><span className="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button className="text" data-go="requests" onClick={() => go('requests')}>Все →</button></div>{open.length ? <div className="request-list">{open.slice(-5).reverse().map(requestCard)}</div> : <div className="empty">Новых заявок нет</div>}</section></>;
+    return <><Hero label="СОТРУДНИК" title="Рабочий стол сотрудника." text="Заявки, парк и выдачи в одном мобильном интерфейсе."/><section className="metrics"><Metric label="Открытые заявки" value={open.length}/><Metric label="Парк" value={operationalFleet.length}/><Metric label="Готовы к выдаче" value={ready}/></section><section className="section"><div className="section-head"><div><span className="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button className="text" data-go="requests" onClick={() => go('requests')}>Все →</button></div>{open.length ? <div className="request-list">{open.slice(-5).reverse().map(requestCard)}</div> : <div className="empty">Новых заявок нет</div>}</section></>;
   }
 
   function employeeFleet() {
-    return <><Hero label="ПАРК СОТРУДНИКА" title="Парк техники." text="Сотрудник видит весь каталог. Сотрудник видит весь парк и может быстро обновлять рабочий статус техники."/><section className="fleet-table">{fleet.map((vehicle) => <article key={vehicle.id}><div className="mini-photo"><VehiclePhoto vehicle={vehicle}/></div><div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? ''}</small></div><select data-fleet-state={vehicle.id} value={effectiveFleetState(vehicle.id)} onChange={(event) => setFleetStates((current) => ({ ...current, [vehicle.id]: event.target.value as FleetState }))}><option value="manager">Подтверждает менеджер</option><option value="ready">Готов к выдаче</option><option value="service">В сервисе</option><option value="hold">Резерв</option></select></article>)}</section></>;
+    return <><Hero label="ПАРК СОТРУДНИКА" title="Парк техники." text="Сотрудник видит весь каталог. Сотрудник видит весь парк и может быстро обновлять рабочий статус техники."/><section className="fleet-table">{operationalFleet.map((vehicle) => <article key={vehicle.id}><div className="mini-photo"><VehiclePhoto vehicle={vehicle}/></div><div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? ''}</small></div><select data-fleet-state={vehicle.id} value={effectiveFleetState(vehicle.id)} onChange={(event) => setFleetStates((current) => ({ ...current, [vehicle.id]: event.target.value as FleetState }))}><option value="manager">Подтверждает менеджер</option><option value="ready">Готов к выдаче</option><option value="service">В сервисе</option><option value="hold">Резерв</option></select></article>)}</section></>;
   }
 
   function handoverPage() {
@@ -304,9 +297,7 @@ export function PrototypeApp() {
   }
 
   function ownerFleet() {
-    const counts: Record<FleetState, number> = { manager:0, ready:0, service:0, hold:0 };
-    fleet.forEach((vehicle) => { counts[effectiveFleetState(vehicle.id)] += 1; });
-    return <><Hero label="ПАРК ВЛАДЕЛЬЦА" title="Парк и состояние." text="Сводка по состоянию парка и готовности техники к выдаче."/><section className="metrics"><Metric label="Всего" value={fleet.length}/><Metric label="Менеджер" value={counts.manager}/><Metric label="Готовы к выдаче" value={counts.ready}/><Metric label="В сервисе" value={counts.service}/></section><section className="grid">{fleet.slice(0,18).map((vehicle) => <VehicleCard key={vehicle.id} vehicle={vehicle} fleetState={effectiveFleetState(vehicle.id)} onOpen={() => { setSelectedId(vehicle.id); setMainPhotoIndex(0); }} onBook={() => setBookingVehicleId(vehicle.id)}/>)}</section><div className="proof">Владелец видит общий срез по парку и текущим статусам техники.</div></>;
+    return <OwnerFleetManager fleet={fleet} baseFleet={baseFleet} fleetStates={fleetStates} setFleet={setFleet} setFleetStates={setFleetStates}/>;
   }
 
   let content: React.ReactNode;

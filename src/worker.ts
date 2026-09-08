@@ -4,12 +4,14 @@ import { calculateRentalTotal, isValidDateRange } from './domain/booking.js';
 import type { BookingStatus } from './domain/types.js';
 import { ensureDatabase } from './db/bootstrap.js';
 import type { D1DatabaseLike } from './db/bootstrap.js';
+import { handleFleetManagementRequest } from './api/ownerFleetWorker.js';
 
 interface AssetBinding { fetch(request: Request): Promise<Response>; }
 interface Env {
   ASSETS: AssetBinding;
   DB?: D1DatabaseLike;
   STAFF_API_KEY?: string;
+  DEMO_MODE?: string;
 }
 
 const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response => new Response(JSON.stringify(data), {
@@ -17,7 +19,7 @@ const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response 
   headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers }
 });
 
-const corsHeaders = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type,x-uniq-admin-key', 'access-control-allow-methods': 'GET,POST,PATCH,OPTIONS' };
+const corsHeaders = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type,x-uniq-admin-key,x-uniq-demo-role', 'access-control-allow-methods': 'GET,POST,PATCH,DELETE,OPTIONS' };
 const blockingStatuses: BookingStatus[] = ['confirmed','vehicle_issued','active','return_due'];
 const allowedStatuses: BookingStatus[] = ['draft','new','contacted','awaiting_confirmation','confirmed','cancelled','vehicle_issued','active','return_due','returned','completed'];
 
@@ -123,12 +125,14 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 2 : null, verifiedCatalog: vehicles.length }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 4 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'GET') return listBookings(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'POST') return createBooking(request, env);
+    const fleetManagementResponse = await handleFleetManagementRequest(request, env, url);
+    if (fleetManagementResponse) return fleetManagementResponse;
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);
