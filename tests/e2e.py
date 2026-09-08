@@ -93,6 +93,7 @@ try:
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
         page=ctx.new_page(); errors=[]
         page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}'))
+        page.route('**/api/bookings',lambda route: route.fulfill(status=200,content_type='application/json',body='{}') if route.request.method=='POST' else route.continue_())
         page.on('console',lambda msg: capture_console_error(errors,msg))
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
