@@ -28,14 +28,14 @@ type Customer = {
   country: string;
   language: 'RU' | 'VI' | 'EN' | 'KO' | 'ZH';
   phone: string;
-  telegram?: string;
-  zalo?: string;
+  telegram?: string | undefined;
+  zalo?: string | undefined;
   preferredChannel: 'Telegram' | 'Zalo' | 'WhatsApp' | 'Телефон';
   segment: CrmSegment;
   tags: string[];
   note: string;
   firstContact: string;
-  lastRental?: string;
+  lastRental?: string | undefined;
   rentalCount: number;
   lifetimeValueVnd: number;
   preferredVehicle: string;

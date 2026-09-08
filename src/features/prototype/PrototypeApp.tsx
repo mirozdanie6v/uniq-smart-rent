@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { OwnerFleetManager } from '../fleet/OwnerFleetManager';
 import { OwnerBookingCalendar } from '../bookings/OwnerBookingCalendar';
 import { PaymentCheckout } from '../payments/PaymentCheckout';
+import { OwnerCRM } from '../crm/OwnerCRM';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
 import { createPersistedBooking, PaymentProvider } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
@@ -9,7 +10,7 @@ import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
 type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'handover';
-type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar';
+type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
 type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
 
@@ -40,7 +41,7 @@ const roleLabels: Record<Role, string> = { client: 'Клиент', employee: 'С
 const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   client: [['home','Главная'],['catalog','Каталог'],['requests','MY UNIQ'],['contacts','Контакты']],
   employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['handover','Выдачи']],
-  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь']],
+  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты']],
 };
 
 const requestKey = 'uniq-demo-requests-v2';
@@ -87,7 +88,7 @@ const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
 const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
 const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
-const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';
+const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
@@ -365,11 +366,15 @@ export function PrototypeApp() {
     return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;
   }
 
+  function ownerCustomers() {
+    return <OwnerCRM requests={requests} fleet={fleet}/>;
+  }
+
   let content: React.ReactNode;
   if (selectedVehicle) content = vehicleDetailPage(selectedVehicle);
   else if (role === 'client') content = route === 'catalog' ? catalogPage() : route === 'requests' ? requestsPage() : route === 'contacts' ? contactsPage() : clientHome();
   else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'handover' ? handoverPage() : employeeDashboard();
-  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : ownerOverview();
+  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : ownerOverview();
 
   return <>
     <div className="shell">
