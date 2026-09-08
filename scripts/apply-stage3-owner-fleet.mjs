@@ -75,9 +75,9 @@ fs.writeFileSync(workerPath, worker);
 const testPath = 'tests/domain.test.mjs';
 let tests = fs.readFileSync(testPath, 'utf8');
 if (!tests.includes('stage 3 owner fleet management contracts are present')) {
-  tests += `\n\ntest('stage 3 owner fleet management contracts are present',()=>{\n  const migration=readFileSync(new URL('../migrations/0004_owner_fleet_management.sql',import.meta.url),'utf8');\n  const worker=readFileSync(new URL('../src/api/ownerFleetWorker.ts',import.meta.url),'utf8');\n  const ui=readFileSync(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');\n  assert.match(migration,/owner_managed/);\n  assert.match(worker,/\/api\/fleet-overrides/);\n  assert.match(worker,/owner_saved/);\n  assert.match(ui,/Добавить технику/);\n  assert.match(ui,/data-owner-save/);\n});\n`;
+  tests += `\n\ntest('stage 3 owner fleet management contracts are present',async()=>{\n  const migration=await readFile(new URL('../migrations/0004_owner_fleet_management.sql',import.meta.url),'utf8');\n  const worker=await readFile(new URL('../src/api/ownerFleetWorker.ts',import.meta.url),'utf8');\n  const ui=await readFile(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');\n  assert.ok(migration.includes('owner_managed'));\n  assert.ok(worker.includes('/api/fleet-overrides'));\n  assert.ok(worker.includes('owner_saved'));\n  assert.ok(ui.includes('Добавить технику'));\n  assert.ok(ui.includes('data-owner-save'));\n});\n`;
 }
 fs.writeFileSync(testPath, tests);
 
 console.log('Stage 3 owner fleet patches applied');
-// trigger: 2026-09-08T21:21+07:00
+// trigger: 2026-09-08T21:27+07:00
