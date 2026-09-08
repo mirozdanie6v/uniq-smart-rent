@@ -23,6 +23,17 @@ def assert_lazy_images(page, selector, limit=6):
         handle=img.element_handle()
         page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', arg=handle, timeout=5000)
 
+def capture_console_error(errors, msg):
+    if msg.type != 'error':
+        return
+    text=msg.text
+    google_maps_noise=(
+        'maps.googleapis.com' in text or
+        ('Failed to load resource: net::ERR_FAILED' in text and 'google' in msg.location.get('url',''))
+    )
+    if not google_maps_noise:
+        errors.append(text)
+
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
 try:
@@ -35,7 +46,7 @@ try:
         for w,h in [(320,568),(375,667),(390,844),(430,932),(768,1024),(1024,1366),(1440,900),(1920,1080)]:
             ctx=browser.new_context(viewport={"width":w,"height":h},locale='ru-RU')
             page=ctx.new_page(); errors=[]
-            page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
+            page.on('console',lambda msg: capture_console_error(errors,msg))
             page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
             assert page.locator('#root .shell').count()==1
             assert page.locator('.brand img').count()==1
@@ -73,7 +84,7 @@ try:
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
         page=ctx.new_page(); errors=[]
-        page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
+        page.on('console',lambda msg: capture_console_error(errors,msg))
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
         page.locator('.vehicle-card').first.scroll_into_view_if_needed(); page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
