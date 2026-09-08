@@ -70,26 +70,25 @@ export async function saveOwnerVehicle(vehicle: ManagedFleetVehicle): Promise<Ma
 
 export async function archiveOwnerVehicle(id: string, archived: boolean): Promise<ManagedFleetVehicle | null> {
   const fallback = loadFallback().find((item) => item.id === id);
-  if (fallback) {
-    upsertFallback({
-      ...fallback,
-      archivedAt: archived ? new Date().toISOString() : null,
-      published: archived ? false : (fallback.published ?? true),
-      ownerManaged: true,
-    });
-  }
+  const localVehicle = fallback ? {
+    ...fallback,
+    archivedAt: archived ? new Date().toISOString() : null,
+    published: archived ? false : (fallback.published ?? true),
+    ownerManaged: true,
+  } satisfies ManagedFleetVehicle : null;
+  if (localVehicle) upsertFallback(localVehicle);
   try {
     const response = await fetch(`/api/owner/fleet/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json', 'x-uniq-demo-role': 'owner' },
       body: JSON.stringify({ action: archived ? 'archive' : 'restore' }),
     });
-    if (!response.ok) return fallback ?? null;
+    if (!response.ok) return localVehicle;
     const data = await response.json() as { vehicle?: ManagedFleetVehicle };
     if (data.vehicle) upsertFallback(data.vehicle);
-    return data.vehicle ?? fallback ?? null;
+    return data.vehicle ?? localVehicle;
   } catch {
-    return fallback ?? null;
+    return localVehicle;
   }
 }
 
