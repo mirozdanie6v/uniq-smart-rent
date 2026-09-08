@@ -24,15 +24,8 @@ jobs:
           from pathlib import Path
           p=Path('tests/e2e.py')
           s=p.read_text()
-          old="""        page=ctx.new_page(); errors=[]
-        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))
-        page.on('console',lambda msg: capture_console_error(errors,msg))
-"""
-          new="""        page=ctx.new_page(); errors=[]
-        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))
-        page.route('**/api/bookings',lambda route: route.fulfill(status=200,content_type='application/json',body='{}') if route.request.method=='POST' else route.continue_())
-        page.on('console',lambda msg: capture_console_error(errors,msg))
-"""
+          old="        page=ctx.new_page(); errors=[]\n        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))\n        page.on('console',lambda msg: capture_console_error(errors,msg))\n"
+          new="        page=ctx.new_page(); errors=[]\n        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))\n        page.route('**/api/bookings',lambda route: route.fulfill(status=200,content_type='application/json',body='{}') if route.request.method=='POST' else route.continue_())\n        page.on('console',lambda msg: capture_console_error(errors,msg))\n"
           if old not in s:
               raise SystemExit('legacy scenario patch target missing')
           p.write_text(s.replace(old,new,1))
