@@ -27,6 +27,18 @@ jobs:
           npm install --save-dev @types/qrcode
       - name: Apply Stage 5 integration patches
         run: node scripts/apply-stage5-payments.mjs
+      - name: Align Cloudflare Env typing for payment adapters
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('src/worker.ts')
+          s=p.read_text()
+          old="  DEMO_MODE?: string;\n}"
+          new="  DEMO_MODE?: string;\n  [key: string]: unknown;\n}"
+          if old not in s:
+              raise SystemExit('Env patch target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
       - run: npm run check
       - name: Commit generated Stage 5 integration
         run: |
