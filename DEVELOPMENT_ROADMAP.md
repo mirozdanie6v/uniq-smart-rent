@@ -99,21 +99,26 @@ Delivered and verified:
 - Stage 9 browser acceptance verified on mobile 390×844 and desktop 1440×900, including Ready for handover → payment and seven payment logos;
 - production schemaVersion 9, serviceManagement/serviceInspections/serviceExpenses health flags and D1 service records verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 10 — Marketing
+### ✅ Stage 10 — Marketing
 Promotions, promo codes, mailings.
 
-Acceptance target:
-- owner has a Marketing section with promotions and campaigns;
-- promotions support percent/fixed discounts, code, audience segment, vehicle kind, branches and usage limit;
-- campaigns use CRM segments: all, new, repeat, VIP and inactive;
-- channels: Telegram, Zalo, Email and SMS as DEMO integrations;
-- DEMO send updates recipients, opens, clicks, conversions and attributed revenue;
-- D1 stores promotions, campaigns and marketing events;
-- mobile request cards keep label/value spacing and never render glued payment text;
-- owner navigation with nine sections remains usable without horizontal page overflow;
-- browser acceptance passes on mobile and desktop before deployment.
+Delivered and verified:
+- fixed glued payment label/value rendering in request cards with flex layout, gap and mobile wrapping;
+- owner Marketing section with promotions, promo codes and campaigns;
+- percent and fixed-VND discounts;
+- audience targeting by CRM segment: all, new, repeat, VIP and inactive;
+- optional vehicle-kind and branch targeting plus usage limits;
+- campaign channels Telegram, Zalo, Email and SMS as DEMO integrations;
+- DEMO campaign delivery updates recipients, opens, clicks, conversions and attributed revenue;
+- D1 marketing_campaigns and marketing_campaign_events plus promotion targeting fields;
+- seeded demonstration campaigns and promotions for presentation;
+- owner navigation expanded to nine sections with mobile-safe layout;
+- D1 migration 0010_stage10_marketing.sql applied successfully;
+- unit/domain tests verified 16/16;
+- Stage 10 browser acceptance verified on mobile 390×844 and desktop 1440×900, including payment-text spacing and no horizontal overflow;
+- production schemaVersion 10, marketingCampaigns/promotionsMarketing/marketingSegments health flags and D1 marketing API verified on uniq-smart-rent.viiversion.com.
 
-### ⏳ Stage 11 — Analytics
+### 🚧 Stage 11 — Analytics
 Dashboard, charts, funnel, sources, vehicle profitability.
 
 ### ⏳ Stage 12 — AI Owner
