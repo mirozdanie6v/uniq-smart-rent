@@ -22,12 +22,45 @@ jobs:
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SAVED_CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+      SAVED_CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
     steps:
       - name: Require UNIQ Cloudflare credentials
         shell: bash
         run: |
           test -n "$CLOUDFLARE_API_TOKEN"
           test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Resolve viiversion.com zone
+        shell: bash
+        run: |
+          if [ -n "$SAVED_CLOUDFLARE_ZONE_ID" ]; then
+            echo "PET_NIKA_ZONE_ID=$SAVED_CLOUDFLARE_ZONE_ID" >> "$GITHUB_ENV"
+            echo "Using saved CLOUDFLARE_ZONE_ID."
+            exit 0
+          fi
+          if [ -n "$SAVED_CF_ZONE_ID" ]; then
+            echo "PET_NIKA_ZONE_ID=$SAVED_CF_ZONE_ID" >> "$GITHUB_ENV"
+            echo "Using saved CF_ZONE_ID."
+            exit 0
+          fi
+
+          response="$(curl -fsS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" "https://api.cloudflare.com/client/v4/zones?name=viiversion.com&account.id=$CLOUDFLARE_ACCOUNT_ID")"
+          RESPONSE="$response" node <<'NODE'
+          const data = JSON.parse(process.env.RESPONSE || '{}');
+          if (!data.success) {
+            const errors = (data.errors || []).map(e => `${e.code ?? 'unknown'}: ${e.message ?? 'Cloudflare API error'}`).join('; ');
+            console.error(`Cloudflare zone lookup failed: ${errors || 'unknown error'}`);
+            process.exit(1);
+          }
+          const zone = Array.isArray(data.result) ? data.result.find(z => z.name === 'viiversion.com') : null;
+          if (!zone?.id) {
+            console.error('Cloudflare token/account cannot see zone viiversion.com.');
+            process.exit(2);
+          }
+          require('fs').appendFileSync(process.env.GITHUB_ENV, `PET_NIKA_ZONE_ID=${zone.id}\n`);
+          console.log('Resolved viiversion.com zone successfully.');
+          NODE
 
       - name: Checkout PET NIKA
         uses: actions/checkout@v4
@@ -38,6 +71,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Pin PET NIKA route to resolved zone
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = 'wrangler.jsonc';
+          const cfg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          cfg.routes = [{ pattern: 'pet-nika.viiversion.com', zone_id: process.env.PET_NIKA_ZONE_ID, custom_domain: true }];
+          fs.writeFileSync(path, JSON.stringify(cfg, null, 2) + '\n');
+          NODE
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
