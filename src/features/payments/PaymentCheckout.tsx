@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import QRCode from 'qrcode';
+import * as QRCode from 'qrcode';
 import { confirmDemoPayment, createPaymentIntent, fetchPaymentProviders, PaymentIntent, PaymentProvider, PaymentProviderInfo } from '../../api/payments';
 
 const fallbackProviders: PaymentProviderInfo[] = [
