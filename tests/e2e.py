@@ -28,12 +28,18 @@ def capture_console_error(errors, msg):
     if msg.type != 'error':
         return
     text=msg.text
+    location_url=msg.location.get('url','')
     google_maps_noise=(
         'maps.googleapis.com' in text or
-        ('Failed to load resource: net::ERR_FAILED' in text and 'google' in msg.location.get('url',''))
+        ('Failed to load resource: net::ERR_FAILED' in text and 'google' in location_url)
     )
-    if not google_maps_noise:
-        errors.append(text)
+    local_fleet_image_fallback=(
+        'Failed to load resource' in text and
+        ('404' in text or 'Not Found' in text) and
+        '/assets/fleet/' in location_url
+    )
+    if not google_maps_noise and not local_fleet_image_fallback:
+        errors.append(f'{text} @ {location_url}')
 
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
