@@ -1,5 +1,6 @@
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from urllib.parse import urlparse
 import subprocess, time, json, os
 
 root=Path(__file__).resolve().parents[1]
@@ -128,6 +129,118 @@ try:
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
         results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","engine":"react","console_errors":errors})
+        ctx.close()
+
+        # Stage 3: owner fleet CRUD with an in-memory API contract.
+        api_state={}
+        def fleet_api(route):
+            request=route.request
+            path=urlparse(request.url).path
+            method=request.method
+            if path=='/api/fleet-overrides' and method=='GET':
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicles':list(api_state.values())}))
+                return
+            if path=='/api/owner/fleet' and method=='POST':
+                vehicle=json.loads(request.post_data or '{}')
+                api_state[vehicle['id']]=vehicle
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicle':vehicle,'persisted':True}))
+                return
+            if path.startswith('/api/owner/fleet/') and method=='PATCH':
+                vehicle_id=path.rsplit('/',1)[-1]
+                payload=json.loads(request.post_data or '{}')
+                vehicle=api_state.get(vehicle_id)
+                if vehicle is None:
+                    route.fulfill(status=404,content_type='application/json',body='{"error":"vehicle_not_found"}')
+                    return
+                if payload.get('action')=='archive':
+                    vehicle={**vehicle,'archivedAt':'2026-09-08T14:00:00.000Z','published':False,'ownerManaged':True}
+                elif payload.get('action')=='restore':
+                    vehicle={**vehicle,'archivedAt':None,'ownerManaged':True}
+                api_state[vehicle_id]=vehicle
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicle':vehicle,'persisted':True}))
+                return
+            if path.startswith('/api/owner/fleet/') and method=='DELETE':
+                vehicle_id=path.rsplit('/',1)[-1]
+                api_state.pop(vehicle_id,None)
+                route.fulfill(status=200,content_type='application/json',body='{"removed":true,"persisted":true}')
+                return
+            route.fulfill(status=404,content_type='application/json',body='{"error":"not_found"}')
+
+        ctx=browser.new_context(viewport={"width":390,"height":844},locale='ru-RU')
+        page=ctx.new_page(); errors=[]
+        page.route('**/api/**',fleet_api)
+        page.on('console',lambda msg: capture_console_error(errors,msg))
+        page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+        page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
+        page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(100)
+        assert page.locator('[data-owner-add-vehicle]').count()==1
+        assert page.locator('[data-owner-vehicle]').count()==89
+
+        # Edit an existing vehicle and verify the new price reaches the client catalog.
+        existing=page.locator('[data-owner-vehicle]').first
+        existing_id=existing.get_attribute('data-owner-vehicle')
+        assert existing_id
+        existing.locator('[data-owner-edit]').click(); page.wait_for_timeout(50)
+        assert page.locator('[data-owner-editor]').count()==1
+        page.locator('[data-owner-daily]').fill('1234567')
+        page.locator('[data-owner-save]').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Изменения сохранены.',exact=True).count()==1
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(40)
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(100)
+        changed_card=page.locator(f'.vehicle-card[data-open="{existing_id}"]')
+        assert changed_card.count()==1
+        price_digits=''.join(ch for ch in changed_card.locator('.vehicle-top b').inner_text() if ch.isdigit())
+        assert price_digits.startswith('1234567'),price_digits
+
+        # Reset the base-vehicle override.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        existing=page.locator(f'[data-owner-vehicle="{existing_id}"]')
+        existing.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        assert page.get_by_role('button',name='Сбросить изменения').count()==1
+        page.get_by_role('button',name='Сбросить изменения').click(); page.wait_for_timeout(100)
+        assert page.locator('[data-owner-editor]').count()==0
+
+        # Add a new published vehicle.
+        page.locator('[data-owner-add-vehicle]').click(); page.wait_for_timeout(40)
+        editor=page.locator('[data-owner-editor]')
+        editor.locator('[data-owner-title]').fill('QA Demo Scooter')
+        editor.get_by_label('Марка').fill('QA')
+        editor.get_by_label('Модель').fill('Demo 125')
+        editor.get_by_label('Двигатель').fill('125 cc')
+        editor.locator('[data-owner-daily]').fill('650000')
+        editor.locator('[data-owner-save]').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Изменения сохранены.',exact=True).count()==1
+        custom_id=editor.locator('[data-owner-save]').evaluate('(button)=>button.closest("form").querySelector("[data-owner-title]").value')
+        assert custom_id=='QA Demo Scooter'
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(50)
+        custom_row=page.locator('[data-owner-vehicle]').filter(has_text='QA Demo Scooter')
+        assert custom_row.count()==1
+        created_id=custom_row.get_attribute('data-owner-vehicle')
+        assert created_id and created_id.startswith('custom-')
+
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(100)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==1
+        assert page.locator('.vehicle-card').count()==90
+
+        # Archive it: it must disappear from the customer catalog immediately.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        custom_row=page.locator(f'[data-owner-vehicle="{created_id}"]')
+        custom_row.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        page.get_by_role('button',name='Архивировать').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Техника перемещена в архив.',exact=True).count()==1
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(40)
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==0
+        assert page.locator('.vehicle-card').count()==89
+
+        # Remove the temporary QA entry and leave the test state clean.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        custom_row=page.locator(f'[data-owner-vehicle="{created_id}"]')
+        custom_row.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        page.get_by_role('button',name='Удалить навсегда').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==0
+        assert not errors,errors
+        results.append({"scenario":"stage3-owner-fleet","edit_existing":"ok","catalog_sync":"ok","add_vehicle":"ok","archive":"ok","delete":"ok","api_contract":"ok","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
