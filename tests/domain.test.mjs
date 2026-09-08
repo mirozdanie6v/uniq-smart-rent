@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { rentalDays, calculateRentalTotal, calculatePriceBreakdown, canTransitionBooking, rangesOverlap } from '../.build/domain/booking.js';
 import { vehicles } from '../.build/domain/catalog.js';
 import { detectBrowserLanguage } from '../.build/domain/i18n.js';
 import { businessInfo } from '../.build/domain/business.js';
+import { ENTITY_TABLES } from '../.build/domain/entities.js';
 
 test('rental day calculation keeps a one-day minimum',()=>{assert.equal(rentalDays('2026-08-27','2026-08-27'),1);assert.equal(rentalDays('2026-08-27','2026-08-30'),3);});
 
@@ -24,3 +26,23 @@ test('catalog contains only manager-confirmed public entries with sources',()=>{
 test('browser language detection uses English fallback',()=>{assert.equal(detectBrowserLanguage('ru-RU'),'ru');assert.equal(detectBrowserLanguage('vi-VN'),'vi');assert.equal(detectBrowserLanguage('ko-KR'),'ko');assert.equal(detectBrowserLanguage('zh-CN'),'en');});
 
 test('verified business facts expose two branches and public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,82);assert.equal(businessInfo.phone,'+84372112370');});
+
+test('stage 2 defines all primary owner-platform entities',()=>{
+  assert.deepEqual(ENTITY_TABLES,[
+    'branches','employees','vehicles','customers','bookings','payments','transactions','service_records','promotions'
+  ]);
+});
+
+test('stage 2 migration contains required operational and finance tables',async()=>{
+  const sql=await readFile(new URL('../migrations/0003_business_platform.sql',import.meta.url),'utf8');
+  for(const table of [
+    'branches','employees','employee_permissions','vehicle_availability_blocks','vehicle_transfers',
+    'booking_status_history','payments','transactions','rental_inspections','customer_documents',
+    'service_records','promotions','promotion_branches','promotion_vehicles','integration_configs','business_settings'
+  ]) assert.match(sql,new RegExp(`CREATE TABLE IF NOT EXISTS ${table}\\b`));
+  assert.match(sql,/branch-north/);
+  assert.match(sql,/branch-center/);
+  assert.match(sql,/integration-vietqr/);
+  assert.match(sql,/integration-sbp/);
+  assert.match(sql,/integration-yookassa/);
+});
