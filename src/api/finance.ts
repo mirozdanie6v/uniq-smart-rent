@@ -62,7 +62,7 @@ export async function createRefund(input:{sourceTransactionId:string;amountVnd:n
   const data=await response.json() as {error?:string;remainingVnd?:number;refund?:{id:string;transactionId:string;amountVnd:number;remainingVnd:number};persisted?:boolean};
   if(!response.ok) {
     const error=new Error(data.error ?? 'refund_failed') as Error & {remainingVnd?:number};
-    error.remainingVnd=data.remainingVnd;
+    if(data.remainingVnd!==undefined) error.remainingVnd=data.remainingVnd;
     throw error;
   }
   return data;
