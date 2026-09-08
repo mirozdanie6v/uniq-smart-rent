@@ -5,7 +5,8 @@ import subprocess, time, json, os
 root=Path(__file__).resolve().parents[1]
 dist=root/'dist'
 assert (dist/'index.html').exists()
-assert (dist/'app-v2.js').exists()
+assert not (dist/'app-v2.js').exists()
+assert list((dist/'assets').glob('index-*.js'))
 assert (dist/'assets/fleet-manifest.js').exists()
 assert (dist/'brand/uniq-logo.svg').exists()
 assert (dist/'i18n.js').exists()
@@ -36,6 +37,7 @@ try:
             page=ctx.new_page(); errors=[]
             page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
             page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+            assert page.locator('#root .shell').count()==1
             assert page.locator('.brand img').count()==1
             assert page.locator('[data-role="client"]').count()==1
             assert page.locator('[data-role="employee"]').count()==1
@@ -58,7 +60,7 @@ try:
                     page.wait_for_timeout(30)
                     assert page.get_by_text(text,exact=False).count()>=1,(code,text)
                     assert page.evaluate('document.documentElement.lang')==html_lang
-                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header"})
+                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header","engine":"react"})
 
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
             assert page.locator('.topbar .header-language-switcher select').count()==1
@@ -66,7 +68,7 @@ try:
             assert_lazy_images(page,'.vehicle-card img',6)
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'catalog overflow at {w}x{h}'
             assert not errors, errors
-            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","header_language":"ok","overflow":"ok"})
+            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","header_language":"ok","overflow":"ok","engine":"react"})
             ctx.close()
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
@@ -114,7 +116,7 @@ try:
         assert page.locator('text=Качество данных').count()==0
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
-        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","console_errors":errors})
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","engine":"react","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
