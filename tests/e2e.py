@@ -47,6 +47,7 @@ try:
         for w,h in [(320,568),(375,667),(390,844),(430,932),(768,1024),(1024,1366),(1440,900),(1920,1080)]:
             ctx=browser.new_context(viewport={"width":w,"height":h},locale='ru-RU')
             page=ctx.new_page(); errors=[]
+            page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}'))
             page.on('console',lambda msg: capture_console_error(errors,msg))
             page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
             assert page.locator('#root .shell').count()==1
@@ -85,6 +86,7 @@ try:
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
         page=ctx.new_page(); errors=[]
+        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}'))
         page.on('console',lambda msg: capture_console_error(errors,msg))
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
