@@ -6,6 +6,7 @@ import './features/bookings/owner-calendar.css';
 import './features/payments/payment-checkout.css';
 import './features/crm/owner-crm.css';
 import './features/team/stage7.css';
+import './features/finance/owner-finance.css';
 import { App } from './app/App';
 
 const rootElement = document.getElementById('root');

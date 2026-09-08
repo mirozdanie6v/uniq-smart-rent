@@ -7,6 +7,7 @@ import { handleFleetManagementRequest } from './api/ownerFleetWorker.js';
 import { handleBookingOperationsRequest } from './api/bookingOperationsWorker.js';
 import { handlePaymentRequest } from './api/paymentWorker.js';
 import { handleTeamRequest } from './api/teamWorker.js';
+import { handleFinanceRequest } from './api/financeWorker.js';
 
 interface AssetBinding { fetch(request: Request): Promise<Response>; }
 interface Env {
@@ -144,7 +145,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, { status: 204, headers: corsHeaders });
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 7 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true, paymentCheckout: true, paymentProviders: 7, employeesBranches: true, vehicleTransfers: true }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 8 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true, paymentCheckout: true, paymentProviders: 7, employeesBranches: true, vehicleTransfers: true, ownerFinance: true, refunds: true, deposits: true }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
@@ -158,6 +159,8 @@ export default {
     if (paymentResponse) return paymentResponse;
     const teamResponse = await handleTeamRequest(request, env, url);
     if (teamResponse) return teamResponse;
+    const financeResponse = await handleFinanceRequest(request, env, url);
+    if (financeResponse) return financeResponse;
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);

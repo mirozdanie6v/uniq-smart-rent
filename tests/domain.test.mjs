@@ -102,3 +102,20 @@ test('stage 7 employees branches and transfers contracts are present',async()=>{
   assert.ok(ui.includes('data-create-transfer'));
   assert.ok(app.includes("employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']]"));
 });
+
+
+test('stage 8 finance contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0008_stage8_finance.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/financeWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/finance/OwnerFinance.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  assert.ok(migration.includes('payment_refunds'));
+  assert.ok(migration.includes('deposit_received_vnd'));
+  assert.ok(worker.includes('/api/owner/finance'));
+  assert.ok(worker.includes('/refunds'));
+  assert.ok(worker.includes('/deposits'));
+  assert.ok(ui.includes('data-stage8-finance'));
+  assert.ok(ui.includes('data-finance-ledger'));
+  assert.ok(ui.includes('data-submit-refund'));
+  assert.ok(app.includes("['finance','Финансы']"));
+});

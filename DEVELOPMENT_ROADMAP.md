@@ -64,6 +64,18 @@ Delivered and verified:
 ### 🚧 Stage 8 — Finance
 Transactions, deposits, refunds, revenue.
 
+Acceptance target:
+- owner Finance section with period and branch filters;
+- net revenue, gross payments, online, cash, pending payments, held deposits and refunds;
+- unified transaction ledger with operation and search filters;
+- deposit received / deposit returned flow;
+- full and partial refund flow;
+- refunds reduce booking paid amount and payment status when linked to a real payment;
+- deposits remain separate from revenue;
+- Stage 8 D1 demo ledger is visibly labelled DEMO;
+- owner navigation remains usable with seven sections on mobile;
+- Stage 8 browser acceptance passes on mobile and desktop before deployment.
+
 ### ⏳ Stage 9 — Service
 Maintenance, repairs, inspections, expenses.
 
