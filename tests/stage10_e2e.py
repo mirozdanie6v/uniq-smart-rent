@@ -9,11 +9,12 @@ snapshot={
   'promotions':[
     {'id':'promo-test','name':'Повторная аренда −10%','status':'active','discountType':'percent','discountValue':10,'startsAt':'2026-09-01T00:00:00Z','endsAt':'2026-10-31T23:59:59Z','promoCode':'RETURN10','maxUses':80,'usesCount':14,'audienceSegment':'repeat','vehicleKind':'','description':'Для повторных клиентов UNIQ.','branches':['branch-north','branch-center'],'isDemo':True}
   ],
-  'campaigns':[
-    {'id':'campaign-test','name':'Вернуть повторных клиентов','channel':'telegram','audienceSegment':'repeat','message':'Снова в Нячанге? Для вас −10%.','promotionId':'promo-test','status':'draft','scheduledAt':'','sentAt':'','recipientsCount':0,'openedCount':0,'clickedCount':0,'conversionsCount':0,'attributedRevenueVnd':0,'isDemo':True}
-  ],
+  'campaigns':[],
   'segments':{'all':72,'new':24,'repeat':22,'vip':9,'inactive':17},'persisted':True
 }
+
+def draft_campaign():
+  return {'id':'campaign-test','name':'Вернуть повторных клиентов','channel':'telegram','audienceSegment':'repeat','message':'Снова в Нячанге? Для вас −10%.','promotionId':'promo-test','status':'draft','scheduledAt':'','sentAt':'','recipientsCount':0,'openedCount':0,'clickedCount':0,'conversionsCount':0,'attributedRevenueVnd':0,'isDemo':True}
 
 try:
   time.sleep(.35)
@@ -23,6 +24,7 @@ try:
     if executable: launch['executable_path']=executable
     browser=p.chromium.launch(**launch)
     for width,height in [(390,844),(1440,900)]:
+      snapshot['campaigns']=[draft_campaign()]
       ctx=browser.new_context(viewport={'width':width,'height':height},locale='ru-RU')
       page=ctx.new_page()
       page.add_init_script("""
@@ -65,6 +67,7 @@ try:
       assert page.locator('[data-marketing-segments] > div').count()==5
       assert page.locator('[data-promotion]').count()>=1
       assert page.locator('[data-campaign]').count()>=1
+      assert page.locator('[data-send-campaign]').count()>=1
       page.locator('[data-send-campaign]').first.click(); page.wait_for_timeout(80)
       assert page.get_by_text('DEMO-рассылка отправлена, статистика обновлена.',exact=True).count()==1
       assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth')
