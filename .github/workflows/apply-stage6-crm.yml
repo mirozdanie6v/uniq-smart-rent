@@ -26,10 +26,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Wire CRM into owner navigation
+      - name: Wire CRM into owner navigation and normalize strict optional types
         shell: python
         run: |
           from pathlib import Path
+
+          crm_path = Path('src/features/crm/OwnerCRM.tsx')
+          crm = crm_path.read_text(encoding='utf-8')
+          crm_replacements = [
+            ('  telegram?: string;', '  telegram?: string | undefined;'),
+            ('  zalo?: string;', '  zalo?: string | undefined;'),
+            ('  lastRental?: string;', '  lastRental?: string | undefined;'),
+          ]
+          crm_changed = False
+          for old, new in crm_replacements:
+            if new in crm:
+              continue
+            if old not in crm:
+              raise SystemExit(f'Expected CRM type anchor not found: {old}')
+            crm = crm.replace(old, new, 1)
+            crm_changed = True
+          if crm_changed:
+            crm_path.write_text(crm, encoding='utf-8')
+
           path = Path('src/features/prototype/PrototypeApp.tsx')
           text = path.read_text(encoding='utf-8')
           replacements = [
@@ -78,6 +97,6 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/features/prototype/PrototypeApp.tsx
+          git add src/features/prototype/PrototypeApp.tsx src/features/crm/OwnerCRM.tsx
           git commit -m "Stage 6: wire CRM into owner application"
           git push origin HEAD:refactor/react-typescript-vite-demo
