@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/apply-stage9-fixed.yml'
       - 'scripts/apply_stage9.py'
+      - 'tests/stage9_e2e.py'
 
 permissions:
   contents: write
