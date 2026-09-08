@@ -117,7 +117,7 @@ async function listManaged(db: D1DatabaseLike) {
   return (rows.results ?? []).map((row) => ({
     id: String(row.id ?? ''),
     title: String(row.title ?? `${row.brand ?? ''} ${row.model ?? ''}`.trim()),
-    type: String(row.kind ?? row.category ?? 'motorcycle'),
+    type: String(row.kind ?? 'motorcycle'),
     brand: String(row.brand ?? ''),
     model: String(row.model ?? ''),
     year: Number(row.year ?? 0),
@@ -187,8 +187,14 @@ async function patchVehicle(db: D1DatabaseLike, request: Request, id: string) {
 async function removeVehicle(db: D1DatabaseLike, id: string) {
   const existing = await db.prepare('SELECT id FROM vehicles WHERE id = ? AND owner_managed = 1 LIMIT 1').bind(id).first<{ id: string }>();
   if (!existing) return json({ error: 'vehicle_not_found' }, 404);
-  const booking = await db.prepare('SELECT id FROM bookings WHERE vehicle_id = ? LIMIT 1').bind(id).first<{ id: string }>();
   const now = new Date().toISOString();
+
+  if (!id.startsWith('custom-')) {
+    await db.prepare('UPDATE vehicles SET owner_managed = 0, archived_at = NULL, published = 1, owner_updated_at = ?, updated_at = ? WHERE id = ?').bind(now, now, id).run();
+    return json({ removed: false, overrideReset: true, persisted: true });
+  }
+
+  const booking = await db.prepare('SELECT id FROM bookings WHERE vehicle_id = ? LIMIT 1').bind(id).first<{ id: string }>();
   if (booking) {
     await db.prepare('UPDATE vehicles SET archived_at = ?, published = 0, owner_managed = 1, owner_updated_at = ?, updated_at = ? WHERE id = ?').bind(now, now, now, id).run();
     return json({ removed: false, archived: true, persisted: true });
