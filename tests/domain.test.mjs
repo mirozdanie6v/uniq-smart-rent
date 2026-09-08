@@ -73,3 +73,16 @@ test('stage 4 booking calendar and lifecycle contracts are present',async()=>{
   assert.ok(calendar.includes('КАЛЕНДАРЬ ЗАНЯТОСТИ'));
   assert.ok(ownerFleet.includes('data-owner-fleet-type-filter'));
 });
+
+
+test('stage 5 payment checkout contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0006_payment_checkout.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/paymentWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/payments/PaymentCheckout.tsx',import.meta.url),'utf8');
+  for(const provider of ['vietqr','vnpay','momo','zalopay','sbp','yookassa','tbank']) assert.ok(worker.includes(provider));
+  assert.ok(migration.includes('payment_events'));
+  assert.ok(worker.includes('/api/payments/intents'));
+  assert.ok(worker.includes('demo-confirm'));
+  assert.ok(ui.includes('data-payment-provider'));
+  assert.ok(ui.includes('data-payment-percent'));
+});

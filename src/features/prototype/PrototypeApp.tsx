@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { OwnerFleetManager } from '../fleet/OwnerFleetManager';
 import { OwnerBookingCalendar } from '../bookings/OwnerBookingCalendar';
+import { PaymentCheckout } from '../payments/PaymentCheckout';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
+import { createPersistedBooking, PaymentProvider } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
@@ -21,6 +23,10 @@ interface RentalRequest {
   status: RequestStatus;
   estimate: number;
   createdAt: string;
+  backendBookingId?: string;
+  paymentStatus?: 'unpaid' | 'pending' | 'partially_paid' | 'paid';
+  paymentId?: string;
+  paymentProvider?: PaymentProvider;
 }
 
 declare global {
@@ -80,6 +86,7 @@ function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): num
 const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 'scooter' ? 'Скутер' : 'Мотоцикл';
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
 const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
+const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
 const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
@@ -111,23 +118,28 @@ function VehicleCard({ vehicle, fleetState, onOpen, onBook }: { vehicle: FleetVe
   </article>;
 }
 
-function BookingModal({ vehicle, onClose, onSubmit }: { vehicle: FleetVehicle; onClose: () => void; onSubmit: (request: RentalRequest) => void }) {
-  function submit(event: FormEvent<HTMLFormElement>) {
+function BookingModal({ vehicle, onClose, onSubmit }: { vehicle: FleetVehicle; onClose: () => void; onSubmit: (request: RentalRequest) => Promise<void> | void }) {
+  const [busy, setBusy] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const from = String(data.get('from') ?? '');
     const to = String(data.get('to') ?? '');
-    onSubmit({
-      id: crypto.randomUUID(),
-      vehicleId: vehicle.id,
-      from,
-      to,
-      client: String(data.get('client') ?? ''),
-      contact: String(data.get('contact') ?? ''),
-      status: 'new',
-      estimate: publishedEstimate(vehicle, from, to),
-      createdAt: new Date().toISOString(),
-    });
+    setBusy(true);
+    try {
+      await onSubmit({
+        id: crypto.randomUUID(),
+        vehicleId: vehicle.id,
+        from,
+        to,
+        client: String(data.get('client') ?? ''),
+        contact: String(data.get('contact') ?? ''),
+        status: 'new',
+        estimate: publishedEstimate(vehicle, from, to),
+        createdAt: new Date().toISOString(),
+        paymentStatus: 'unpaid',
+      });
+    } finally { setBusy(false); }
   }
 
   return <div className="modal-bg" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
@@ -143,7 +155,7 @@ function BookingModal({ vehicle, onClose, onSubmit }: { vehicle: FleetVehicle; o
           <label>Имя<input name="client" required placeholder="Ваше имя" /></label>
           <label>Контакт<input name="contact" required placeholder="Телефон / @username" /></label>
         </div>
-        <button className="primary wide" type="submit">Отправить заявку</button>
+        <button className="primary wide" type="submit" disabled={busy}>{busy ? 'Создаём бронь…' : 'Перейти к оплате'}</button>
       </form>
       <small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small>
     </section>
@@ -194,6 +206,7 @@ export function PrototypeApp() {
   const [fleetStates, setFleetStates] = useState<Record<string, FleetState>>(() => loadSession(fleetStateKey, {}));
   const [bookingVehicleId, setBookingVehicleId] = useState<string | null>(null);
   const [extendingRequestId, setExtendingRequestId] = useState<string | null>(null);
+  const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
 
   useEffect(() => { window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.(); }, []);
@@ -229,11 +242,26 @@ export function PrototypeApp() {
   const bookingVehicle = bookingVehicleId ? fleet.find((item) => item.id === bookingVehicleId) : undefined;
   const extendingRequest = extendingRequestId ? requests.find((item) => item.id === extendingRequestId) : undefined;
   const extendingVehicle = extendingRequest ? fleet.find((item) => item.id === extendingRequest.vehicleId) : undefined;
+  const paymentRequest = paymentRequestId ? requests.find((item) => item.id === paymentRequestId) : undefined;
+  const paymentVehicle = paymentRequest ? fleet.find((item) => item.id === paymentRequest.vehicleId) : undefined;
 
   function setLifecycleStatus(request: RentalRequest, status: RequestStatus) {
     setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status } : item));
     if (status === 'active') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'hold' }));
     if (status === 'returned' || status === 'completed') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'ready' }));
+  }
+
+  async function submitClientBooking(request: RentalRequest) {
+    let next: RentalRequest = { ...request, paymentStatus: 'unpaid' };
+    try {
+      const persisted = await createPersistedBooking({ vehicleId: request.vehicleId, from: request.from, to: request.to, client: request.client, contact: request.contact });
+      next = { ...next, backendBookingId: persisted.bookingId, estimate: persisted.estimatedTotalVnd || request.estimate };
+    } catch {}
+    setRequests((current) => [...current, next]);
+    setBookingVehicleId(null);
+    setSelectedId(null);
+    if (next.backendBookingId) setPaymentRequestId(next.id);
+    else { setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
   }
 
   function requestCard(request: RentalRequest) {
@@ -243,6 +271,8 @@ export function PrototypeApp() {
       <h3>{vehicle?.title ?? request.vehicleId}</h3>
       <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>
       <b>{money(request.estimate)}</b>
+      <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>
+      {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => setPaymentRequestId(request.id)}>Оплатить</button> : null}
       {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => setLifecycleStatus(request, event.target.value as RequestStatus)}>
         {(['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
@@ -350,7 +380,8 @@ export function PrototypeApp() {
       <main>{content}</main>
       <nav className="bottom-nav">{nav[role].map(([id,label]) => <button key={id} data-go={id} className={route === id ? 'active' : ''} onClick={() => go(id)}><span>{icon(id)}</span><b>{label}</b></button>)}</nav>
     </div>
-    {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={(request) => { setRequests((current) => [...current, request]); setBookingVehicleId(null); setSelectedId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}/>: null}
+    {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={submitClientBooking}/>: null}
+    {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} onClose={() => { setPaymentRequestId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider } : item)); }}/>: null}
     {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => { setRequests((current) => current.map((item) => item.id === extendingRequest.id ? { ...item, to: newTo, estimate: item.estimate + additional } : item)); setExtendingRequestId(null); }}/>: null}
     <ScrollTop/>
   </>;

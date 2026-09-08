@@ -5,6 +5,7 @@ import type { BookingStatus } from './domain/types.js';
 import type { D1DatabaseLike } from './db/bootstrap.js';
 import { handleFleetManagementRequest } from './api/ownerFleetWorker.js';
 import { handleBookingOperationsRequest } from './api/bookingOperationsWorker.js';
+import { handlePaymentRequest } from './api/paymentWorker.js';
 
 interface AssetBinding { fetch(request: Request): Promise<Response>; }
 interface Env {
@@ -12,6 +13,7 @@ interface Env {
   DB?: D1DatabaseLike;
   STAFF_API_KEY?: string;
   DEMO_MODE?: string;
+  [key: string]: unknown;
 }
 
 const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response => new Response(JSON.stringify(data), {
@@ -141,7 +143,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, { status: 204, headers: corsHeaders });
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 5 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 6 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true, paymentCheckout: true, paymentProviders: 7 }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
@@ -151,6 +153,8 @@ export default {
     if (fleetManagementResponse) return fleetManagementResponse;
     const bookingOperationsResponse = await handleBookingOperationsRequest(request, env, url);
     if (bookingOperationsResponse) return bookingOperationsResponse;
+    const paymentResponse = await handlePaymentRequest(request, env, url);
+    if (paymentResponse) return paymentResponse;
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);

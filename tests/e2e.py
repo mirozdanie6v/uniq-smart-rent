@@ -257,6 +257,53 @@ try:
         assert page.get_by_text('QA Demo Scooter',exact=True).count()==0
         assert not errors,errors
         results.append({"scenario":"stage3-owner-fleet","edit_existing":"ok","catalog_sync":"ok","add_vehicle":"ok","archive":"ok","delete":"ok","api_contract":"ok","console_errors":errors})
+        ctx.close()
+
+        # Stage 5: persisted booking -> provider -> QR -> demo payment confirmation.
+        def payment_api(route):
+            request=route.request
+            path=urlparse(request.url).path
+            method=request.method
+            if path=='/api/fleet-overrides' and method=='GET':
+                route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}')
+                return
+            if path=='/api/bookings' and method=='POST':
+                route.fulfill(status=201,content_type='application/json',body=json.dumps({'bookingId':'booking-stage5','estimatedTotalVnd':9000000,'status':'new','persisted':True}))
+                return
+            if path=='/api/payments/providers' and method=='GET':
+                providers=[{'id':p,'label':l,'market':m,'currency':'VND' if m=='Vietnam' else 'RUB','credentialReady':False,'checkoutMode':'demo'} for p,l,m in [('vietqr','VietQR','Vietnam'),('vnpay','VNPAY','Vietnam'),('momo','MoMo','Vietnam'),('zalopay','ZaloPay','Vietnam'),('sbp','СБП','Russia'),('yookassa','ЮKassa','Russia'),('tbank','T‑Bank','Russia')]]
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'providers':providers}))
+                return
+            if path=='/api/payments/intents' and method=='POST':
+                payload=json.loads(request.post_data or '{}')
+                route.fulfill(status=201,content_type='application/json',body=json.dumps({'payment':{'id':'pay-stage5','bookingId':'booking-stage5','provider':payload.get('provider','vietqr'),'providerLabel':'MoMo' if payload.get('provider')=='momo' else 'VietQR','status':'pending','amountVnd':9000000,'totalVnd':9000000,'alreadyPaidVnd':0,'requestedPercent':payload.get('prepaymentPercent',100),'paymentReference':'UNIQ-STAGE5','paymentUrl':'https://uniq-smart-rent.viiversion.com/?payment=stage5','qrPayload':'https://uniq-smart-rent.viiversion.com/?payment=stage5','expiresAt':'2026-09-09T01:00:00.000Z','mode':'demo'},'persisted':True}))
+                return
+            if path=='/api/payments/pay-stage5/demo-confirm' and method=='POST':
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'paymentId':'pay-stage5','status':'paid','bookingPaidVnd':9000000,'bookingPaymentStatus':'paid','persisted':True}))
+                return
+            route.fulfill(status=404,content_type='application/json',body='{"error":"not_found"}')
+
+        ctx=browser.new_context(viewport={"width":390,"height":844},locale='ru-RU')
+        page=ctx.new_page(); errors=[]
+        page.route('**/api/**',payment_api)
+        page.on('console',lambda msg: capture_console_error(errors,msg))
+        page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+        page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(60)
+        page.locator('.vehicle-card').first.locator('[data-book]').click(); page.wait_for_timeout(40)
+        form=page.locator('#bookForm'); form.locator('input[name="client"]').fill('Payment QA'); form.locator('input[name="contact"]').fill('@paymentqa')
+        form.locator('button[type="submit"]').click(); page.wait_for_timeout(120)
+        assert page.locator('[data-payment-checkout]').count()==1
+        assert page.locator('[data-payment-provider]').count()==7
+        page.locator('[data-payment-percent="100"]').click(); page.locator('[data-payment-provider="momo"]').click(); page.locator('[data-create-payment]').click(); page.wait_for_timeout(180)
+        assert page.locator('[data-payment-ready]').count()==1
+        qr=page.locator('.payment-qr img'); assert qr.count()==1
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',arg=qr.element_handle(),timeout=5000)
+        page.locator('[data-demo-confirm-payment]').click(); page.wait_for_timeout(100)
+        assert page.locator('[data-payment-success]').count()==1
+        page.locator('.payment-checkout .modal-x').click(); page.wait_for_timeout(80)
+        assert page.get_by_text('Оплачено',exact=True).count()>=1
+        assert not errors,errors
+        results.append({"scenario":"stage5-payment-checkout","providers":7,"booking_persisted":"ok","qr":"ok","demo_confirm":"ok","payment_status":"paid","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
