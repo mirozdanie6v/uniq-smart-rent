@@ -1,0 +1,52 @@
+name: Deploy PET NIKA via UNIQ Cloudflare credentials
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.deploy-pet-nika'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pet-nika-cloudflare-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Require UNIQ Cloudflare credentials
+        shell: bash
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+
+      - name: Checkout PET NIKA
+        uses: actions/checkout@v4
+        with:
+          repository: mirozdanie6v/pet-nika
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Verify approved PET NIKA v28 UX/UI
+        run: cmp --silent uxui-source/pet-nika-uxui-source.html public/index.html
+
+      - name: Build Cloudflare production bundle
+        run: npm run build:vinext
+
+      - name: Deploy PET NIKA to Cloudflare
+        run: npx wrangler deploy
