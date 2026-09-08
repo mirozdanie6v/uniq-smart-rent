@@ -46,7 +46,7 @@ export async function createPersistedBooking(input: {
   }));
 }
 
-export async function updatePersistedBookingStatus(bookingId: string, status: 'contacted' | 'confirmed' | 'vehicle_issued' | 'active' | 'returned' | 'completed' | 'cancelled'): Promise<void> {
+export async function updatePersistedBookingStatus(bookingId: string, status: 'contacted' | 'confirmed' | 'vehicle_issued' | 'active' | 'return_due' | 'returned' | 'completed' | 'cancelled'): Promise<void> {
   await json(await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/status`, {
     method: 'PATCH',
     headers: { 'content-type': 'application/json', 'x-uniq-demo-role': 'employee' },
