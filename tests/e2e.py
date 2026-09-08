@@ -30,7 +30,7 @@ def capture_console_error(errors, msg):
     text=msg.text
     location_url=msg.location.get('url','')
     google_maps_noise=(
-        'maps.googleapis.com' in text or
+        'maps.googleapis.com' in text or 'maps.googleapis.com' in location_url or
         ('Failed to load resource: net::ERR_FAILED' in text and 'google' in location_url)
     )
     local_fleet_image_fallback=(
