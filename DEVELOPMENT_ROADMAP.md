@@ -61,22 +61,28 @@ Delivered and verified:
 - unit tests verified 13/13;
 - production Stage 7 UI, schemaVersion 7 and D1 team API verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 8 — Finance
+### ✅ Stage 8 — Finance
 Transactions, deposits, refunds, revenue.
 
-Acceptance target:
-- owner Finance section with period and branch filters;
-- net revenue, gross payments, online, cash, pending payments, held deposits and refunds;
-- unified transaction ledger with operation and search filters;
-- deposit received / deposit returned flow;
-- full and partial refund flow;
-- refunds reduce booking paid amount and payment status when linked to a real payment;
-- deposits remain separate from revenue;
-- Stage 8 D1 demo ledger is visibly labelled DEMO;
-- owner navigation remains usable with seven sections on mobile;
-- Stage 8 browser acceptance passes on mobile and desktop before deployment.
+Delivered and verified:
+- owner Finance section with Today / 7 days / 30 days / All period filters;
+- branch filter for North, Center and all locations;
+- net revenue, gross payments, online, cash, pending payments, held deposits and refunds KPIs;
+- additional discount, deposit-return and service-expense figures;
+- unified transaction ledger with operation filter and search;
+- deposit received and deposit returned workflows;
+- deposits are tracked separately and excluded from revenue;
+- full and partial refund workflow from a payment transaction;
+- linked real payment refunds update payment and booking paid status;
+- D1 payment_refunds model and booking deposit state fields;
+- Stage 8 demonstration finance ledger clearly labelled DEMO;
+- owner navigation expanded to seven sections with mobile-safe labels;
+- D1 migration 0008 applied successfully;
+- unit tests verified 14/14;
+- browser acceptance verified on mobile 390×844 and desktop 1440×900;
+- production schemaVersion 8, ownerFinance/refunds/deposits health flags and D1 finance API verified on uniq-smart-rent.viiversion.com.
 
-### ⏳ Stage 9 — Service
+### 🚧 Stage 9 — Service
 Maintenance, repairs, inspections, expenses.
 
 ### ⏳ Stage 10 — Marketing
