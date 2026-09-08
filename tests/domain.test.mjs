@@ -135,3 +135,20 @@ test('stage 9 service and payment readiness contracts are present',async()=>{
  assert.ok(app.includes('updatePersistedBookingStatus'));
  assert.ok(pay.includes('ProviderLogo'));
 });
+
+
+test('stage 10 marketing contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0010_stage10_marketing.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/marketingWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/marketing/OwnerMarketing.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  const styles=await readFile(new URL('../styles.css',import.meta.url),'utf8');
+  assert.ok(migration.includes('marketing_campaigns'));
+  assert.ok(migration.includes('audience_segment'));
+  assert.ok(worker.includes('/api/owner/marketing'));
+  assert.ok(worker.includes('/api/owner/campaigns'));
+  assert.ok(ui.includes('data-stage10-marketing'));
+  assert.ok(ui.includes('data-send-campaign'));
+  assert.ok(app.includes("['marketing','Маркетинг']"));
+  assert.ok(styles.includes('.request-payment{grid-column:1/-1;display:flex'));
+});

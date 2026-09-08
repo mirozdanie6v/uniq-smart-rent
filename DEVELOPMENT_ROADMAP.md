@@ -102,6 +102,17 @@ Delivered and verified:
 ### 🚧 Stage 10 — Marketing
 Promotions, promo codes, mailings.
 
+Acceptance target:
+- owner has a Marketing section with promotions and campaigns;
+- promotions support percent/fixed discounts, code, audience segment, vehicle kind, branches and usage limit;
+- campaigns use CRM segments: all, new, repeat, VIP and inactive;
+- channels: Telegram, Zalo, Email and SMS as DEMO integrations;
+- DEMO send updates recipients, opens, clicks, conversions and attributed revenue;
+- D1 stores promotions, campaigns and marketing events;
+- mobile request cards keep label/value spacing and never render glued payment text;
+- owner navigation with nine sections remains usable without horizontal page overflow;
+- browser acceptance passes on mobile and desktop before deployment.
+
 ### ⏳ Stage 11 — Analytics
 Dashboard, charts, funnel, sources, vehicle profitability.
 

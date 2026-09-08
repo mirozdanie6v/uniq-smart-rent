@@ -21,3 +21,7 @@
 .hero-office-map>span small{font-size:9px;line-height:1.3;color:var(--green2)}
 .hero-office-map:hover{border-color:rgba(32,227,143,.55)}
 @media(max-width:620px){.hero-card>div.hero-office-maps{grid-template-columns:1fr 1fr}.hero-office-map{min-height:132px}.hero-office-map>span b{font-size:11px}.hero-office-map>span small{font-size:8px}}
+
+/* Stage 10 mobile text-spacing QA */
+.request-payment{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;line-height:1.35}.request-payment>span{color:var(--muted);font-size:10px}.request-payment>b{font-size:11px;overflow-wrap:anywhere}.request-payment>small{font-size:9px;color:var(--muted)}.request-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:620px){.request-payment{gap:6px 8px}.request-payment>span{flex:0 0 auto}.request-payment>b{min-width:0}.request{row-gap:10px}}
