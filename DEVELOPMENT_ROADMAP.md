@@ -27,19 +27,21 @@ Calendar, availability, extensions, handover and return.
 ### ✅ Stage 5 — Payments
 VietQR / VNPAY / MoMo / ZaloPay / SBP / YooKassa / T-Bank + DEMO QR.
 
-### 🚧 Stage 6 — CRM
+### ✅ Stage 6 — CRM
 Customers, customer history, search and segments.
 
-Acceptance target:
-- owner can open a Customers/CRM section;
-- customer list supports search and filtering;
-- segments include New, Repeat, VIP and Inactive;
-- customer card shows contacts, language/country, rental count, lifetime value and notes;
-- customer history shows bookings, payment state and rental lifecycle;
-- new Mini App bookings appear in CRM data;
-- demo data is realistic and clearly separated from external integrations.
+Delivered and verified:
+- owner Customers/CRM section;
+- customer list with search and filtering;
+- New, Repeat, VIP and Inactive segments;
+- customer card with contacts, language/country, rental count, lifetime value and notes;
+- customer history with bookings, payment state and rental lifecycle;
+- new Mini App bookings represented in CRM data;
+- realistic multilingual demonstration customer dataset;
+- browser acceptance verified on mobile 390×844 and desktop 1440×900;
+- production deployment verified on uniq-smart-rent.viiversion.com.
 
-### ⏳ Stage 7 — Employees and branches
+### 🚧 Stage 7 — Employees and branches
 Roles, permissions, two locations, vehicle transfers.
 
 ### ⏳ Stage 8 — Finance
