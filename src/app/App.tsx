@@ -1,10 +1,10 @@
 import { AppProviders } from './providers/AppProviders';
-import { LegacyBridge } from './legacy/LegacyBridge';
+import { PrototypeApp } from '../features/prototype/PrototypeApp';
 
 export function App() {
   return (
     <AppProviders>
-      <LegacyBridge />
+      <PrototypeApp />
     </AppProviders>
   );
 }
