@@ -121,6 +121,19 @@ Delivered and verified:
 ### 🚧 Stage 11 — Analytics
 Dashboard, charts, funnel, sources, vehicle profitability.
 
+Acceptance target:
+- owner has a dedicated Analytics section;
+- Today / 7 days / 30 days and branch filters work;
+- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion are visible;
+- revenue/bookings trend is rendered without a chart library;
+- funnel covers views → vehicle opens → booking start → payment → paid;
+- sources compare Telegram Mini App, website, office, Google, Instagram, partners and QR;
+- North and Center branches are compared;
+- vehicle profitability ranks models by revenue, rentals, utilization and idle days;
+- D1 contains analytics funnel telemetry and 20 realistic DEMO bookings in multiple statuses;
+- seeded business requests are visible to Employee/Owner and hidden from the Client personal cabinet;
+- mobile and desktop browser acceptance passes before deployment.
+
 ### ⏳ Stage 12 — AI Owner
 Questions over business data + demonstration actions.
 

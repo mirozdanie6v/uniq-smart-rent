@@ -7,6 +7,7 @@ import { OwnerTeamBranches } from '../team/OwnerTeamBranches';
 import { OwnerFinance } from '../finance/OwnerFinance';
 import { OwnerService } from '../service/OwnerService';
 import { OwnerMarketing } from '../marketing/OwnerMarketing';
+import { OwnerAnalytics } from '../analytics/OwnerAnalytics';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
 import { createPersistedBooking, PaymentProvider, updatePersistedBookingStatus } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
@@ -14,9 +15,9 @@ import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
 type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'calendar' | 'handover';
-type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service' | 'marketing';
+type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service' | 'marketing' | 'analytics';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
-type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
+type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'return_due' | 'returned' | 'completed' | 'cancelled';
 
 interface RentalRequest {
   id: string;
@@ -32,6 +33,9 @@ interface RentalRequest {
   paymentStatus?: 'unpaid' | 'pending' | 'partially_paid' | 'paid';
   paymentId?: string;
   paymentProvider?: PaymentProvider;
+  branchId?: 'branch-north' | 'branch-center';
+  sourceChannel?: string;
+  demoBusiness?: boolean;
 }
 
 declare global {
@@ -45,10 +49,10 @@ const roleLabels: Record<Role, string> = { client: 'Клиент', employee: 'С
 const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   client: [['home','Главная'],['catalog','Каталог'],['requests','MY UNIQ'],['contacts','Контакты']],
   employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']],
-  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг']],
+  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг'],['analytics','Аналитика']],
 };
 
-const requestKey = 'uniq-demo-requests-v2';
+const requestKey = 'uniq-demo-requests-v3-stage11';
 const fleetStateKey = 'uniq-demo-fleet-state-v2';
 const roleKey = 'uniq-role-v2';
 
@@ -73,6 +77,53 @@ const toDefaultDate = new Date(today); toDefaultDate.setDate(toDefaultDate.getDa
 const defaultFrom = dateISO(fromDefaultDate);
 const defaultTo = dateISO(toDefaultDate);
 
+
+function shiftedDay(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return dateISO(date);
+}
+
+function shiftedCreated(hoursAgo: number): string {
+  return new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
+}
+
+function buildDemoBusinessRequests(): RentalRequest[] {
+  type DemoRow = {
+    id: string; vehicleId: string; from: number; to: number; client: string; contact: string; status: RequestStatus;
+    estimate: number; createdHoursAgo: number; paymentStatus: NonNullable<RentalRequest['paymentStatus']>;
+    branchId: 'branch-north' | 'branch-center'; sourceChannel: string; provider?: PaymentProvider;
+  };
+  const rows: DemoRow[] = [
+    { id:'demo-ui-01',vehicleId:'hyundai-elantra-2025-74404',from:1,to:3,client:'Анна Крылова',contact:'@anna_demo',status:'new',estimate:4050000,createdHoursAgo:1,paymentStatus:'unpaid',branchId:'branch-center',sourceChannel:'telegram_mini_app' },
+    { id:'demo-ui-02',vehicleId:'kia-sorento-2023-74401',from:2,to:5,client:'Nguyễn Minh Anh',contact:'Zalo · demo02',status:'new',estimate:7800000,createdHoursAgo:3,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
+    { id:'demo-ui-03',vehicleId:'mazda-cx-5-2022-74405',from:1,to:3,client:'Алексей Морозов',contact:'@alex_demo',status:'contacted',estimate:4350000,createdHoursAgo:5,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'google' },
+    { id:'demo-ui-04',vehicleId:'toyota-yaris-cross-2025-74402',from:3,to:4,client:'Kim Min-ji',contact:'@minji_demo',status:'contacted',estimate:2800000,createdHoursAgo:7,paymentStatus:'pending',branchId:'branch-north',sourceChannel:'instagram' },
+    { id:'demo-ui-05',vehicleId:'yamaha-x-max-2024-76826',from:1,to:4,client:'Chen Wei',contact:'WeChat · demo05',status:'confirmed',estimate:7200000,createdHoursAgo:10,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
+    { id:'demo-ui-06',vehicleId:'honda-pcx-150cc-2022-73073',from:2,to:5,client:'Мария Лебедева',contact:'@maria_demo',status:'confirmed',estimate:2200000,createdHoursAgo:24,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'qr',provider:'momo' },
+    { id:'demo-ui-07',vehicleId:'honda-cb500x-2023-73325',from:0,to:2,client:'Sergey Volkov',contact:'@sergey_demo',status:'issued',estimate:7500000,createdHoursAgo:28,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'office' },
+    { id:'demo-ui-08',vehicleId:'honda-cb650r-2022-73228',from:-1,to:3,client:'Olga Petrova',contact:'@olga_demo',status:'active',estimate:12500000,createdHoursAgo:48,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vnpay' },
+    { id:'demo-ui-09',vehicleId:'honda-cbr-150cc-2021-76481',from:-2,to:1,client:'Park Ji-hoon',contact:'@jihoon_demo',status:'active',estimate:2800000,createdHoursAgo:72,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'partner',provider:'sbp' },
+    { id:'demo-ui-10',vehicleId:'honda-pcx-150cc-2022-73073',from:-5,to:0,client:'Trần Thu Hà',contact:'Zalo · demo10',status:'return_due',estimate:3850000,createdHoursAgo:96,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'office',provider:'zalopay' },
+    { id:'demo-ui-11',vehicleId:'honda-pcx-125cc-2018-76169',from:-7,to:-1,client:'Dmitry Orlov',contact:'@orlov_demo',status:'returned',estimate:3150000,createdHoursAgo:120,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'qr',provider:'vietqr' },
+    { id:'demo-ui-12',vehicleId:'hyundai-elantra-2025-74404',from:-8,to:-5,client:'Emily Carter',contact:'email-demo-12',status:'completed',estimate:5400000,createdHoursAgo:144,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'yookassa' },
+    { id:'demo-ui-13',vehicleId:'mazda-cx-5-2022-74405',from:-10,to:-7,client:'Ирина Соколова',contact:'@irina_demo',status:'completed',estimate:5800000,createdHoursAgo:192,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'website',provider:'vietqr' },
+    { id:'demo-ui-14',vehicleId:'kia-sorento-2023-74401',from:-14,to:-11,client:'Lê Quốc Bảo',contact:'Zalo · demo14',status:'completed',estimate:7800000,createdHoursAgo:288,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'google',provider:'tbank' },
+    { id:'demo-ui-15',vehicleId:'toyota-yaris-cross-2025-74402',from:1,to:2,client:'Максим Беляев',contact:'@max_demo',status:'cancelled',estimate:2800000,createdHoursAgo:51,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
+    { id:'demo-ui-16',vehicleId:'honda-cb500x-2023-73325',from:5,to:9,client:'Sofia Ivanova',contact:'@sofia_demo',status:'new',estimate:12500000,createdHoursAgo:54,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'partner' },
+    { id:'demo-ui-17',vehicleId:'honda-pcx-150cc-2022-73073',from:3,to:5,client:'Lee Soo-jin',contact:'@soojin_demo',status:'contacted',estimate:1650000,createdHoursAgo:74,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'qr' },
+    { id:'demo-ui-18',vehicleId:'yamaha-x-max-2024-76826',from:2,to:5,client:'Pavel Smirnov',contact:'@pavel_demo',status:'confirmed',estimate:7200000,createdHoursAgo:96,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
+    { id:'demo-ui-19',vehicleId:'toyota-yaris-cross-2025-74402',from:-3,to:2,client:'Vũ Hoàng Nam',contact:'Zalo · demo19',status:'active',estimate:8400000,createdHoursAgo:144,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'website',provider:'vnpay' },
+    { id:'demo-ui-20',vehicleId:'hyundai-elantra-2025-74404',from:-22,to:-18,client:'Елена Кузнецова',contact:'@elena_demo',status:'completed',estimate:6750000,createdHoursAgo:480,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'office' },
+  ];
+  return rows.map((row) => ({
+    id:row.id, vehicleId:row.vehicleId, from:shiftedDay(row.from), to:shiftedDay(row.to), client:row.client, contact:row.contact,
+    status:row.status, estimate:row.estimate, createdAt:shiftedCreated(row.createdHoursAgo), paymentStatus:row.paymentStatus,
+    branchId:row.branchId, sourceChannel:row.sourceChannel, demoBusiness:true,
+    ...(row.provider ? { paymentProvider:row.provider } : {}),
+  }));
+}
+
 function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): number {
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);
@@ -90,9 +141,9 @@ function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): num
 
 const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 'scooter' ? 'Скутер' : 'Мотоцикл';
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
-const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
+const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', return_due:'Возврат сегодня', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
 const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
-const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟',finance:'₫',service:'⚙',marketing:'✦'} as Partial<Record<Route,string>>)[route] ?? '•';
+const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟',finance:'₫',service:'⚙',marketing:'✦',analytics:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
@@ -207,7 +258,7 @@ export function PrototypeApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [type, setType] = useState<'all' | VehicleType>('all');
-  const [requests, setRequests] = useState<RentalRequest[]>(() => loadSession(requestKey, []));
+  const [requests, setRequests] = useState<RentalRequest[]>(() => loadSession(requestKey, buildDemoBusinessRequests()));
   const [fleetStates, setFleetStates] = useState<Record<string, FleetState>>(() => loadSession(fleetStateKey, {}));
   const [bookingVehicleId, setBookingVehicleId] = useState<string | null>(null);
   const [extendingRequestId, setExtendingRequestId] = useState<string | null>(null);
@@ -260,7 +311,7 @@ export function PrototypeApp() {
 
   async function setLifecycleStatus(request: RentalRequest, status: RequestStatus) {
     const synced = status === 'new' ? request : await ensurePersistedRequest(request);
-    const backendMap: Partial<Record<RequestStatus,'contacted'|'confirmed'|'vehicle_issued'|'active'|'returned'|'completed'|'cancelled'>> = { contacted:'contacted', confirmed:'confirmed', issued:'vehicle_issued', active:'active', returned:'returned', completed:'completed', cancelled:'cancelled' };
+    const backendMap: Partial<Record<RequestStatus,'contacted'|'confirmed'|'vehicle_issued'|'active'|'return_due'|'returned'|'completed'|'cancelled'>> = { contacted:'contacted', confirmed:'confirmed', issued:'vehicle_issued', active:'active', return_due:'return_due', returned:'returned', completed:'completed', cancelled:'cancelled' };
     const backendStatus = backendMap[status];
     if (synced.backendBookingId && backendStatus) {
       try { await updatePersistedBookingStatus(synced.backendBookingId, backendStatus); } catch {}
@@ -300,17 +351,18 @@ export function PrototypeApp() {
       <div><span className="status">{statusText(request.status)}</span><small>{new Date(request.createdAt).toLocaleString('ru-RU')}</small></div>
       <h3>{vehicle?.title ?? request.vehicleId}</h3>
       <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>
+      {role !== 'client' && request.demoBusiness ? <small className="request-business-meta">{request.branchId === 'branch-north' ? 'Северный филиал' : 'Центр города'} · {({telegram_mini_app:'Telegram Mini App',website:'Сайт',office:'Офис',google:'Google',instagram:'Instagram',partner:'Партнёр',qr:'QR-код'} as Record<string,string>)[request.sourceChannel ?? ''] ?? 'Источник'} · DEMO</small> : null}
       <b>{money(request.estimate)}</b>
       <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>
       {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => setPaymentRequestId(request.id)}>Оплатить</button> : null}
       {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => { void setLifecycleStatus(request, event.target.value as RequestStatus); }}>
-        {(['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
+        {(['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
       {role !== 'client' ? <div className="request-actions">
         {request.status === 'confirmed' ? <button className="primary" data-issue={request.id} onClick={() => { void setLifecycleStatus(request,'active'); }}>Выдать технику</button> : null}
         {request.status === 'issued' ? <button className="primary" onClick={() => { void setLifecycleStatus(request,'active'); }}>Начать аренду</button> : null}
-        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить</button> : null}
-        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-return={request.id} onClick={() => { void setLifecycleStatus(request,'returned'); }}>Принять возврат</button> : null}
+        {['active','issued','return_due'].includes(request.status) ? <button className="secondary" data-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить</button> : null}
+        {['active','issued','return_due'].includes(request.status) ? <button className="secondary" data-return={request.id} onClick={() => { void setLifecycleStatus(request,'returned'); }}>Принять возврат</button> : null}
         {request.status === 'returned' ? <button className="primary" data-complete={request.id} onClick={() => { void setLifecycleStatus(request,'completed'); }}>Завершить аренду</button> : null}
       </div> : null}
     </article>;
@@ -348,7 +400,7 @@ export function PrototypeApp() {
   }
 
   function requestsPage() {
-    const list = [...requests].reverse();
+    const list = [...(role === 'client' ? requests.filter((item) => !item.demoBusiness) : requests)].reverse();
     const title = role === 'client' ? 'Мои заявки' : role === 'employee' ? 'Заявки клиентов' : 'Все заявки';
     return <><Hero label="ЗАЯВКИ" title={title} text={role === 'client' ? 'Ваши заявки на аренду.' : 'Заявки клиентов и их текущие статусы.'}/>{list.length ? <section className="request-list">{list.map(requestCard)}</section> : <div className="empty"><b>Заявок пока нет</b><span>Создайте заявку из карточки техники в режиме клиента.</span></div>}</>;
   }
@@ -375,7 +427,7 @@ export function PrototypeApp() {
   }
 
   function handoverPage() {
-    const rows = requests.filter((item) => ['confirmed','issued','active','returned'].includes(item.status));
+    const rows = requests.filter((item) => ['confirmed','issued','active','return_due','returned'].includes(item.status));
     return <><Hero label="ВЫДАЧИ" title="Выдачи и возвраты." text="Здесь отображаются только заявки, дошедшие до подтверждения."/>{rows.length ? <section className="request-list">{rows.map(requestCard)}</section> : <div className="empty"><b>Подтверждённых выдач пока нет</b><span>Статус заявки можно изменить в разделе «Заявки».</span></div>}</>;
   }
 
@@ -383,7 +435,7 @@ export function PrototypeApp() {
     const confirmed = requests.filter((item) => ['confirmed','issued','active','returned','completed'].includes(item.status)).length;
     const open = requests.filter((item) => !['completed','cancelled'].includes(item.status)).length;
     const estimate = requests.filter((item) => item.status !== 'cancelled').reduce((sum, item) => sum + (item.estimate || 0), 0);
-    const statuses = ['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[];
+    const statuses = ['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[];
     return <><Hero label="ВЛАДЕЛЕЦ" title="Пульс бизнеса — со смартфона." text="Ключевые показатели по парку и заявкам в одном экране."/><section className="metrics owner-metrics"><Metric label="Парк" value={fleet.length} sub="единиц техники"/><Metric label="Открытые заявки" value={open}/><Metric label="Подтверждены" value={confirmed}/><Metric label="Потенциал заявок" value={money(estimate)} sub="по текущим тарифам"/></section><section className="panel"><span className="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2><div className="status-bars">{statuses.map((status) => { const count = requests.filter((item) => item.status === status).length; return <div key={status}><span>{statusText(status)}</span><b>{count}</b><i style={{ width: `${requests.length ? Math.max(4, count / requests.length * 100) : 4}%` }}></i></div>; })}</div></section></>;
   }
 
@@ -419,11 +471,15 @@ export function PrototypeApp() {
     return <OwnerMarketing/>;
   }
 
+  function ownerAnalytics() {
+    return <OwnerAnalytics requests={requests} fleet={fleet}/>;
+  }
+
   let content: React.ReactNode;
   if (selectedVehicle) content = vehicleDetailPage(selectedVehicle);
   else if (role === 'client') content = route === 'catalog' ? catalogPage() : route === 'requests' ? requestsPage() : route === 'contacts' ? contactsPage() : clientHome();
   else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'calendar' ? employeeCalendar() : route === 'handover' ? handoverPage() : employeeDashboard();
-  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : route === 'finance' ? ownerFinance() : route === 'service' ? ownerService() : route === 'marketing' ? ownerMarketing() : ownerOverview();
+  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : route === 'finance' ? ownerFinance() : route === 'service' ? ownerService() : route === 'marketing' ? ownerMarketing() : route === 'analytics' ? ownerAnalytics() : ownerOverview();
 
   return <>
     <div className="shell">

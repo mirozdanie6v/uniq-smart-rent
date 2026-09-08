@@ -10,6 +10,7 @@ import { handleTeamRequest } from './api/teamWorker.js';
 import { handleFinanceRequest } from './api/financeWorker.js';
 import { handleServiceRequest } from './api/serviceWorker.js';
 import { handleMarketingRequest } from './api/marketingWorker.js';
+import { handleAnalyticsRequest } from './api/analyticsWorker.js';
 
 interface AssetBinding { fetch(request: Request): Promise<Response>; }
 interface Env {
@@ -147,7 +148,7 @@ export default {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) return new Response(null, { status: 204, headers: corsHeaders });
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 10 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true, paymentCheckout: true, paymentProviders: 7, employeesBranches: true, vehicleTransfers: true, ownerFinance: true, refunds: true, deposits: true, serviceManagement: true, serviceInspections: true, serviceExpenses: true, marketingCampaigns: true, promotionsMarketing: true, marketingSegments: true }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 11 : null, verifiedCatalog: vehicles.length, ownerFleetManagement: true, bookingCalendar: true, rentalLifecycle: true, paymentCheckout: true, paymentProviders: 7, employeesBranches: true, vehicleTransfers: true, ownerFinance: true, refunds: true, deposits: true, serviceManagement: true, serviceInspections: true, serviceExpenses: true, marketingCampaigns: true, promotionsMarketing: true, marketingSegments: true, ownerAnalytics: true, analyticsFunnel: true, vehicleProfitability: true, demoRequestDataset: true }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
@@ -167,6 +168,8 @@ export default {
     if (serviceResponse) return serviceResponse;
     const marketingResponse = await handleMarketingRequest(request, env, url);
     if (marketingResponse) return marketingResponse;
+    const analyticsResponse = await handleAnalyticsRequest(request, env, url);
+    if (analyticsResponse) return analyticsResponse;
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);

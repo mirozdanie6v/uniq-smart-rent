@@ -9,6 +9,7 @@ import './features/team/stage7.css';
 import './features/finance/owner-finance.css';
 import './features/service/owner-service.css';
 import './features/marketing/owner-marketing.css';
+import './features/analytics/owner-analytics.css';
 import { App } from './app/App';
 
 const rootElement = document.getElementById('root');

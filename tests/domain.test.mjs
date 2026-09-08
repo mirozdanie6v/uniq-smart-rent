@@ -152,3 +152,22 @@ test('stage 10 marketing contracts are present',async()=>{
   assert.ok(app.includes("['marketing','Маркетинг']"));
   assert.ok(styles.includes('.request-payment{grid-column:1/-1;display:flex'));
 });
+
+
+test('stage 11 analytics and demo request contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0011_stage11_analytics.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/analyticsWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/analytics/OwnerAnalytics.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  assert.ok(migration.includes('analytics_daily_funnel'));
+  assert.ok(migration.includes("'return_due'"));
+  assert.ok(migration.includes('demo-b11-20'));
+  assert.ok(worker.includes('/api/owner/analytics'));
+  assert.ok(worker.includes('vehicleProfitability') === false || worker.includes('vehicles'));
+  assert.ok(ui.includes('data-stage11-analytics'));
+  assert.ok(ui.includes('data-analytics-funnel'));
+  assert.ok(ui.includes('data-vehicle-profitability'));
+  assert.ok(app.includes('buildDemoBusinessRequests'));
+  assert.ok(app.includes("['analytics','Аналитика']"));
+  assert.ok(app.includes("return_due:'Возврат сегодня'"));
+});
