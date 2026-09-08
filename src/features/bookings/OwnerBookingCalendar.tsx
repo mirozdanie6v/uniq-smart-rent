@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { ManagedFleetVehicle, VehicleType } from '../fleet/fleetManagement';
 
-type CalendarRequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
+type CalendarRequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'return_due' | 'returned' | 'completed' | 'cancelled';
 export interface CalendarRentalRequest {
   id: string;
   vehicleId: string;
@@ -25,8 +25,8 @@ const dayMs = 86_400_000;
 const dateISO = (date: Date) => date.toISOString().slice(0, 10);
 const atMidnight = (value: string) => new Date(`${value}T00:00:00Z`).getTime();
 const overlaps = (fromA: string, toA: string, day: string) => atMidnight(fromA) <= atMidnight(day) && atMidnight(toA) >= atMidnight(day);
-const statusClass = (status: CalendarRequestStatus) => status === 'active' || status === 'issued' ? 'active' : status === 'confirmed' ? 'confirmed' : status === 'returned' || status === 'completed' ? 'completed' : 'request';
-const statusLabel = (status: CalendarRequestStatus) => ({ new:'Заявка', contacted:'Связались', confirmed:'Бронь', issued:'Выдана', active:'Аренда', returned:'Возврат', completed:'Завершена', cancelled:'Отмена' })[status];
+const statusClass = (status: CalendarRequestStatus) => status === 'active' || status === 'issued' || status === 'return_due' ? 'active' : status === 'confirmed' ? 'confirmed' : status === 'returned' || status === 'completed' ? 'completed' : 'request';
+const statusLabel = (status: CalendarRequestStatus) => ({ new:'Заявка', contacted:'Связались', confirmed:'Бронь', issued:'Выдана', active:'Аренда', return_due:'Возврат сегодня', returned:'Возврат', completed:'Завершена', cancelled:'Отмена' })[status];
 const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 'motorcycle' ? 'Мотоцикл' : 'Скутер';
 
 export function OwnerBookingCalendar({ fleet, requests, fleetStates }: Props) {
@@ -60,7 +60,7 @@ export function OwnerBookingCalendar({ fleet, requests, fleetStates }: Props) {
       <span>{rows.length} единиц</span>
     </section>
 
-    <section className="calendar-legend"><span className="legend-request">Заявка</span><span className="legend-confirmed">Бронь</span><span className="legend-active">Аренда</span><span className="legend-service">Сервис</span><span className="legend-free">Свободна</span></section>
+    <section className="calendar-legend"><span className="legend-request">Заявка</span><span className="legend-confirmed">Бронь</span><span className="legend-active">Аренда / возврат сегодня</span><span className="legend-service">Сервис</span><span className="legend-free">Свободна</span></section>
 
     <section className="owner-calendar" data-owner-calendar>
       <div className="calendar-grid calendar-head"><div>Техника</div>{days.map((day) => <div key={day}><b>{new Date(`${day}T00:00:00Z`).toLocaleDateString('ru-RU',{weekday:'short'})}</b><span>{new Date(`${day}T00:00:00Z`).toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})}</span></div>)}</div>
