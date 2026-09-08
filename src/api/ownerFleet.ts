@@ -26,6 +26,16 @@ function removeFallback(id: string) {
   saveFallback(loadFallback().filter((item) => item.id !== id));
 }
 
+function prepareVehicle(vehicle: ManagedFleetVehicle): ManagedFleetVehicle {
+  return vehicle.id ? vehicle : {
+    ...vehicle,
+    id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    published: vehicle.published ?? true,
+    archivedAt: vehicle.archivedAt ?? null,
+    ownerManaged: true,
+  };
+}
+
 export async function fetchFleetOverrides(): Promise<ManagedFleetVehicle[]> {
   try {
     const response = await fetch('/api/fleet-overrides', { headers: { accept: 'application/json' } });
@@ -40,26 +50,34 @@ export async function fetchFleetOverrides(): Promise<ManagedFleetVehicle[]> {
 }
 
 export async function saveOwnerVehicle(vehicle: ManagedFleetVehicle): Promise<ManagedFleetVehicle> {
-  upsertFallback(vehicle);
+  const prepared = prepareVehicle(vehicle);
+  upsertFallback(prepared);
   try {
     const response = await fetch('/api/owner/fleet', {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-uniq-demo-role': 'owner' },
-      body: JSON.stringify(vehicle),
+      body: JSON.stringify(prepared),
     });
-    if (!response.ok) return vehicle;
+    if (!response.ok) return prepared;
     const data = await response.json() as { vehicle?: ManagedFleetVehicle };
     if (data.vehicle) {
       upsertFallback(data.vehicle);
       return data.vehicle;
     }
   } catch {}
-  return vehicle;
+  return prepared;
 }
 
 export async function archiveOwnerVehicle(id: string, archived: boolean): Promise<ManagedFleetVehicle | null> {
   const fallback = loadFallback().find((item) => item.id === id);
-  if (fallback) upsertFallback({ ...fallback, archivedAt: archived ? new Date().toISOString() : null, published: archived ? false : fallback.published });
+  if (fallback) {
+    upsertFallback({
+      ...fallback,
+      archivedAt: archived ? new Date().toISOString() : null,
+      published: archived ? false : (fallback.published ?? true),
+      ownerManaged: true,
+    });
+  }
   try {
     const response = await fetch(`/api/owner/fleet/${encodeURIComponent(id)}`, {
       method: 'PATCH',
