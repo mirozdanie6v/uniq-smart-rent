@@ -58,3 +58,18 @@ test('stage 3 owner fleet management contracts are present',async()=>{
   assert.ok(ui.includes('Добавить технику'));
   assert.ok(ui.includes('data-owner-save'));
 });
+
+
+test('stage 4 booking calendar and lifecycle contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0005_booking_calendar.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/bookingOperationsWorker.ts',import.meta.url),'utf8');
+  const calendar=await readFile(new URL('../src/features/bookings/OwnerBookingCalendar.tsx',import.meta.url),'utf8');
+  const ownerFleet=await readFile(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');
+  assert.ok(migration.includes('booking_extensions'));
+  assert.ok(migration.includes('issued_at'));
+  assert.ok(worker.includes('/api/owner/calendar'));
+  assert.ok(worker.includes('/extend'));
+  assert.ok(worker.includes('/lifecycle'));
+  assert.ok(calendar.includes('КАЛЕНДАРЬ ЗАНЯТОСТИ'));
+  assert.ok(ownerFleet.includes('data-owner-fleet-type-filter'));
+});

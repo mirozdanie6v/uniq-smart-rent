@@ -133,6 +133,9 @@ try:
         page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
         assert page.locator('.topbar .header-language-switcher select').count()==1
+        page.locator('[data-go="calendar"]').last.click(); page.wait_for_timeout(80)
+        assert page.locator('[data-owner-calendar]').count()==1
+        assert page.locator('[data-owner-calendar-type]').count()==1
         assert page.locator('text=Качество данных').count()==0
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
@@ -183,6 +186,11 @@ try:
         page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(100)
         assert page.locator('[data-owner-add-vehicle]').count()==1
         assert page.locator('[data-owner-vehicle]').count()==89
+        owner_type=page.locator('[data-owner-fleet-type-filter]'); assert owner_type.count()==1
+        owner_type.select_option('car'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==7
+        owner_type.select_option('motorcycle'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==33
+        owner_type.select_option('scooter'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==49
+        owner_type.select_option('all'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==89
 
         # Edit an existing vehicle and verify the new price reaches the client catalog.
         existing=page.locator('[data-owner-vehicle]').first

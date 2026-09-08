@@ -57,6 +57,7 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
   const [editing, setEditing] = useState<Draft | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | FleetState | 'archived'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | VehicleType>('all');
   const [branchFilter, setBranchFilter] = useState<'all' | 'branch-north' | 'branch-center'>('all');
   const [photoUrl, setPhotoUrl] = useState('');
   const [busy, setBusy] = useState(false);
@@ -68,9 +69,10 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
     const state = effectiveState(vehicle);
     if (statusFilter === 'archived' && !vehicle.archivedAt) return false;
     if (statusFilter !== 'all' && statusFilter !== 'archived' && state !== statusFilter) return false;
+    if (typeFilter !== 'all' && vehicle.type !== typeFilter) return false;
     if (branchFilter !== 'all' && vehicle.branchId !== branchFilter) return false;
     return !q || `${vehicle.title} ${vehicle.brand ?? ''} ${vehicle.model ?? ''} ${vehicle.engine ?? ''} ${vehicle.registrationNumber ?? ''}`.toLowerCase().includes(q);
-  }), [fleet, search, statusFilter, branchFilter, fleetStates]);
+  }), [fleet, search, statusFilter, typeFilter, branchFilter, fleetStates]);
 
   const counts = useMemo(() => ({
     total: fleet.filter((item) => !item.archivedAt).length,
@@ -175,6 +177,9 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
       <input data-owner-fleet-search value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Поиск по парку…" />
       <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}>
         <option value="all">Все состояния</option><option value="manager">Подтверждает менеджер</option><option value="ready">Готовы к выдаче</option><option value="service">В сервисе</option><option value="hold">Резерв</option><option value="archived">Архив</option>
+      </select>
+      <select data-owner-fleet-type-filter value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as typeof typeFilter)}>
+        <option value="all">Все типы</option><option value="car">Авто</option><option value="motorcycle">Мотоциклы</option><option value="scooter">Скутеры</option>
       </select>
       <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value as typeof branchFilter)}>
         <option value="all">Все точки</option>{branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}

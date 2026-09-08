@@ -1,12 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { OwnerFleetManager } from '../fleet/OwnerFleetManager';
+import { OwnerBookingCalendar } from '../bookings/OwnerBookingCalendar';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
 type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'handover';
-type OwnerRoute = 'overview' | 'requests' | 'fleet';
+type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
 type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
 
@@ -33,7 +34,7 @@ const roleLabels: Record<Role, string> = { client: 'Клиент', employee: 'С
 const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   client: [['home','Главная'],['catalog','Каталог'],['requests','MY UNIQ'],['contacts','Контакты']],
   employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['handover','Выдачи']],
-  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк']],
+  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь']],
 };
 
 const requestKey = 'uniq-demo-requests-v2';
@@ -79,7 +80,7 @@ function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): num
 const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 'scooter' ? 'Скутер' : 'Мотоцикл';
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
 const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
-const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉'} as Partial<Record<Route,string>>)[route] ?? '•';
+const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
@@ -149,6 +150,20 @@ function BookingModal({ vehicle, onClose, onSubmit }: { vehicle: FleetVehicle; o
   </div>;
 }
 
+function ExtensionModal({ request, vehicle, onClose, onSubmit }: { request: RentalRequest; vehicle: FleetVehicle; onClose: () => void; onSubmit: (newTo: string, additional: number) => void }) {
+  const nextDay = new Date(`${request.to}T00:00:00Z`); nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const minDate = dateISO(nextDay);
+  const [newTo, setNewTo] = useState(minDate);
+  const additional = newTo >= minDate ? publishedEstimate(vehicle, minDate, newTo) : 0;
+  return <div className="modal-bg" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
+    <section className="modal" data-extension-modal><button className="modal-x" onClick={onClose}>×</button><span className="eyebrow">ПРОДЛЕНИЕ АРЕНДЫ</span><h2>{vehicle.title}</h2><p>Текущий возврат: <b>{request.to}</b></p>
+      <label>Новая дата возврата<input data-extension-to type="date" min={minDate} value={newTo} onChange={(event) => setNewTo(event.target.value)} /></label>
+      <div className="extension-summary"><b>Доплата: {money(additional)}</b><span>Расчёт по опубликованным тарифам. Финальная сумма подтверждается системой оплаты.</span></div>
+      <button className="primary wide" data-extension-submit disabled={!newTo || newTo < minDate} onClick={() => onSubmit(newTo, additional)}>Продлить аренду</button>
+    </section>
+  </div>;
+}
+
 function ScrollTop() {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
@@ -178,6 +193,7 @@ export function PrototypeApp() {
   const [requests, setRequests] = useState<RentalRequest[]>(() => loadSession(requestKey, []));
   const [fleetStates, setFleetStates] = useState<Record<string, FleetState>>(() => loadSession(fleetStateKey, {}));
   const [bookingVehicleId, setBookingVehicleId] = useState<string | null>(null);
+  const [extendingRequestId, setExtendingRequestId] = useState<string | null>(null);
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
 
   useEffect(() => { window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.(); }, []);
@@ -211,6 +227,14 @@ export function PrototypeApp() {
 
   const selectedVehicle = selectedId ? fleet.find((item) => item.id === selectedId) : undefined;
   const bookingVehicle = bookingVehicleId ? fleet.find((item) => item.id === bookingVehicleId) : undefined;
+  const extendingRequest = extendingRequestId ? requests.find((item) => item.id === extendingRequestId) : undefined;
+  const extendingVehicle = extendingRequest ? fleet.find((item) => item.id === extendingRequest.vehicleId) : undefined;
+
+  function setLifecycleStatus(request: RentalRequest, status: RequestStatus) {
+    setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status } : item));
+    if (status === 'active') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'hold' }));
+    if (status === 'returned' || status === 'completed') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'ready' }));
+  }
 
   function requestCard(request: RentalRequest) {
     const vehicle = fleet.find((item) => item.id === request.vehicleId);
@@ -219,9 +243,16 @@ export function PrototypeApp() {
       <h3>{vehicle?.title ?? request.vehicleId}</h3>
       <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>
       <b>{money(request.estimate)}</b>
-      {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status: event.target.value as RequestStatus } : item))}>
+      {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => setLifecycleStatus(request, event.target.value as RequestStatus)}>
         {(['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
+      {role !== 'client' ? <div className="request-actions">
+        {request.status === 'confirmed' ? <button className="primary" data-issue={request.id} onClick={() => setLifecycleStatus(request,'active')}>Выдать технику</button> : null}
+        {request.status === 'issued' ? <button className="primary" onClick={() => setLifecycleStatus(request,'active')}>Начать аренду</button> : null}
+        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить</button> : null}
+        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-return={request.id} onClick={() => setLifecycleStatus(request,'returned')}>Принять возврат</button> : null}
+        {request.status === 'returned' ? <button className="primary" data-complete={request.id} onClick={() => setLifecycleStatus(request,'completed')}>Завершить аренду</button> : null}
+      </div> : null}
     </article>;
   }
 
@@ -300,11 +331,15 @@ export function PrototypeApp() {
     return <OwnerFleetManager fleet={fleet} baseFleet={baseFleet} fleetStates={fleetStates} setFleet={setFleet} setFleetStates={setFleetStates}/>;
   }
 
+  function ownerCalendar() {
+    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;
+  }
+
   let content: React.ReactNode;
   if (selectedVehicle) content = vehicleDetailPage(selectedVehicle);
   else if (role === 'client') content = route === 'catalog' ? catalogPage() : route === 'requests' ? requestsPage() : route === 'contacts' ? contactsPage() : clientHome();
   else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'handover' ? handoverPage() : employeeDashboard();
-  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : ownerOverview();
+  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : ownerOverview();
 
   return <>
     <div className="shell">
@@ -316,6 +351,7 @@ export function PrototypeApp() {
       <nav className="bottom-nav">{nav[role].map(([id,label]) => <button key={id} data-go={id} className={route === id ? 'active' : ''} onClick={() => go(id)}><span>{icon(id)}</span><b>{label}</b></button>)}</nav>
     </div>
     {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={(request) => { setRequests((current) => [...current, request]); setBookingVehicleId(null); setSelectedId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}/>: null}
+    {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => { setRequests((current) => current.map((item) => item.id === extendingRequest.id ? { ...item, to: newTo, estimate: item.estimate + additional } : item)); setExtendingRequestId(null); }}/>: null}
     <ScrollTop/>
   </>;
 }
