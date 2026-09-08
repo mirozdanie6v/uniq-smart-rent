@@ -90,16 +90,17 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
   const paymentUrl = `${origin}/?payment=${checkoutToken}`;
   const qrPayload = paymentUrl;
   const mode = credentialReady(env, provider) && env.DEMO_MODE !== 'true' ? 'live-ready' : 'demo';
+  const providerPayload = JSON.stringify({ mode, requestedPercent, checkoutToken, paymentReference, methodLabel: providerMeta[provider].label });
 
-  await env.DB.prepare(`INSERT INTO payments (id, booking_id, customer_id, provider, status, currency, amount_vnd, display_amount, qr_payload, payment_url, expires_at, provider_payload_json, is_demo, payment_reference, method_label, checkout_token, created_at, updated_at)
-    VALUES (?, ?, ?, ?, 'pending', 'VND', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(paymentId, bookingId, booking.customer_id, provider, amountVnd, amountVnd, qrPayload, paymentUrl, expiresAt, JSON.stringify({ mode, requestedPercent }), mode === 'demo' ? 1 : 0, paymentReference, providerMeta[provider].label, checkoutToken, now, now).run();
+  await env.DB.prepare(`INSERT INTO payments (id, booking_id, customer_id, provider, provider_payment_id, status, currency, amount_vnd, display_amount, qr_payload, payment_url, expires_at, provider_payload_json, is_demo, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, 'pending', 'VND', ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+    .bind(paymentId, bookingId, booking.customer_id, provider, paymentReference, amountVnd, amountVnd, qrPayload, paymentUrl, expiresAt, providerPayload, mode === 'demo' ? 1 : 0, now, now).run();
 
   await env.DB.prepare(`UPDATE bookings SET prepayment_percent = ?, payment_status = CASE WHEN paid_vnd > 0 THEN 'partially_paid' ELSE 'pending' END, updated_at = ? WHERE id = ?`)
     .bind(requestedPercent, now, bookingId).run();
 
   await env.DB.prepare(`INSERT INTO payment_events (id, payment_id, provider, event_type, payload_json, created_at) VALUES (?, ?, ?, 'intent_created', ?, ?)`)
-    .bind(crypto.randomUUID(), paymentId, provider, JSON.stringify({ amountVnd, requestedPercent, mode }), now).run();
+    .bind(crypto.randomUUID(), paymentId, provider, JSON.stringify({ amountVnd, requestedPercent, mode, paymentReference }), now).run();
 
   return json({
     payment: {
@@ -124,7 +125,7 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
 
 async function getPayment(env: PaymentEnv, paymentId: string): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503);
-  const row = await env.DB.prepare(`SELECT id, booking_id, provider, status, amount_vnd, currency, qr_payload, payment_url, expires_at, paid_at, payment_reference, method_label, checkout_token, confirmed_at, is_demo, created_at, updated_at
+  const row = await env.DB.prepare(`SELECT id, booking_id, provider, provider_payment_id AS payment_reference, status, amount_vnd, currency, qr_payload, payment_url, expires_at, paid_at, provider_payload_json, is_demo, created_at, updated_at
     FROM payments WHERE id = ? LIMIT 1`).bind(paymentId).first<Record<string, unknown>>();
   return row ? json({ payment: row }) : json({ error: 'payment_not_found' }, 404);
 }
@@ -132,7 +133,7 @@ async function getPayment(env: PaymentEnv, paymentId: string): Promise<Response>
 async function listBookingPayments(request: Request, env: PaymentEnv, bookingId: string): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503);
   if (!isStaff(request, env) && env.DEMO_MODE !== 'true') return json({ error: 'unauthorized' }, 401);
-  const rows = await env.DB.prepare(`SELECT id, booking_id, provider, status, amount_vnd, currency, payment_reference, method_label, expires_at, paid_at, confirmed_at, is_demo, created_at
+  const rows = await env.DB.prepare(`SELECT id, booking_id, provider, provider_payment_id AS payment_reference, status, amount_vnd, currency, expires_at, paid_at, provider_payload_json, is_demo, created_at
     FROM payments WHERE booking_id = ? ORDER BY created_at DESC`).bind(bookingId).all<Record<string, unknown>>();
   return json({ bookingId, payments: rows.results ?? [] });
 }
@@ -157,7 +158,7 @@ async function confirmDemo(env: PaymentEnv, paymentId: string): Promise<Response
   const newPaid = Math.min(totalVnd, Math.max(0, Number(booking.paid_vnd || 0)) + Number(payment.amount_vnd || 0));
   const paymentStatus = newPaid >= totalVnd ? 'paid' : 'partially_paid';
 
-  await env.DB.prepare(`UPDATE payments SET status = 'paid', paid_at = ?, confirmed_at = ?, updated_at = ? WHERE id = ?`).bind(now, now, now, paymentId).run();
+  await env.DB.prepare(`UPDATE payments SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?`).bind(now, now, paymentId).run();
   await env.DB.prepare(`UPDATE bookings SET paid_vnd = ?, payment_status = ?, updated_at = ? WHERE id = ?`).bind(newPaid, paymentStatus, now, payment.booking_id).run();
   await env.DB.prepare(`INSERT INTO transactions (id, booking_id, payment_id, vehicle_id, customer_id, type, status, amount_vnd, method, occurred_at, note, created_at)
     VALUES (?, ?, ?, ?, ?, 'payment', 'completed', ?, ?, ?, 'Stage 5 demo payment confirmation', ?)`)
