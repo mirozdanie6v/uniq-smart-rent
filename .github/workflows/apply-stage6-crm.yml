@@ -10,6 +10,7 @@ on:
       - 'src/features/crm/**'
       - 'src/features/prototype/PrototypeApp.tsx'
       - 'src/main.tsx'
+      - 'tests/stage6_crm_e2e.py'
       - 'DEVELOPMENT_ROADMAP.md'
 
 permissions:
@@ -89,6 +90,12 @@ jobs:
             path.write_text(text, encoding='utf-8')
       - run: npm install
       - run: npm run check
+      - name: Install Playwright for Stage 6 acceptance
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Stage 6 CRM browser acceptance
+        run: python tests/stage6_crm_e2e.py
       - name: Commit Stage 6 wiring
         run: |
           if git diff --quiet; then
