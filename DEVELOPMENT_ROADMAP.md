@@ -41,21 +41,27 @@ Delivered and verified:
 - browser acceptance verified on mobile 390×844 and desktop 1440×900;
 - production deployment verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 7 — Employees and branches
+### ✅ Stage 7 — Employees and branches
 Roles, permissions, two locations, vehicle transfers.
 
-Acceptance target:
-- owner sees both UNIQ branches with fleet and employee counts;
-- owner can add/edit employees, roles, branch assignment, status and permissions;
-- roles: owner, admin, manager, branch staff;
-- permissions cover bookings, CRM, fleet, prices, payments, finance, team and transfers;
-- owner can create and complete a vehicle transfer between North and Center;
-- completed transfer updates the vehicle branch in the interface;
-- employee panel includes the shared fleet occupancy calendar;
-- employee navigation remains usable on mobile and navigation labels are slightly larger;
-- Stage 7 browser acceptance passes on mobile and desktop before deployment.
+Delivered and verified:
+- owner Team section with both UNIQ branches and fleet/employee counters;
+- employee profiles with roles, branch assignment, active/inactive status and permissions;
+- roles: owner, admin, manager and branch staff;
+- permissions for bookings, CRM, fleet status, pricing, payments, finance, team and transfers;
+- add/edit employee flow;
+- vehicle transfer flow between North and Center with planned, in-transit and completed states;
+- completed transfers update the vehicle branch in the application;
+- D1 migration 0007 seeds the demonstration team and Stage 7 indexes;
+- shared occupancy calendar added to the Employee panel;
+- Employee navigation expanded to five sections and Owner navigation to six sections;
+- navigation labels enlarged while retaining mobile usability;
+- deterministic demo branch distribution for frontend fleet entries without a stored branch;
+- browser acceptance verified on mobile 390×844 and desktop 1440×900;
+- unit tests verified 13/13;
+- production Stage 7 UI, schemaVersion 7 and D1 team API verified on uniq-smart-rent.viiversion.com.
 
-### ⏳ Stage 8 — Finance
+### 🚧 Stage 8 — Finance
 Transactions, deposits, refunds, revenue.
 
 ### ⏳ Stage 9 — Service
