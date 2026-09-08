@@ -6,6 +6,7 @@ on:
       - refactor/react-typescript-vite-demo
     paths:
       - 'scripts/apply-stage4-booking-calendar.mjs'
+      - '.github/workflows/apply-stage4-booking-calendar.yml'
   workflow_dispatch:
 
 permissions:
