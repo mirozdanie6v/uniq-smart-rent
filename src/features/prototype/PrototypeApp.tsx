@@ -3,14 +3,15 @@ import { OwnerFleetManager } from '../fleet/OwnerFleetManager';
 import { OwnerBookingCalendar } from '../bookings/OwnerBookingCalendar';
 import { PaymentCheckout } from '../payments/PaymentCheckout';
 import { OwnerCRM } from '../crm/OwnerCRM';
+import { OwnerTeamBranches } from '../team/OwnerTeamBranches';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
 import { createPersistedBooking, PaymentProvider } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
-type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'handover';
-type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers';
+type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'calendar' | 'handover';
+type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
 type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
 
@@ -40,8 +41,8 @@ declare global {
 const roleLabels: Record<Role, string> = { client: 'Клиент', employee: 'Сотрудник', owner: 'Владелец' };
 const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   client: [['home','Главная'],['catalog','Каталог'],['requests','MY UNIQ'],['contacts','Контакты']],
-  employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['handover','Выдачи']],
-  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты']],
+  employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']],
+  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда']],
 };
 
 const requestKey = 'uniq-demo-requests-v2';
@@ -88,7 +89,7 @@ const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
 const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
 const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
-const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙'} as Partial<Record<Route,string>>)[route] ?? '•';
+const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
@@ -366,15 +367,23 @@ export function PrototypeApp() {
     return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;
   }
 
+  function employeeCalendar() {
+    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;
+  }
+
   function ownerCustomers() {
     return <OwnerCRM requests={requests} fleet={fleet}/>;
+  }
+
+  function ownerTeam() {
+    return <OwnerTeamBranches fleet={fleet} setFleet={setFleet}/>;
   }
 
   let content: React.ReactNode;
   if (selectedVehicle) content = vehicleDetailPage(selectedVehicle);
   else if (role === 'client') content = route === 'catalog' ? catalogPage() : route === 'requests' ? requestsPage() : route === 'contacts' ? contactsPage() : clientHome();
-  else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'handover' ? handoverPage() : employeeDashboard();
-  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : ownerOverview();
+  else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'calendar' ? employeeCalendar() : route === 'handover' ? handoverPage() : employeeDashboard();
+  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : ownerOverview();
 
   return <>
     <div className="shell">
@@ -383,7 +392,7 @@ export function PrototypeApp() {
         <div className="role-switch">{(Object.keys(roleLabels) as Role[]).map((item) => <button key={item} data-role={item} className={role === item ? 'active' : ''} onClick={() => switchRole(item)}>{roleLabels[item]}</button>)}</div>
       </header>
       <main>{content}</main>
-      <nav className="bottom-nav">{nav[role].map(([id,label]) => <button key={id} data-go={id} className={route === id ? 'active' : ''} onClick={() => go(id)}><span>{icon(id)}</span><b>{label}</b></button>)}</nav>
+      <nav className="bottom-nav" data-nav-count={nav[role].length}>{nav[role].map(([id,label]) => <button key={id} data-go={id} className={route === id ? 'active' : ''} onClick={() => go(id)}><span>{icon(id)}</span><b>{label}</b></button>)}</nav>
     </div>
     {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={submitClientBooking}/>: null}
     {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} onClose={() => { setPaymentRequestId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider } : item)); }}/>: null}

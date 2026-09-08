@@ -35,6 +35,12 @@ export const branchOptions = [
   { id: 'branch-center' as const, label: 'Центр города', address: '254 Nguyễn Thị Minh Khai' },
 ];
 
+export function demoBranchForVehicleId(id: string): 'branch-north' | 'branch-center' {
+  let hash = 0;
+  for (let i = 0; i < id.length; i += 1) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;
+  return Math.abs(hash) % 2 === 0 ? 'branch-north' : 'branch-center';
+}
+
 export function normalizeBaseVehicle(vehicle: ManagedFleetVehicle): ManagedFleetVehicle {
   const words = vehicle.title.trim().split(/\s+/);
   return {
@@ -42,7 +48,7 @@ export function normalizeBaseVehicle(vehicle: ManagedFleetVehicle): ManagedFleet
     brand: vehicle.brand ?? words[0] ?? '',
     model: vehicle.model ?? words.slice(1).join(' '),
     status: vehicle.status ?? 'manager',
-    branchId: vehicle.branchId ?? '',
+    branchId: vehicle.branchId || demoBranchForVehicleId(vehicle.id),
     published: vehicle.published ?? true,
     archivedAt: vehicle.archivedAt ?? null,
     ownerManaged: vehicle.ownerManaged ?? false,

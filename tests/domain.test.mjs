@@ -86,3 +86,19 @@ test('stage 5 payment checkout contracts are present',async()=>{
   assert.ok(ui.includes('data-payment-provider'));
   assert.ok(ui.includes('data-payment-percent'));
 });
+
+
+test('stage 7 employees branches and transfers contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0007_stage7_employees_branches.sql',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/api/teamWorker.ts',import.meta.url),'utf8');
+  const ui=await readFile(new URL('../src/features/team/OwnerTeamBranches.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  assert.ok(migration.includes('employee-demo-linh'));
+  assert.ok(migration.includes('idx_vehicle_transfers_status'));
+  assert.ok(worker.includes('/api/owner/team'));
+  assert.ok(worker.includes('/api/owner/transfers'));
+  assert.ok(ui.includes('data-stage7-team'));
+  assert.ok(ui.includes('data-permission-grid'));
+  assert.ok(ui.includes('data-create-transfer'));
+  assert.ok(app.includes("employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']]"));
+});

@@ -44,6 +44,17 @@ Delivered and verified:
 ### 🚧 Stage 7 — Employees and branches
 Roles, permissions, two locations, vehicle transfers.
 
+Acceptance target:
+- owner sees both UNIQ branches with fleet and employee counts;
+- owner can add/edit employees, roles, branch assignment, status and permissions;
+- roles: owner, admin, manager, branch staff;
+- permissions cover bookings, CRM, fleet, prices, payments, finance, team and transfers;
+- owner can create and complete a vehicle transfer between North and Center;
+- completed transfer updates the vehicle branch in the interface;
+- employee panel includes the shared fleet occupancy calendar;
+- employee navigation remains usable on mobile and navigation labels are slightly larger;
+- Stage 7 browser acceptance passes on mobile and desktop before deployment.
+
 ### ⏳ Stage 8 — Finance
 Transactions, deposits, refunds, revenue.
 
