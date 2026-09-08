@@ -20,12 +20,12 @@ try:
    page.route('**/api/owner/service',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps(service,ensure_ascii=False)) if r.request.method=='GET' else r.continue_())
    page.route('**/api/owner/service/svc-1',lambda r:r.fulfill(status=200,content_type='application/json',body=json.dumps({'record':{**service['records'][0],'status':'in_progress'},'persisted':True},ensure_ascii=False)))
    page.goto('http://127.0.0.1:8768/',wait_until='networkidle')
-   vehicle_id=page.locator('[data-fleet-state]').first.get_attribute('data-fleet-state')
-   assert vehicle_id
+   page.locator('[data-role="employee"]').click();page.locator('[data-go="fleet"]').last.click();page.wait_for_timeout(80)
+   vehicle_id=page.locator('[data-fleet-state]').first.get_attribute('data-fleet-state');assert vehicle_id
    request={'id':'local-payment-fix','vehicleId':vehicle_id,'from':'2026-09-12','to':'2026-09-15','client':'Test Client','contact':'@test','status':'new','estimate':1800000,'createdAt':'2026-09-09T01:00:00Z','paymentStatus':'unpaid'}
    page.evaluate("r=>sessionStorage.setItem('uniq-demo-requests-v2',JSON.stringify([r]))",request);page.reload(wait_until='networkidle')
    page.locator('[data-role="employee"]').click();page.locator('[data-go="fleet"]').last.click();page.wait_for_timeout(80)
-   page.locator(f'[data-fleet-state="{vehicle_id}"]').select_option('ready');page.wait_for_timeout(160)
+   page.locator(f'[data-fleet-state="{vehicle_id}"]').select_option('ready');page.wait_for_timeout(180)
    page.locator('[data-role="client"]').click();page.locator('[data-go="requests"]').last.click();page.wait_for_timeout(80)
    pay=page.locator('[data-pay-booking="local-payment-fix"]');assert pay.count()==1
    pay.click();page.wait_for_timeout(80);assert page.locator('[data-payment-checkout]').count()==1;assert page.locator('.provider-logo').count()==7
