@@ -82,10 +82,24 @@ Delivered and verified:
 - browser acceptance verified on mobile 390×844 and desktop 1440×900;
 - production schemaVersion 8, ownerFinance/refunds/deposits health flags and D1 finance API verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 9 — Service
+### ✅ Stage 9 — Service
 Maintenance, repairs, inspections, expenses.
 
-### ⏳ Stage 10 — Marketing
+Delivered and verified:
+- fixed Employee → Ready for handover flow: the matching booking is created/synchronized in D1 when necessary, confirmed, and client test payment becomes available;
+- client payment selector now displays seven provider brand marks: VietQR, VNPAY, MoMo, ZaloPay, SBP, YooKassa and T-Bank;
+- owner Service section with maintenance, repair, inspection, cleaning and other work types;
+- mileage, next-service mileage, supplier, notes, cost and inspection checklist;
+- service start moves the vehicle to service state and creates an availability block;
+- service completion returns the vehicle to the operational fleet and removes the service block;
+- service completion updates mileage, last-service and next-service data;
+- completed service cost creates a service_expense transaction in Finance;
+- D1 migration 0009 extends fleet/service data and adds vehicle inspections;
+- unit/domain tests verified 15/15;
+- Stage 9 browser acceptance verified on mobile 390×844 and desktop 1440×900, including Ready for handover → payment and seven payment logos;
+- production schemaVersion 9, serviceManagement/serviceInspections/serviceExpenses health flags and D1 service records verified on uniq-smart-rent.viiversion.com.
+
+### 🚧 Stage 10 — Marketing
 Promotions, promo codes, mailings.
 
 ### ⏳ Stage 11 — Analytics
