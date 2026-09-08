@@ -1,0 +1,41 @@
+name: Apply Stage 5 Payments
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - 'scripts/apply-stage5-payments.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refactor/react-typescript-vite-demo
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install QR dependency
+        run: |
+          npm install qrcode
+          npm install --save-dev @types/qrcode
+      - name: Apply Stage 5 integration patches
+        run: node scripts/apply-stage5-payments.mjs
+      - run: npm run check
+      - name: Commit generated Stage 5 integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src/features/prototype/PrototypeApp.tsx src/main.tsx src/worker.ts tests/domain.test.mjs tests/e2e.py
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Stage 5: integrate payment checkout"
+            git push origin HEAD:refactor/react-typescript-vite-demo
+          fi
