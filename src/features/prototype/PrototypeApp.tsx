@@ -5,14 +5,15 @@ import { PaymentCheckout } from '../payments/PaymentCheckout';
 import { OwnerCRM } from '../crm/OwnerCRM';
 import { OwnerTeamBranches } from '../team/OwnerTeamBranches';
 import { OwnerFinance } from '../finance/OwnerFinance';
+import { OwnerService } from '../service/OwnerService';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
-import { createPersistedBooking, PaymentProvider } from '../../api/payments';
+import { createPersistedBooking, PaymentProvider, updatePersistedBookingStatus } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
 type ClientRoute = 'home' | 'catalog' | 'requests' | 'contacts';
 type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'calendar' | 'handover';
-type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance';
+type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service';
 type Route = ClientRoute | EmployeeRoute | OwnerRoute;
 type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';
 
@@ -43,7 +44,7 @@ const roleLabels: Record<Role, string> = { client: 'Клиент', employee: 'С
 const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   client: [['home','Главная'],['catalog','Каталог'],['requests','MY UNIQ'],['contacts','Контакты']],
   employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']],
-  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы']],
+  owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис']],
 };
 
 const requestKey = 'uniq-demo-requests-v2';
@@ -90,7 +91,7 @@ const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
 const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
 const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
-const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟',finance:'₫'} as Partial<Record<Route,string>>)[route] ?? '•';
+const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟',finance:'₫',service:'⚙'} as Partial<Record<Route,string>>)[route] ?? '•';
 
 function Hero({ label, title, text, aside }: { label: string; title: string; text: string; aside?: React.ReactNode }) {
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
@@ -248,10 +249,35 @@ export function PrototypeApp() {
   const paymentRequest = paymentRequestId ? requests.find((item) => item.id === paymentRequestId) : undefined;
   const paymentVehicle = paymentRequest ? fleet.find((item) => item.id === paymentRequest.vehicleId) : undefined;
 
-  function setLifecycleStatus(request: RentalRequest, status: RequestStatus) {
-    setRequests((current) => current.map((item) => item.id === request.id ? { ...item, status } : item));
+  async function ensurePersistedRequest(request: RentalRequest): Promise<RentalRequest> {
+    if (request.backendBookingId) return request;
+    try {
+      const persisted = await createPersistedBooking({ vehicleId: request.vehicleId, from: request.from, to: request.to, client: request.client, contact: request.contact });
+      return { ...request, backendBookingId: persisted.bookingId, estimate: persisted.estimatedTotalVnd || request.estimate, paymentStatus: request.paymentStatus ?? 'unpaid' };
+    } catch { return request; }
+  }
+
+  async function setLifecycleStatus(request: RentalRequest, status: RequestStatus) {
+    const synced = status === 'new' ? request : await ensurePersistedRequest(request);
+    const backendMap: Partial<Record<RequestStatus,'contacted'|'confirmed'|'vehicle_issued'|'active'|'returned'|'completed'|'cancelled'>> = { contacted:'contacted', confirmed:'confirmed', issued:'vehicle_issued', active:'active', returned:'returned', completed:'completed', cancelled:'cancelled' };
+    const backendStatus = backendMap[status];
+    if (synced.backendBookingId && backendStatus) {
+      try { await updatePersistedBookingStatus(synced.backendBookingId, backendStatus); } catch {}
+    }
+    setRequests((current) => current.map((item) => {
+      if (item.id != request.id) return item;
+      const persisted = synced.backendBookingId ? { backendBookingId:synced.backendBookingId, estimate:synced.estimate } : { estimate:synced.estimate };
+      return { ...item, ...persisted, status, paymentStatus:item.paymentStatus ?? 'unpaid' };
+    }));
     if (status === 'active') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'hold' }));
     if (status === 'returned' || status === 'completed') setFleetStates((current) => ({ ...current, [request.vehicleId]: 'ready' }));
+  }
+
+  async function setEmployeeFleetState(vehicle: FleetVehicle, nextState: FleetState) {
+    setFleetStates((current) => ({ ...current, [vehicle.id]: nextState }));
+    if (nextState !== 'ready') return;
+    const candidate = [...requests].reverse().find((item) => item.vehicleId === vehicle.id && ['new','contacted','confirmed'].includes(item.status) && item.paymentStatus !== 'paid');
+    if (candidate) await setLifecycleStatus(candidate, 'confirmed');
   }
 
   async function submitClientBooking(request: RentalRequest) {
@@ -276,15 +302,15 @@ export function PrototypeApp() {
       <b>{money(request.estimate)}</b>
       <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>
       {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => setPaymentRequestId(request.id)}>Оплатить</button> : null}
-      {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => setLifecycleStatus(request, event.target.value as RequestStatus)}>
+      {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => { void setLifecycleStatus(request, event.target.value as RequestStatus); }}>
         {(['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
       {role !== 'client' ? <div className="request-actions">
-        {request.status === 'confirmed' ? <button className="primary" data-issue={request.id} onClick={() => setLifecycleStatus(request,'active')}>Выдать технику</button> : null}
-        {request.status === 'issued' ? <button className="primary" onClick={() => setLifecycleStatus(request,'active')}>Начать аренду</button> : null}
+        {request.status === 'confirmed' ? <button className="primary" data-issue={request.id} onClick={() => { void setLifecycleStatus(request,'active'); }}>Выдать технику</button> : null}
+        {request.status === 'issued' ? <button className="primary" onClick={() => { void setLifecycleStatus(request,'active'); }}>Начать аренду</button> : null}
         {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить</button> : null}
-        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-return={request.id} onClick={() => setLifecycleStatus(request,'returned')}>Принять возврат</button> : null}
-        {request.status === 'returned' ? <button className="primary" data-complete={request.id} onClick={() => setLifecycleStatus(request,'completed')}>Завершить аренду</button> : null}
+        {request.status === 'active' || request.status === 'issued' ? <button className="secondary" data-return={request.id} onClick={() => { void setLifecycleStatus(request,'returned'); }}>Принять возврат</button> : null}
+        {request.status === 'returned' ? <button className="primary" data-complete={request.id} onClick={() => { void setLifecycleStatus(request,'completed'); }}>Завершить аренду</button> : null}
       </div> : null}
     </article>;
   }
@@ -344,7 +370,7 @@ export function PrototypeApp() {
   }
 
   function employeeFleet() {
-    return <><Hero label="ПАРК СОТРУДНИКА" title="Парк техники." text="Сотрудник видит весь каталог. Сотрудник видит весь парк и может быстро обновлять рабочий статус техники."/><section className="fleet-table">{operationalFleet.map((vehicle) => <article key={vehicle.id}><div className="mini-photo"><VehiclePhoto vehicle={vehicle}/></div><div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? ''}</small></div><select data-fleet-state={vehicle.id} value={effectiveFleetState(vehicle.id)} onChange={(event) => setFleetStates((current) => ({ ...current, [vehicle.id]: event.target.value as FleetState }))}><option value="manager">Подтверждает менеджер</option><option value="ready">Готов к выдаче</option><option value="service">В сервисе</option><option value="hold">Резерв</option></select></article>)}</section></>;
+    return <><Hero label="ПАРК СОТРУДНИКА" title="Парк техники." text="Сотрудник видит весь каталог. Сотрудник видит весь парк и может быстро обновлять рабочий статус техники."/><section className="fleet-table">{operationalFleet.map((vehicle) => <article key={vehicle.id}><div className="mini-photo"><VehiclePhoto vehicle={vehicle}/></div><div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? ''}</small></div><select data-fleet-state={vehicle.id} value={effectiveFleetState(vehicle.id)} onChange={(event) => { void setEmployeeFleetState(vehicle, event.target.value as FleetState); }}><option value="manager">Подтверждает менеджер</option><option value="ready">Готов к выдаче</option><option value="service">В сервисе</option><option value="hold">Резерв</option></select></article>)}</section></>;
   }
 
   function handoverPage() {
@@ -384,11 +410,15 @@ export function PrototypeApp() {
     return <OwnerFinance/>;
   }
 
+  function ownerService() {
+    return <OwnerService fleet={fleet} setFleetStates={setFleetStates}/>;
+  }
+
   let content: React.ReactNode;
   if (selectedVehicle) content = vehicleDetailPage(selectedVehicle);
   else if (role === 'client') content = route === 'catalog' ? catalogPage() : route === 'requests' ? requestsPage() : route === 'contacts' ? contactsPage() : clientHome();
   else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'calendar' ? employeeCalendar() : route === 'handover' ? handoverPage() : employeeDashboard();
-  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : route === 'finance' ? ownerFinance() : ownerOverview();
+  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : route === 'finance' ? ownerFinance() : route === 'service' ? ownerService() : ownerOverview();
 
   return <>
     <div className="shell">

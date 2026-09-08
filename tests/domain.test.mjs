@@ -119,3 +119,19 @@ test('stage 8 finance contracts are present',async()=>{
   assert.ok(ui.includes('data-submit-refund'));
   assert.ok(app.includes("['finance','Финансы']"));
 });
+
+
+test('stage 9 service and payment readiness contracts are present',async()=>{
+ const migration=await readFile(new URL('../migrations/0009_stage9_service.sql',import.meta.url),'utf8');
+ const service=await readFile(new URL('../src/api/serviceWorker.ts',import.meta.url),'utf8');
+ const ui=await readFile(new URL('../src/features/service/OwnerService.tsx',import.meta.url),'utf8');
+ const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+ const pay=await readFile(new URL('../src/features/payments/PaymentCheckout.tsx',import.meta.url),'utf8');
+ assert.ok(migration.includes('vehicle_inspections'));
+ assert.ok(service.includes('/api/owner/service'));
+ assert.ok(service.includes('service_expense'));
+ assert.ok(ui.includes('data-stage9-service'));
+ assert.ok(app.includes('setEmployeeFleetState'));
+ assert.ok(app.includes('updatePersistedBookingStatus'));
+ assert.ok(pay.includes('ProviderLogo'));
+});
