@@ -22,6 +22,7 @@
 
   const requestKey = 'uniq-data-requests-v3';
   const fleetStateKey = 'uniq-data-fleet-state-v3';
+  const clientDateKey = 'uniq-client-dates-v1';
   const legacyRequestKey = 'uniq-demo-requests-v2';
   const legacyFleetStateKey = 'uniq-demo-fleet-state-v2';
   const bookingStatusOrder = ['new','contacted','awaiting_confirmation','confirmed','vehicle_issued','active','return_due','returned','completed','cancelled'];
@@ -44,6 +45,19 @@
   const today = new Date();
   const fromDefault = new Date(today); fromDefault.setDate(fromDefault.getDate()+1);
   const toDefault = new Date(today); toDefault.setDate(toDefault.getDate()+4);
+  const validDate = value => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+  const savedClientDates = parseStore(localStorage, clientDateKey) || {};
+  state.bookingFrom = validDate(savedClientDates.from) ? savedClientDates.from : dateISO(fromDefault);
+  state.bookingTo = validDate(savedClientDates.to) && savedClientDates.to >= state.bookingFrom ? savedClientDates.to : dateISO(toDefault);
+  const saveClientDates = () => save(clientDateKey,{from:state.bookingFrom,to:state.bookingTo});
+  function syncQuickDates() {
+    const from=document.querySelector('#quickFrom')?.value;
+    const to=document.querySelector('#quickTo')?.value;
+    if(validDate(from)) state.bookingFrom=from;
+    if(validDate(to)) state.bookingTo=to;
+    if(state.bookingTo < state.bookingFrom) state.bookingTo=state.bookingFrom;
+    saveClientDates();
+  }
   const telegram = window.Telegram?.WebApp; telegram?.ready?.(); telegram?.expand?.();
   const apiWriteEnabled = location.protocol === 'https:';
   const staffApiKey = () => apiWriteEnabled ? (sessionStorage.getItem('uniq-staff-api-key') || '') : '';
@@ -96,7 +110,7 @@
   function clientHome() {
     const featured = fleet.filter(v=>v.photos?.length).slice(0,6);
     return hero('UNIQ SMART RENT · NHA TRANG','Весь парк UNIQ — прямо в Telegram.','Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.',`<div class="hero-card"><b>${fleet.length}</b><span>единиц техники</span><div class="hero-office-maps"><a class="hero-office-map" href="https://maps.app.goo.gl/qr3FNiVVxAdThVBV6" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 312 Đ. 2/4 — открыть в Google Maps"><iframe title="UNIQ Moto — 312 Đ. 2/4" src="https://www.google.com/maps?q=UNIQ%20Moto%20312%20%C4%90.%202%2F4%20Nha%20Trang&output=embed" loading="lazy" tabindex="-1"></iframe><span><b>312 Đ. 2/4</b><small>Северный филиал · Google Maps ↗</small></span></a><a class="hero-office-map" href="https://maps.app.goo.gl/sJdMndLRPz9b228J7" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 254 Nguyễn Thị Minh Khai — открыть в Google Maps"><iframe title="UNIQ Moto — 254 Nguyễn Thị Minh Khai" src="https://www.google.com/maps?q=UNIQ%20Moto%20254%20Nguyen%20Thi%20Minh%20Khai%20Nha%20Trang&output=embed" loading="lazy" tabindex="-1"></iframe><span><b>254 Nguyễn Thị Minh Khai</b><small>Центр города · Google Maps ↗</small></span></a></div></div>`) +
-      `<section class="quick"><div><label>Получение<input id="quickFrom" type="date" value="${dateISO(fromDefault)}"></label><label>Возврат<input id="quickTo" type="date" value="${dateISO(toDefault)}"></label></div><button class="primary" data-go="catalog">Подобрать технику</button></section>`+
+      `<section class="quick"><div><label>Получение<input id="quickFrom" type="date" value="${state.bookingFrom}"></label><label>Возврат<input id="quickTo" type="date" value="${state.bookingTo}"></label></div><button class="primary" data-go="catalog">Подобрать технику</button></section>`+
       `<section class="section"><div class="section-head"><div><span class="eyebrow">ПАРК</span><h2>Популярная техника</h2></div><button class="text" data-go="catalog">Весь каталог →</button></div><div class="grid">${featured.map(card).join('')}</div></section>`+
       `<section class="proof"><b>Актуальный парк UNIQ</b><span>Наличие конкретной единицы и выбранные даты подтверждает менеджер.</span></section>`;
   }
@@ -199,9 +213,11 @@
 
   function bind() {
     document.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>{state.role=b.dataset.role;sessionStorage.setItem('uniq-role-v2',state.role);state.route=nav[state.role][0][0];state.selectedId=null;render(true)});
-    document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{state.route=b.dataset.go;state.selectedId=null;render(true)});
+    document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{if(state.role==='client')syncQuickDates();state.route=b.dataset.go;state.selectedId=null;render(true)});
     document.querySelectorAll('[data-open]').forEach(el=>el.onclick=e=>{if(e.target.closest('[data-book]'))return;state.selectedId=el.dataset.open;render(true)});
-    document.querySelectorAll('[data-book]').forEach(b=>b.onclick=e=>{e.stopPropagation();openBooking(b.dataset.book)});
+    document.querySelectorAll('[data-book]').forEach(b=>b.onclick=e=>{e.stopPropagation();syncQuickDates();openBooking(b.dataset.book)});
+    document.querySelector('#quickFrom')?.addEventListener('change',syncQuickDates);
+    document.querySelector('#quickTo')?.addEventListener('change',syncQuickDates);
     document.querySelector('#fleetSearch')?.addEventListener('input',e=>{state.query=e.target.value;render()});
     document.querySelector('#typeFilter')?.addEventListener('change',e=>{state.type=e.target.value;render()});
     document.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const r=requests.find(x=>x.id===s.dataset.status);if(r){r.status=normalizeBookingStatus(s.value);save(requestKey,requests);void persistBookingStatus(r,r.status);render()}});
@@ -211,7 +227,7 @@
 
   function openBooking(id) {
     const v=fleet.find(x=>x.id===id); if(!v)return;
-    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">БРОНИРОВАНИЕ</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${dateISO(fromDefault)}" required></label><label>Возврат<input name="to" type="date" value="${dateISO(toDefault)}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Отправить заявку</button></form><small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString(),persistence:'local'};if(apiWriteEnabled){try{const response=await fetch('/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({vehicleId:id,from,to,client:r.client,contact:r.contact,channel:'other',deliveryLocation:'',note:''})});if(response.ok){const data=await response.json();if(data.persisted){r.id=data.bookingId||r.id;r.estimate=Number(data.estimatedTotalVnd)||r.estimate;r.persistence='d1';}}}catch{}}requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
+    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">БРОНИРОВАНИЕ</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${state.bookingFrom}" required></label><label>Возврат<input name="to" type="date" value="${state.bookingTo}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Отправить заявку</button></form><small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));state.bookingFrom=from;state.bookingTo=to;saveClientDates();const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString(),persistence:'local'};if(apiWriteEnabled){try{const response=await fetch('/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({vehicleId:id,from,to,client:r.client,contact:r.contact,channel:'other',deliveryLocation:'',note:''})});if(response.ok){const data=await response.json();if(data.persisted){r.id=data.bookingId||r.id;r.estimate=Number(data.estimatedTotalVnd)||r.estimate;r.persistence='d1';}}}catch{}}requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
   }
 
   if (!fleet.length) root.innerHTML='<div class="fatal"><b>Каталог временно недоступен.</b><span>Обновите страницу или свяжитесь с менеджером UNIQ.</span></div>'; else render();
