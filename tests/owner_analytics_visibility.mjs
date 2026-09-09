@@ -19,7 +19,9 @@ for (const viewport of [{width:390,height:844},{width:412,height:915},{width:144
   console.log(JSON.stringify({viewport,labels,rect,inside}));
   if (!inside) throw new Error(`Analytics is outside viewport at ${viewport.width}x${viewport.height}`);
   await button.click();
-  await page.locator('[data-owner-analytics]').waitFor({ state:'visible' });
+  await page.locator('[data-stage11-analytics]').waitFor({ state:'visible' });
+  const heading = await page.locator('[data-stage11-analytics] h1').first().textContent();
+  if (!heading?.includes('Что приносит деньги')) throw new Error(`Analytics page heading mismatch: ${heading}`);
   await page.close();
 }
 await browser.close();
