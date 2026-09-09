@@ -1,3 +1,8 @@
+CREATE TABLE IF NOT EXISTS schema_meta (
+  version INTEGER PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 ALTER TABLE customers ADD COLUMN contact_key TEXT NOT NULL DEFAULT '';
 
 UPDATE customers
