@@ -14,6 +14,7 @@ try:
         browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
         ctx=browser.new_context(viewport={'width':390,'height':844},locale='ru-RU')
         page=ctx.new_page(); errors=[]
+        page.route('https://www.google.com/maps**', lambda route: route.fulfill(status=204, body=''))
         page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
         page.goto('http://127.0.0.1:8765/',wait_until='networkidle')
 
