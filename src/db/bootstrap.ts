@@ -46,12 +46,14 @@ CREATE TABLE IF NOT EXISTS pricing (
   weekly_vnd INTEGER NOT NULL,
   monthly_vnd INTEGER NOT NULL,
   deposit_usd INTEGER NOT NULL,
+  deposit_vnd INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS customers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   contact TEXT NOT NULL,
+  contact_key TEXT NOT NULL DEFAULT '',
   preferred_channel TEXT NOT NULL DEFAULT 'other',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -122,25 +124,47 @@ INSERT OR IGNORE INTO vehicles (id, slug, brand, model, year, category, engine_l
 ('r7-2023','yamaha-r7-2023','Yamaha','YZF-R7',2023,'sport','689 cc','manager_confirmation'),
 ('rebel-300-2023','honda-rebel-300-2023','Honda','Rebel 300',2023,'cruiser','286 cc','manager_confirmation'),
 ('espero-50-2024','detech-espero-50cc-2024','Detech','Espero 50cc',2024,'scooter','49 cc','manager_confirmation');
-INSERT OR IGNORE INTO pricing (vehicle_id, daily_vnd, weekly_vnd, monthly_vnd, deposit_usd) VALUES
-('mt09-sp-2023',4000000,15000000,32000000,2000),
-('xmax-2024',1800000,8000000,17000000,600),
-('r7-2023',3500000,16000000,32000000,1500),
-('rebel-300-2023',1600000,7000000,17500000,600),
-('espero-50-2024',450000,2500000,4000000,200);
+INSERT OR IGNORE INTO pricing (vehicle_id, daily_vnd, weekly_vnd, monthly_vnd, deposit_usd, deposit_vnd) VALUES
+('mt09-sp-2023',4000000,15000000,32000000,2000,0),
+('xmax-2024',1800000,8000000,17000000,600,0),
+('r7-2023',3500000,16000000,32000000,1500,0),
+('rebel-300-2023',1600000,7000000,17500000,600,0),
+('espero-50-2024',450000,2500000,4000000,200,0);
 INSERT OR IGNORE INTO vehicle_photos (id, vehicle_id, url, sort_order, source_url) VALUES
 ('mt09-sp-2023-1','mt09-sp-2023','https://ahodwykbyoytwtpfoxgi.supabase.co/storage/v1/object/public/public-assets/vehicles/75172/1.jpg',1,'https://uniqmoto.com/en/rentals/motorcycles/yamaha-mt-09-sp-2023'),
 ('xmax-2024-1','xmax-2024','https://uniqmoto.com/assets/vehicles/client-fleet/yamaha-x-max-2024-76826.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/yamaha-x-max-2024-76826'),
 ('r7-2023-1','r7-2023','https://uniqmoto.com/assets/vehicles/client-fleet/yamaha-r7-2023.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/yamaha-r7-2023'),
 ('rebel-300-2023-1','rebel-300-2023','https://uniqmoto.com/assets/vehicles/client-fleet/honda-rebel-300-2023.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/honda-rebel-300-2023'),
 ('espero-50-2024-1','espero-50-2024','https://uniqmoto.com/assets/vehicles/client-fleet/detech-espero-50cc-2024.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/detech-espero-50cc-2024');
-INSERT OR IGNORE INTO schema_meta (version) VALUES (2);
+INSERT OR IGNORE INTO schema_meta (version) VALUES (4);
 `;
+
+async function ensureColumn(db: D1DatabaseLike, table: string, column: string, definition: string): Promise<void> {
+  const info = await db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+  if ((info.results ?? []).some(item => item.name === column)) return;
+  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+}
+
+async function ensureCompatibilityMigrations(db: D1DatabaseLike): Promise<void> {
+  await ensureColumn(db, 'customers', 'contact_key', "TEXT NOT NULL DEFAULT ''");
+  await ensureColumn(db, 'pricing', 'deposit_vnd', 'INTEGER NOT NULL DEFAULT 0');
+  await db.exec(`
+UPDATE customers
+SET contact_key = lower(
+  replace(replace(replace(replace(replace(trim(contact), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '')
+)
+WHERE contact_key = '';
+CREATE INDEX IF NOT EXISTS idx_customers_contact_key ON customers(contact_key, updated_at DESC);
+INSERT OR IGNORE INTO schema_meta (version) VALUES (3);
+INSERT OR IGNORE INTO schema_meta (version) VALUES (4);
+`);
+}
 
 export async function ensureDatabase(db: D1DatabaseLike): Promise<void> {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
       await db.exec(schemaSql);
+      await ensureCompatibilityMigrations(db);
       await db.exec(seedSql);
     })().catch((error) => {
       bootstrapPromise = null;

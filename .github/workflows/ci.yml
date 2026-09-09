@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm test
+      - name: Validate D1 migrations
+        run: npx wrangler d1 migrations apply uniq-smart-rent-db --local
       - name: Validate Cloudflare Worker bundle
         run: npx wrangler deploy --dry-run --outdir .wrangler-dry-run
       - name: Install Chromium + Python Playwright

@@ -17,7 +17,15 @@
   <div id="app"></div>
   <noscript>Для прототипа UNIQ Smart Rent требуется JavaScript.</noscript>
   <script src="./assets/fleet-manifest.js"></script>
-  <script defer src="https://dashboard.viiversion.com/tracker.js" data-project="UNIQ Smart Rent"></script>
+  <script>
+    if (location.protocol === 'https:') {
+      const tracker = document.createElement('script');
+      tracker.src = 'https://dashboard.viiversion.com/tracker.js';
+      tracker.defer = true;
+      tracker.dataset.project = 'UNIQ Smart Rent';
+      document.body.appendChild(tracker);
+    }
+  </script>
   <script src="./app-v2.js" defer></script>
   <script src="./scroll-top.js" defer></script>
   <script src="./i18n.js" defer></script>

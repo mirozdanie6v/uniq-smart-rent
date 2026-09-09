@@ -12,7 +12,7 @@ export const businessInfo: BusinessInfo = {
   website: 'https://uniqmoto.com',
   publicRating: 4.9,
   publicReviewCount: 204,
-  publicFleetCount: 82,
+  publicFleetCount: 89,
   branches: [
     {
       id: 'north',
@@ -27,5 +27,5 @@ export const businessInfo: BusinessInfo = {
       mapsUrl: 'https://www.google.com/maps/search/?api=1&query=UNIQ+Moto+254+Nguyen+Thi+Minh+Khai+Nha+Trang'
     }
   ],
-  verifiedAt: '2026-08-25'
+  verifiedAt: '2026-09-02'
 };

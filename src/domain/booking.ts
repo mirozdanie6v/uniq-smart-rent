@@ -8,6 +8,31 @@ export interface PriceBreakdown {
   totalVnd: number;
 }
 
+export interface RentalPricing {
+  dailyVnd: number;
+  weeklyVnd: number;
+  monthlyVnd: number;
+}
+
+const bookingStatusAliases: Record<string, BookingStatus> = {
+  draft: 'draft',
+  new: 'new',
+  contacted: 'contacted',
+  awaiting_confirmation: 'awaiting_confirmation',
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+  issued: 'vehicle_issued',
+  vehicle_issued: 'vehicle_issued',
+  active: 'active',
+  return_due: 'return_due',
+  returned: 'returned',
+  completed: 'completed'
+};
+
+export function normalizeBookingStatus(value: string): BookingStatus | null {
+  return bookingStatusAliases[value] ?? null;
+}
+
 export function rentalDays(from: string, to: string): number {
   const start = new Date(`${from}T00:00:00Z`);
   const end = new Date(`${to}T00:00:00Z`);
@@ -24,16 +49,24 @@ export function calculateRentalTotal(vehicle: Vehicle, from: string, to: string)
   return calculatePriceBreakdown(vehicle, from, to).totalVnd;
 }
 
+export function calculateRentalTotalForPricing(pricing: RentalPricing, from: string, to: string): number {
+  return calculatePriceBreakdownForPricing(pricing, from, to).totalVnd;
+}
+
 export function calculatePriceBreakdown(vehicle: Vehicle, from: string, to: string): PriceBreakdown {
+  return calculatePriceBreakdownForPricing(vehicle.pricing, from, to);
+}
+
+export function calculatePriceBreakdownForPricing(pricing: RentalPricing, from: string, to: string): PriceBreakdown {
   const days = rentalDays(from, to);
-  const { dailyVnd, weeklyVnd, monthlyVnd } = vehicle.pricing;
+  const { dailyVnd, weeklyVnd, monthlyVnd } = pricing;
   const best: Array<{ total: number; months: number; weeks: number; dailyDays: number }> = Array.from({ length: days + 1 }, () => ({ total: Number.POSITIVE_INFINITY, months: 0, weeks: 0, dailyDays: 0 }));
   best[0] = { total: 0, months: 0, weeks: 0, dailyDays: 0 };
   const packages = [
     { length: 1, price: dailyVnd, key: 'dailyDays' as const },
     { length: 7, price: weeklyVnd, key: 'weeks' as const },
     { length: 30, price: monthlyVnd, key: 'months' as const }
-  ];
+  ].filter(pkg => Number.isFinite(pkg.price) && pkg.price > 0);
   for (let d = 1; d <= days; d += 1) {
     for (const pkg of packages) {
       const prevDay = Math.max(0, d - pkg.length);
@@ -45,8 +78,11 @@ export function calculatePriceBreakdown(vehicle: Vehicle, from: string, to: stri
       }
     }
   }
-  const result = best[days] ?? { total: days * dailyVnd, months: 0, weeks: 0, dailyDays: days };
-  return { days, months: result.months, weeks: result.weeks, dailyDays: result.dailyDays, totalVnd: result.total };
+  const fallbackDaily = Number.isFinite(dailyVnd) && dailyVnd > 0 ? dailyVnd : 0;
+  const result = best[days]?.total === Number.POSITIVE_INFINITY
+    ? { total: days * fallbackDaily, months: 0, weeks: 0, dailyDays: days }
+    : best[days];
+  return { days, months: result?.months ?? 0, weeks: result?.weeks ?? 0, dailyDays: result?.dailyDays ?? days, totalVnd: result?.total ?? days * fallbackDaily };
 }
 
 export function canRequestBooking(_vehicle: Vehicle): boolean { return true; }
