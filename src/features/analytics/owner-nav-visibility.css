@@ -1,0 +1,30 @@
+/* Regression guard: the owner has ten primary sections. Keep all of them visible
+   on mobile instead of hiding the last items behind horizontal scrolling. */
+@media(max-width:760px){
+  .bottom-nav[data-nav-count="10"]{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    grid-template-rows:repeat(2,auto);
+    width:min(620px,calc(100% - 8px));
+    gap:3px;
+    padding:5px;
+    overflow:visible;
+    scroll-snap-type:none;
+    bottom:calc(5px + var(--safe));
+    border-radius:18px;
+  }
+  .bottom-nav[data-nav-count="10"] button{
+    min-width:0;
+    min-height:52px;
+    padding-inline:1px;
+  }
+  .bottom-nav[data-nav-count="10"] b{
+    max-width:none;
+    font-size:9px;
+    line-height:1.05;
+    white-space:normal;
+    text-align:center;
+  }
+  .bottom-nav[data-nav-count="10"] span{font-size:13px}
+  .shell{padding-bottom:calc(136px + var(--safe))}
+}
