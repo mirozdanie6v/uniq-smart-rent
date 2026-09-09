@@ -8,6 +8,25 @@ export interface PriceBreakdown {
   totalVnd: number;
 }
 
+const bookingStatusAliases: Record<string, BookingStatus> = {
+  draft: 'draft',
+  new: 'new',
+  contacted: 'contacted',
+  awaiting_confirmation: 'awaiting_confirmation',
+  confirmed: 'confirmed',
+  cancelled: 'cancelled',
+  issued: 'vehicle_issued',
+  vehicle_issued: 'vehicle_issued',
+  active: 'active',
+  return_due: 'return_due',
+  returned: 'returned',
+  completed: 'completed'
+};
+
+export function normalizeBookingStatus(value: string): BookingStatus | null {
+  return bookingStatusAliases[value] ?? null;
+}
+
 export function rentalDays(from: string, to: string): number {
   const start = new Date(`${from}T00:00:00Z`);
   const end = new Date(`${to}T00:00:00Z`);
