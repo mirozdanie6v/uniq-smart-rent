@@ -1,0 +1,49 @@
+name: Stage 12 Remerge Full Regression QA
+
+on:
+  push:
+    branches:
+      - stage12/remerge-with-analytics
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: stage12/remerge-with-analytics
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Full project check
+        run: |
+          npm install
+          npm run check
+      - name: Apply local D1 migrations
+        run: npx wrangler d1 migrations apply uniq-smart-rent-db --local --config wrangler.jsonc
+      - name: Start local Worker
+        run: |
+          nohup npx wrangler dev --local --port 8787 --config wrangler.jsonc >/tmp/stage12-remerge-wrangler.log 2>&1 &
+          ready=0
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/tmp/stage12-remerge-health.json; then ready=1; break; fi
+            sleep 1
+          done
+          cat /tmp/stage12-remerge-health.json || true
+          test "$ready" -eq 1
+          test "$(jq -r '.ownerAnalytics' /tmp/stage12-remerge-health.json)" = "true"
+          test "$(jq -r '.dynamicBranches' /tmp/stage12-remerge-health.json)" = "true"
+          test "$(jq -r '.clientBookingExtension' /tmp/stage12-remerge-health.json)" = "true"
+          test "$(jq -r '.balancePayments' /tmp/stage12-remerge-health.json)" = "true"
+      - name: Run API business scenarios
+        run: python tests/stage12_business_scenarios.py
+      - name: Install Playwright
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Browser regression analytics plus Stage 12 operations
+        run: node tests/stage12_browser.mjs
