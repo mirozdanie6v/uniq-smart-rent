@@ -17,7 +17,7 @@
   const providerLabel=id=>providers.find(item=>item[0]===id)?.[1]||id;
   const requestById=id=>requests().find(item=>String(item.id)===String(id));
   const vehicleTitle=request=>fleet().find(item=>String(item.id)===String(request?.vehicleId))?.title||request?.vehicleId||'UNIQ';
-  const paymentAmount=(total,percent)=>percent===30?Math.ceil((Number(total)||0)*.3):(Number(total)||0;
+  const paymentAmount=(total,percent)=>percent===30?Math.ceil((Number(total)||0)*.3):(Number(total)||0);
 
   window.__UNIQ_STAGE9_EXCLUSIVE__={loaded:true,claimed:0,lastRequest:null,lastError:null};
 
