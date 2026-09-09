@@ -2,6 +2,7 @@ import { vehicles } from './domain/catalog.js';
 import { businessInfo } from './domain/business.js';
 import { calculateRentalTotalForPricing, isValidDateRange, normalizeBookingStatus } from './domain/booking.js';
 import { normalizeContactKey } from './domain/customer.js';
+import { normalizeFleetStatus } from './domain/fleet.js';
 import type { BookingStatus } from './domain/types.js';
 import { ensureDatabase } from './db/bootstrap.js';
 import type { D1DatabaseLike } from './db/bootstrap.js';
@@ -96,6 +97,10 @@ async function ensureVehicleRecord(db: D1DatabaseLike, vehicle: PublishedVehicle
     VALUES (?, ?, ?, ?, ?, ?, ?, 'manager_confirmation', ?, ?)
     ON CONFLICT(id) DO UPDATE SET slug = excluded.slug, brand = excluded.brand, model = excluded.model, year = excluded.year, category = excluded.category, engine_label = excluded.engine_label, updated_at = excluded.updated_at`)
     .bind(vehicle.id, vehicle.slug, brand, model, Number(vehicle.year) || 0, vehicle.type || 'vehicle', vehicle.engine || '', now, now).run();
+  await db.prepare(`INSERT INTO pricing (vehicle_id, daily_vnd, weekly_vnd, monthly_vnd, deposit_usd, updated_at)
+    VALUES (?, ?, ?, ?, COALESCE((SELECT deposit_usd FROM pricing WHERE vehicle_id = ?), 0), ?)
+    ON CONFLICT(vehicle_id) DO UPDATE SET daily_vnd = excluded.daily_vnd, weekly_vnd = excluded.weekly_vnd, monthly_vnd = excluded.monthly_vnd, updated_at = excluded.updated_at`)
+    .bind(vehicle.id, Number(vehicle.dailyVnd) || 0, Number(vehicle.weeklyVnd) || 0, Number(vehicle.monthlyVnd) || 0, vehicle.id, now).run();
 }
 
 async function bookingConflict(db: D1DatabaseLike, vehicleId: string, from: string, to: string, excludeBookingId = ''): Promise<{ type: 'booking' | 'service'; id: string; status?: string } | null> {
@@ -188,6 +193,31 @@ async function syncFleetCatalog(request: Request, env: Env): Promise<Response> {
   return json({ synced: fleet.length, source: 'assets/fleet-manifest.json' }, 200, corsHeaders);
 }
 
+async function listFleetState(request: Request, env: Env): Promise<Response> {
+  if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
+  const result = await env.DB.prepare(`SELECT v.id, v.slug, v.brand, v.model, v.year, v.category, v.engine_label, v.status, v.updated_at, p.daily_vnd, p.weekly_vnd, p.monthly_vnd FROM vehicles v LEFT JOIN pricing p ON p.vehicle_id = v.id ORDER BY v.brand, v.model, v.year DESC`).all<Record<string, unknown>>();
+  return json({ fleet: result.results ?? [] }, 200, corsHeaders);
+}
+
+async function updateFleetStatus(request: Request, env: Env, vehicleId: string): Promise<Response> {
+  if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
+  const body = await parseBody(request);
+  const rawStatus = text(body?.status);
+  const status = normalizeFleetStatus(rawStatus);
+  if (!status) return json({ error: 'invalid_fleet_status' }, 400, corsHeaders);
+  let vehicle: PublishedVehicle | null = null;
+  try { vehicle = await findPublishedVehicle(request, env, vehicleId); } catch { return json({ error: 'fleet_manifest_unavailable' }, 503, corsHeaders); }
+  if (!vehicle) return json({ error: 'vehicle_not_found' }, 404, corsHeaders);
+  await ensureVehicleRecord(env.DB, vehicle);
+  const now = new Date().toISOString();
+  await env.DB.prepare('UPDATE vehicles SET status = ?, updated_at = ? WHERE id = ?').bind(status, now, vehicleId).run();
+  await env.DB.prepare('INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(crypto.randomUUID(), 'vehicle', vehicleId, 'status_changed', JSON.stringify({ to: status, requested: rawStatus }), now).run();
+  return json({ vehicleId, status, persisted: true }, 200, corsHeaders);
+}
+
 async function listBookings(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
@@ -247,9 +277,12 @@ export default {
     if (url.pathname === '/api/bookings' && request.method === 'GET') return listBookings(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'POST') return createBooking(request, env);
     if (url.pathname === '/api/customers' && request.method === 'GET') return listCustomers(request, env);
+    if (url.pathname === '/api/fleet' && request.method === 'GET') return listFleetState(request, env);
     if (url.pathname === '/api/admin/sync-fleet' && request.method === 'POST') return syncFleetCatalog(request, env);
-    const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
-    if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
+    const bookingStatusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
+    if (bookingStatusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(bookingStatusMatch[1] ?? ''));
+    const vehicleStatusMatch = url.pathname.match(/^\/api\/vehicles\/([^/]+)\/status$/);
+    if (vehicleStatusMatch && request.method === 'PATCH') return updateFleetStatus(request, env, decodeURIComponent(vehicleStatusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);
     return env.ASSETS.fetch(request);
   }
