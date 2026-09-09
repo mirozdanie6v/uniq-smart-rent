@@ -40,7 +40,7 @@
   };
 
   const lang=()=>{const value=localStorage.getItem(LANG_KEY)||'ru';return SUPPORTED.includes(value)?value:'ru'};
-  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
   const money=value=>Number(value)>0?new Intl.NumberFormat('ru-RU').format(Number(value))+' ₫':'—';
   const fleet=()=>Array.isArray(window.UNIQ_FLEET)?window.UNIQ_FLEET:[];
   const activeRole=()=>document.querySelector('.role-switch [data-role].active')?.dataset.role||'';
@@ -123,6 +123,16 @@
     if(clients.parentElement!==nav)nav.insertBefore(clients,fleetButton||null);
     if(analytics.parentElement!==nav)nav.append(analytics);
     nav.classList.add('owner-nav','owner-nav-scroll');
+    nav.setAttribute('aria-label','Разделы панели · свайпните ← →');
+
+    const shell=nav.closest('.shell')||document.querySelector('.shell');
+    if(shell){
+      const hints=[...document.querySelectorAll('.owner-nav-hint')];
+      let hint=hints.find(node=>node.closest('.shell')===shell)||null;
+      if(!hint){hint=document.createElement('div');hint.className='owner-nav-hint';shell.append(hint)}
+      hint.textContent='Разделы панели · свайпните ← →';
+      [...document.querySelectorAll('.owner-nav-hint')].forEach(node=>{if(node!==hint)node.remove()});
+    }
   }
 
   function polishOwner(force=false){
