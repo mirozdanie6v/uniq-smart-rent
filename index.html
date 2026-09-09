@@ -13,20 +13,13 @@
   <link rel="stylesheet" href="./i18n.css">
   <link rel="stylesheet" href="./header-language.css">
   <link rel="stylesheet" href="./prod-ui.css">
+  <script src="https://telegram.org/js/telegram-web-app.js?63"></script>
 </head>
 <body>
   <div id="app"></div>
   <noscript>Для работы UNIQ Smart Rent требуется JavaScript.</noscript>
   <script src="./assets/fleet-manifest.js"></script>
-  <script>
-    if (location.protocol === 'https:') {
-      const tracker = document.createElement('script');
-      tracker.src = 'https://dashboard.viiversion.com/tracker.js';
-      tracker.defer = true;
-      tracker.dataset.project = 'UNIQ Smart Rent';
-      document.body.appendChild(tracker);
-    }
-  </script>
+  <script defer src="https://dashboard.viiversion.com/tracker.js" data-project="UNIQ Smart Rent"></script>
   <script src="./app-v2.js" defer></script>
   <script src="./scroll-top.js" defer></script>
   <script src="./i18n.js" defer></script>
