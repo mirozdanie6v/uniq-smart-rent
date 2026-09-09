@@ -11,6 +11,21 @@ async function assertNoOverflow(page, label) {
   if (sizes.sw > sizes.cw + 2) throw new Error(`${label} horizontal overflow ${sizes.sw}/${sizes.cw}`);
 }
 
+async function assertOwnerAnalyticsVisible(page, label) {
+  const nav = page.locator('.bottom-nav');
+  if (await nav.locator('button').count() !== 10) throw new Error(`${label}: owner must expose 10 primary sections`);
+  const analytics = page.locator('[data-go="analytics"]');
+  await analytics.waitFor();
+  const box = await analytics.boundingBox();
+  const viewport = page.viewportSize();
+  if (!box || !viewport || box.x < 0 || box.y < 0 || box.x + box.width > viewport.width + 1 || box.y + box.height > viewport.height + 1) {
+    throw new Error(`${label}: analytics navigation is not visibly reachable`);
+  }
+  await analytics.click();
+  await page.locator('[data-stage11-analytics]').waitFor();
+  await page.getByText('Что приносит деньги — видно сразу.').waitFor();
+}
+
 async function seedClient(page) {
   await page.goto(base + '/');
   await page.evaluate((fixture) => {
@@ -40,6 +55,7 @@ desktop.on('console', (message) => {
 });
 await desktop.goto(base + '/');
 await desktop.locator('[data-role="owner"]').click();
+await assertOwnerAnalyticsVisible(desktop, 'desktop owner');
 await desktop.locator('[data-go="team"]').click();
 await desktop.locator('[data-add-branch]').click();
 await desktop.locator('[data-branch-name]').fill('Западный офис');
@@ -72,10 +88,12 @@ await mobile.locator('[data-client-extend="stage12-ui-request"]').waitFor();
 await mobile.locator('[data-pay-booking="stage12-ui-request"]').waitFor();
 await assertNoOverflow(mobile, 'mobile MY UNIQ');
 await mobile.locator('[data-role="owner"]').click();
+await assertOwnerAnalyticsVisible(mobile, 'mobile owner');
+await assertNoOverflow(mobile, 'mobile owner analytics');
 await mobile.locator('[data-go="team"]').click();
 await mobile.locator('[data-add-branch]').waitFor();
 await assertNoOverflow(mobile, 'mobile owner branches');
 
 if (consoleErrors.length) throw new Error('Console errors: ' + consoleErrors.join(' | '));
 await browser.close();
-console.log('Stage 12 browser acceptance passed: desktop + mobile');
+console.log('Stage 12 merged browser acceptance passed: analytics + operations + desktop + mobile');
