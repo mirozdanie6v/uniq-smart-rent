@@ -14,8 +14,9 @@ export interface D1DatabaseLike {
 
 let bootstrapPromise: Promise<void> | null = null;
 
+// Cloudflare D1 enforces foreign keys by default. Avoid changing the pragma from
+// a binding exec(), which runs inside D1's implicit transaction semantics.
 const schemaSql = `
-PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS schema_meta (
   version INTEGER PRIMARY KEY,
   applied_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
