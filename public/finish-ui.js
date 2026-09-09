@@ -85,7 +85,8 @@
   const formatDate = value => { try { return value ? new Date(value).toLocaleDateString(lang()==='ru'?'ru-RU':'en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '—'; } catch { return '—'; } };
 
   function enhanceHero() {
-    if (activeRole() !== 'client') return;
+    const homeButton = document.querySelector('.bottom-nav [data-go="home"]');
+    if (activeRole() !== 'client' || !homeButton?.classList.contains('active')) return;
     const main = document.querySelector('main');
     const hero = main?.querySelector('.hero');
     if (!hero) return;
@@ -146,7 +147,7 @@
       const row = document.createElement('div'); row.className = 'finish-payment-state';
       if (role === 'client') {
         const status = card.querySelector('.status');
-        if (status && pay !== 'paid') status.textContent = tr('ready');
+        if (status) status.textContent = pay === 'paid' ? tr('paid') : tr('ready');
         row.innerHTML = pay === 'paid'
           ? `<span class="payment-badge paid">${esc(tr('paid'))}</span>`
           : `<button type="button" class="payment-button" data-pay-request="${esc(request.id)}">${esc(tr('pay'))}</button>`;
@@ -208,7 +209,7 @@
     const request = requests().find(item => String(item.id) === String(requestId)); if (!request) return;
     const data = payments();
     data[request.id] = {status:'paid',paidAt:new Date().toISOString(),amount:Number(request.estimate||request.estimatedTotalVnd)||0,method:document.querySelector('#finishPaymentMethod')?.value||'demo'};
-    savePayments(data); document.querySelector('#finishPaymentModal')?.remove(); refresh(true);
+    savePayments(data); document.querySelector('#finishPaymentModal')?.remove(); refresh();
   }
 
   let applying = false;
