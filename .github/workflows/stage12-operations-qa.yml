@@ -24,7 +24,9 @@ jobs:
           node-version: 22
 
       - name: Integrate Stage 12
-        run: python scripts/stage12_integrate.py
+        run: |
+          python scripts/stage12_integrate.py
+          python scripts/stage12_postfix.py
 
       - name: Install dependencies and full check
         run: |
