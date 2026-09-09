@@ -2,6 +2,7 @@
   'use strict';
 
   const LANG_KEY = 'uniq-language-v1';
+  const REQUEST_KEY = 'uniq-data-requests-v3';
   const SUPPORTED = ['ru','vi','en','ko','zh'];
   const copy = {
     slogan: {
@@ -40,10 +41,12 @@
   };
 
   const lang=()=>{const value=localStorage.getItem(LANG_KEY)||'ru';return SUPPORTED.includes(value)?value:'ru'};
-  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[ch]));
+  const esc=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const money=value=>Number(value)>0?new Intl.NumberFormat('ru-RU').format(Number(value))+' ₫':'—';
   const fleet=()=>Array.isArray(window.UNIQ_FLEET)?window.UNIQ_FLEET:[];
   const activeRole=()=>document.querySelector('.role-switch [data-role].active')?.dataset.role||'';
+  const readJson=(key,fallback)=>{try{const value=JSON.parse(localStorage.getItem(key)||'null');return value??fallback}catch{return fallback}};
+  const ownerRequests=()=>{const value=readJson(REQUEST_KEY,[]);return Array.isArray(value)?value:[]};
 
   function pickFeatured(){
     const source=fleet().filter(v=>Array.isArray(v.photos)&&v.photos.length);
@@ -105,6 +108,26 @@
     while((node=walker.nextNode())){const text=node.nodeValue?.trim();if(!text)continue;if(text==='Клиенты')node.nodeValue=node.nodeValue.replace('Клиенты',copy.clients[currentLang]);if(text==='Последние клиенты')node.nodeValue=node.nodeValue.replace('Последние клиенты',copy.latestClients[currentLang]);if(text==='Ключевые показатели по парку, клиентам и заявкам в одном экране.')node.nodeValue=node.nodeValue.replace(text,copy.ownerSummary[currentLang])}
   }
 
+  function customerKey(request){return String(request.contact||request.client||request.name||request.id||'client').trim().toLowerCase()}
+  function customerId(source){let hash=2166136261;for(let i=0;i<source.length;i++){hash^=source.charCodeAt(i);hash=Math.imul(hash,16777619)}return `c${(hash>>>0).toString(16)}`}
+  function initials(name){return String(name||'К').split(/\s+/).filter(Boolean).slice(0,2).map(part=>part[0]?.toUpperCase()||'').join('')||'К'}
+  function ensureOwnerClientCards(section){
+    if(!section)return;
+    const map=new Map();
+    for(const request of ownerRequests()){
+      const key=customerKey(request);const id=customerId(key);
+      const current=map.get(key)||{id,name:request.client||request.name||'Клиент',contact:request.contact||'',count:0,total:0,last:request.createdAt||''};
+      current.count+=1;current.total+=Number(request.estimate||request.estimatedTotalVnd)||0;
+      if(String(request.createdAt||'')>String(current.last||''))current.last=request.createdAt||current.last;
+      map.set(key,current);
+    }
+    const clients=[...map.values()].sort((a,b)=>String(b.last).localeCompare(String(a.last))).slice(0,8);
+    if(!clients.length)return;
+    let grid=section.querySelector('.client-card-grid');
+    if(!grid){grid=document.createElement('div');grid.className='client-card-grid';section.querySelector('.request-list,.empty')?.replaceWith(grid);if(!grid.isConnected)section.append(grid)}
+    grid.innerHTML=clients.map(client=>`<article class="client-card"><div class="client-card-head"><span class="client-avatar">${esc(initials(client.name))}</span><div><button type="button" class="client-name" data-client-profile="${esc(client.id)}">${esc(client.name)}</button><small>${esc(client.contact||'Контакт не указан')}</small></div></div><div class="client-card-metrics"><span><b>${client.count}</b> заявок</span><span><b>${money(client.total)}</b> сумма заявок</span></div><div class="client-card-foot"><small>${client.last?new Date(client.last).toLocaleString('ru-RU'):''}</small><button type="button" data-client-profile="${esc(client.id)}">Открыть профиль →</button></div></article>`).join('');
+  }
+
   function scrollOwnerClients(){
     const overview=document.querySelector('.bottom-nav [data-go="overview"]');if(overview&&!overview.classList.contains('active'))overview.click();
     setTimeout(()=>{polishOwner(true);ownerClientsSection()?.scrollIntoView({behavior:'smooth',block:'start'});document.querySelectorAll('.bottom-nav button').forEach(button=>button.classList.remove('active'));document.querySelector('.bottom-nav [data-owner-custom="clients"]')?.classList.add('active')},45);
@@ -140,7 +163,7 @@
     const main=document.querySelector('main');const nav=document.querySelector('.bottom-nav');if(!main||!nav)return;
     const currentLang=lang();
     localizeOwner(main,currentLang);
-    const section=ownerClientsSection();if(section)section.dataset.ownerClientsSection='true';
+    const section=ownerClientsSection();if(section){section.dataset.ownerClientsSection='true';ensureOwnerClientCards(section)}
     ensureOwnerButtons(nav,currentLang);
     main.dataset.prodOwner=currentLang;
   }
