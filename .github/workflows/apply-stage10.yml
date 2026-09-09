@@ -1,0 +1,96 @@
+name: Apply Stage 10 Marketing
+
+on:
+  push:
+    branches:
+      - stage10/marketing-ui-fix
+    paths:
+      - '.github/workflows/apply-stage10.yml'
+      - '.stage10-ci-trigger'
+      - 'src/features/marketing/**'
+      - 'src/api/marketing.ts'
+      - 'src/api/marketingWorker.ts'
+      - 'migrations/0010_stage10_marketing.sql'
+      - 'tests/stage10_e2e.py'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: stage10/marketing-ui-fix
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Wire Stage 10 into application
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path, replacements):
+              p=Path(path); text=p.read_text(encoding='utf-8'); changed=False
+              for old,new in replacements:
+                  if new in text: continue
+                  if old not in text: raise SystemExit(f'Anchor missing in {path}: {old[:120]}')
+                  text=text.replace(old,new,1); changed=True
+              if changed: p.write_text(text,encoding='utf-8')
+
+          patch('src/features/prototype/PrototypeApp.tsx',[
+            ("import { OwnerService } from '../service/OwnerService';", "import { OwnerService } from '../service/OwnerService';\nimport { OwnerMarketing } from '../marketing/OwnerMarketing';"),
+            ("type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service';", "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service' | 'marketing';"),
+            ("owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис']],", "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг']],"),
+            ("finance:'₫',service:'⚙'}", "finance:'₫',service:'⚙',marketing:'✦'}"),
+            ("  function ownerService() {\n    return <OwnerService fleet={fleet} setFleetStates={setFleetStates}/>;\n  }", "  function ownerService() {\n    return <OwnerService fleet={fleet} setFleetStates={setFleetStates}/>;\n  }\n\n  function ownerMarketing() {\n    return <OwnerMarketing/>;\n  }"),
+            ("route === 'service' ? ownerService() : ownerOverview();", "route === 'service' ? ownerService() : route === 'marketing' ? ownerMarketing() : ownerOverview();"),
+          ])
+
+          patch('src/main.tsx',[("import './features/service/owner-service.css';", "import './features/service/owner-service.css';\nimport './features/marketing/owner-marketing.css';")])
+
+          patch('src/worker.ts',[
+            ("import { handleServiceRequest } from './api/serviceWorker.js';", "import { handleServiceRequest } from './api/serviceWorker.js';\nimport { handleMarketingRequest } from './api/marketingWorker.js';"),
+            ("schemaVersion: env.DB ? 9 : null", "schemaVersion: env.DB ? 10 : null"),
+            ("serviceExpenses: true", "serviceExpenses: true, marketingCampaigns: true, promotionsMarketing: true, marketingSegments: true"),
+            ("    const serviceResponse = await handleServiceRequest(request, env, url);\n    if (serviceResponse) return serviceResponse;", "    const serviceResponse = await handleServiceRequest(request, env, url);\n    if (serviceResponse) return serviceResponse;\n    const marketingResponse = await handleMarketingRequest(request, env, url);\n    if (marketingResponse) return marketingResponse;"),
+          ])
+
+          styles=Path('styles.css'); text=styles.read_text(encoding='utf-8')
+          marker='.request-payment{'
+          if marker not in text:
+              text += '''\n/* Stage 10 mobile text-spacing QA */\n.request-payment{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;line-height:1.35}.request-payment>span{color:var(--muted);font-size:10px}.request-payment>b{font-size:11px;overflow-wrap:anywhere}.request-payment>small{font-size:9px;color:var(--muted)}.request-actions{display:flex;gap:8px;flex-wrap:wrap}\n@media(max-width:620px){.request-payment{gap:6px 8px}.request-payment>span{flex:0 0 auto}.request-payment>b{min-width:0}.request{row-gap:10px}}\n'''
+              styles.write_text(text,encoding='utf-8')
+
+          marketing_css=Path('src/features/marketing/owner-marketing.css'); text=marketing_css.read_text(encoding='utf-8')
+          if '.bottom-nav[data-nav-count="9"]' not in text:
+              text += '''\n.bottom-nav[data-nav-count="9"]{grid-template-columns:repeat(9,1fr);width:min(1020px,calc(100% - 8px));gap:2px;padding:5px}.bottom-nav[data-nav-count="9"] button{min-width:0;padding-inline:1px}.bottom-nav[data-nav-count="9"] b{font-size:9px;line-height:1.05}.bottom-nav[data-nav-count="9"] span{font-size:13px}@media(max-width:760px){.bottom-nav[data-nav-count="9"]{bottom:calc(5px + var(--safe));border-radius:18px}.bottom-nav[data-nav-count="9"] button{min-height:59px}.bottom-nav[data-nav-count="9"] b{font-size:8.3px;max-width:46px;white-space:normal;text-align:center}.bottom-nav[data-nav-count="9"] span{font-size:12px}.shell{padding-bottom:calc(100px + var(--safe))}}\n'''
+              marketing_css.write_text(text,encoding='utf-8')
+
+          tests=Path('tests/domain.test.mjs'); text=tests.read_text(encoding='utf-8')
+          if "stage 10 marketing contracts are present" not in text:
+              text += '''\n\ntest('stage 10 marketing contracts are present',async()=>{\n  const migration=await readFile(new URL('../migrations/0010_stage10_marketing.sql',import.meta.url),'utf8');\n  const worker=await readFile(new URL('../src/api/marketingWorker.ts',import.meta.url),'utf8');\n  const ui=await readFile(new URL('../src/features/marketing/OwnerMarketing.tsx',import.meta.url),'utf8');\n  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');\n  const styles=await readFile(new URL('../styles.css',import.meta.url),'utf8');\n  assert.ok(migration.includes('marketing_campaigns'));\n  assert.ok(migration.includes('audience_segment'));\n  assert.ok(worker.includes('/api/owner/marketing'));\n  assert.ok(worker.includes('/api/owner/campaigns'));\n  assert.ok(ui.includes('data-stage10-marketing'));\n  assert.ok(ui.includes('data-send-campaign'));\n  assert.ok(app.includes("['marketing','Маркетинг']"));\n  assert.ok(styles.includes('.request-payment{grid-column:1/-1;display:flex'));\n});\n'''
+              tests.write_text(text,encoding='utf-8')
+
+          road=Path('DEVELOPMENT_ROADMAP.md'); text=road.read_text(encoding='utf-8')
+          old='### 🚧 Stage 10 — Marketing\nPromotions, promo codes, mailings.\n'
+          new='''### 🚧 Stage 10 — Marketing\nPromotions, promo codes, mailings.\n\nAcceptance target:\n- owner has a Marketing section with promotions and campaigns;\n- promotions support percent/fixed discounts, code, audience segment, vehicle kind, branches and usage limit;\n- campaigns use CRM segments: all, new, repeat, VIP and inactive;\n- channels: Telegram, Zalo, Email and SMS as DEMO integrations;\n- DEMO send updates recipients, opens, clicks, conversions and attributed revenue;\n- D1 stores promotions, campaigns and marketing events;\n- mobile request cards keep label/value spacing and never render glued payment text;\n- owner navigation with nine sections remains usable without horizontal page overflow;\n- browser acceptance passes on mobile and desktop before deployment.\n'''
+          if old in text: road.write_text(text.replace(old,new,1),encoding='utf-8')
+      - run: npm install
+      - run: npm run check
+      - name: Install Playwright
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Stage 10 browser acceptance
+        run: python tests/stage10_e2e.py
+      - name: Commit verified Stage 10 wiring
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/prototype/PrototypeApp.tsx src/main.tsx src/worker.ts styles.css src/features/marketing/owner-marketing.css tests/domain.test.mjs DEVELOPMENT_ROADMAP.md
+          git commit -m "Stage 10: wire marketing and fix mobile text spacing"
+          git push origin HEAD:stage10/marketing-ui-fix

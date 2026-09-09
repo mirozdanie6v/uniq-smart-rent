@@ -1,0 +1,84 @@
+name: Apply Stage 8 Finance
+
+on:
+  push:
+    branches:
+      - stage8/finance
+    paths:
+      - '.github/workflows/apply-stage8-finance.yml'
+      - 'src/features/finance/**'
+      - 'src/api/finance.ts'
+      - 'src/api/financeWorker.ts'
+      - 'migrations/0008_stage8_finance.sql'
+      - 'tests/stage8_e2e.py'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-check-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: stage8/finance
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Wire Stage 8
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path,replacements):
+              p=Path(path); text=p.read_text(encoding='utf-8'); changed=False
+              for old,new in replacements:
+                  if new in text: continue
+                  if old not in text: raise SystemExit(f'Anchor missing in {path}: {old[:120]}')
+                  text=text.replace(old,new,1); changed=True
+              if changed: p.write_text(text,encoding='utf-8')
+
+          patch('src/features/prototype/PrototypeApp.tsx',[
+            ("import { OwnerTeamBranches } from '../team/OwnerTeamBranches';", "import { OwnerTeamBranches } from '../team/OwnerTeamBranches';\nimport { OwnerFinance } from '../finance/OwnerFinance';"),
+            ("type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team';", "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance';"),
+            ("owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда']],", "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы']],"),
+            ("calendar:'▥',customers:'♙',team:'♟'}", "calendar:'▥',customers:'♙',team:'♟',finance:'₫'}"),
+            ("  function ownerTeam() {\n    return <OwnerTeamBranches fleet={fleet} setFleet={setFleet}/>;\n  }", "  function ownerTeam() {\n    return <OwnerTeamBranches fleet={fleet} setFleet={setFleet}/>;\n  }\n\n  function ownerFinance() {\n    return <OwnerFinance/>;\n  }"),
+            ("else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : ownerOverview();", "else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : route === 'finance' ? ownerFinance() : ownerOverview();"),
+          ])
+
+          patch('src/main.tsx',[("import './features/team/stage7.css';", "import './features/team/stage7.css';\nimport './features/finance/owner-finance.css';")])
+
+          patch('src/worker.ts',[
+            ("import { handleTeamRequest } from './api/teamWorker.js';", "import { handleTeamRequest } from './api/teamWorker.js';\nimport { handleFinanceRequest } from './api/financeWorker.js';"),
+            ("schemaVersion: env.DB ? 7 : null", "schemaVersion: env.DB ? 8 : null"),
+            ("vehicleTransfers: true", "vehicleTransfers: true, ownerFinance: true, refunds: true, deposits: true"),
+            ("    const teamResponse = await handleTeamRequest(request, env, url);\n    if (teamResponse) return teamResponse;", "    const teamResponse = await handleTeamRequest(request, env, url);\n    if (teamResponse) return teamResponse;\n    const financeResponse = await handleFinanceRequest(request, env, url);\n    if (financeResponse) return financeResponse;"),
+          ])
+
+          tests=Path('tests/domain.test.mjs'); text=tests.read_text(encoding='utf-8')
+          if "stage 8 finance contracts are present" not in text:
+              text += '''\n\ntest('stage 8 finance contracts are present',async()=>{\n  const migration=await readFile(new URL('../migrations/0008_stage8_finance.sql',import.meta.url),'utf8');\n  const worker=await readFile(new URL('../src/api/financeWorker.ts',import.meta.url),'utf8');\n  const ui=await readFile(new URL('../src/features/finance/OwnerFinance.tsx',import.meta.url),'utf8');\n  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');\n  assert.ok(migration.includes('payment_refunds'));\n  assert.ok(migration.includes('deposit_received_vnd'));\n  assert.ok(worker.includes('/api/owner/finance'));\n  assert.ok(worker.includes('/refunds'));\n  assert.ok(worker.includes('/deposits'));\n  assert.ok(ui.includes('data-stage8-finance'));\n  assert.ok(ui.includes('data-finance-ledger'));\n  assert.ok(ui.includes('data-submit-refund'));\n  assert.ok(app.includes("['finance','Финансы']"));\n});\n'''
+              tests.write_text(text,encoding='utf-8')
+
+          road=Path('DEVELOPMENT_ROADMAP.md'); text=road.read_text(encoding='utf-8')
+          old='### 🚧 Stage 8 — Finance\nTransactions, deposits, refunds, revenue.\n'
+          new='''### 🚧 Stage 8 — Finance\nTransactions, deposits, refunds, revenue.\n\nAcceptance target:\n- owner Finance section with period and branch filters;\n- net revenue, gross payments, online, cash, pending payments, held deposits and refunds;\n- unified transaction ledger with operation and search filters;\n- deposit received / deposit returned flow;\n- full and partial refund flow;\n- refunds reduce booking paid amount and payment status when linked to a real payment;\n- deposits remain separate from revenue;\n- Stage 8 D1 demo ledger is visibly labelled DEMO;\n- owner navigation remains usable with seven sections on mobile;\n- Stage 8 browser acceptance passes on mobile and desktop before deployment.\n'''
+          if old in text: road.write_text(text.replace(old,new,1),encoding='utf-8')
+      - run: npm install
+      - run: npm run check
+      - name: Install Playwright
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Stage 8 browser acceptance
+        run: python tests/stage8_e2e.py
+      - name: Commit verified Stage 8 wiring
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/prototype/PrototypeApp.tsx src/main.tsx src/worker.ts tests/domain.test.mjs DEVELOPMENT_ROADMAP.md
+          git commit -m "Stage 8: wire finance deposits refunds and revenue"
+          git push origin HEAD:stage8/finance

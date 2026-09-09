@@ -1,0 +1,39 @@
+name: Apply Stage 4 Booking Calendar
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - 'scripts/apply-stage4-booking-calendar.mjs'
+      - '.github/workflows/apply-stage4-booking-calendar.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refactor/react-typescript-vite-demo
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply Stage 4 integration patches
+        run: node scripts/apply-stage4-booking-calendar.mjs
+      - run: npm install
+      - run: npm run check
+      - name: Commit generated Stage 4 integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/fleet/OwnerFleetManager.tsx src/features/prototype/PrototypeApp.tsx src/main.tsx src/worker.ts tests/domain.test.mjs tests/e2e.py
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Stage 4: integrate booking calendar and rental lifecycle"
+            git push origin HEAD:refactor/react-typescript-vite-demo
+          fi

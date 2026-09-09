@@ -1,0 +1,181 @@
+name: Apply Stage 11 Analytics
+
+on:
+  push:
+    branches:
+      - stage11/analytics-demo-requests
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: stage11/analytics-demo-requests
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Wire Stage 11 into application
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path, replacements):
+              p=Path(path); text=p.read_text(encoding='utf-8'); changed=False
+              for old,new in replacements:
+                  if new in text: continue
+                  if old not in text: raise SystemExit(f'Anchor missing in {path}: {old[:140]}')
+                  text=text.replace(old,new,1); changed=True
+              if changed: p.write_text(text,encoding='utf-8')
+
+          patch('src/features/prototype/PrototypeApp.tsx',[
+            ("import { OwnerMarketing } from '../marketing/OwnerMarketing';", "import { OwnerMarketing } from '../marketing/OwnerMarketing';\nimport { OwnerAnalytics } from '../analytics/OwnerAnalytics';"),
+            ("type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service' | 'marketing';", "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team' | 'finance' | 'service' | 'marketing' | 'analytics';"),
+            ("type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'returned' | 'completed' | 'cancelled';", "type RequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'return_due' | 'returned' | 'completed' | 'cancelled';"),
+            ("  paymentProvider?: PaymentProvider;\n}", "  paymentProvider?: PaymentProvider;\n  branchId?: 'branch-north' | 'branch-center';\n  sourceChannel?: string;\n  demoBusiness?: boolean;\n}"),
+            ("owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг']],", "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг'],['analytics','Аналитика']],"),
+            ("const requestKey = 'uniq-demo-requests-v2';", "const requestKey = 'uniq-demo-requests-v3-stage11';"),
+            ("const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];", "const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', return_due:'Возврат сегодня', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];"),
+            ("finance:'₫',service:'⚙',marketing:'✦'}", "finance:'₫',service:'⚙',marketing:'✦',analytics:'▥'}"),
+            ("  const [requests, setRequests] = useState<RentalRequest[]>(() => loadSession(requestKey, []));", "  const [requests, setRequests] = useState<RentalRequest[]>(() => loadSession(requestKey, buildDemoBusinessRequests()));"),
+            ("const backendMap: Partial<Record<RequestStatus,'contacted'|'confirmed'|'vehicle_issued'|'active'|'returned'|'completed'|'cancelled'>> = { contacted:'contacted', confirmed:'confirmed', issued:'vehicle_issued', active:'active', returned:'returned', completed:'completed', cancelled:'cancelled' };", "const backendMap: Partial<Record<RequestStatus,'contacted'|'confirmed'|'vehicle_issued'|'active'|'return_due'|'returned'|'completed'|'cancelled'>> = { contacted:'contacted', confirmed:'confirmed', issued:'vehicle_issued', active:'active', return_due:'return_due', returned:'returned', completed:'completed', cancelled:'cancelled' };"),
+            ("{(['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[]).map", "{(['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[]).map"),
+            ("const list = [...requests].reverse();", "const list = [...(role === 'client' ? requests.filter((item) => !item.demoBusiness) : requests)].reverse();"),
+            ("const rows = requests.filter((item) => ['confirmed','issued','active','returned'].includes(item.status));", "const rows = requests.filter((item) => ['confirmed','issued','active','return_due','returned'].includes(item.status));"),
+            ("const statuses = ['new','contacted','confirmed','issued','active','returned','completed','cancelled'] as RequestStatus[];", "const statuses = ['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[];"),
+            ("  function ownerMarketing() {\n    return <OwnerMarketing/>;\n  }", "  function ownerMarketing() {\n    return <OwnerMarketing/>;\n  }\n\n  function ownerAnalytics() {\n    return <OwnerAnalytics requests={requests} fleet={fleet}/>;\n  }"),
+            ("route === 'marketing' ? ownerMarketing() : ownerOverview();", "route === 'marketing' ? ownerMarketing() : route === 'analytics' ? ownerAnalytics() : ownerOverview();"),
+          ])
+
+          app=Path('src/features/prototype/PrototypeApp.tsx'); text=app.read_text(encoding='utf-8')
+          if 'function buildDemoBusinessRequests()' not in text:
+              anchor="const defaultTo = dateISO(toDefaultDate);\n"
+              block=r'''
+
+          function shiftedDay(days: number): string {
+            const date = new Date();
+            date.setDate(date.getDate() + days);
+            return dateISO(date);
+          }
+
+          function shiftedCreated(hoursAgo: number): string {
+            return new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
+          }
+
+          function buildDemoBusinessRequests(): RentalRequest[] {
+            type DemoRow = {
+              id: string; vehicleId: string; from: number; to: number; client: string; contact: string; status: RequestStatus;
+              estimate: number; createdHoursAgo: number; paymentStatus: NonNullable<RentalRequest['paymentStatus']>;
+              branchId: 'branch-north' | 'branch-center'; sourceChannel: string; provider?: PaymentProvider;
+            };
+            const rows: DemoRow[] = [
+              { id:'demo-ui-01',vehicleId:'hyundai-elantra-2025-74404',from:1,to:3,client:'Анна Крылова',contact:'@anna_demo',status:'new',estimate:4050000,createdHoursAgo:1,paymentStatus:'unpaid',branchId:'branch-center',sourceChannel:'telegram_mini_app' },
+              { id:'demo-ui-02',vehicleId:'kia-sorento-2023-74401',from:2,to:5,client:'Nguyễn Minh Anh',contact:'Zalo · demo02',status:'new',estimate:7800000,createdHoursAgo:3,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
+              { id:'demo-ui-03',vehicleId:'mazda-cx-5-2022-74405',from:1,to:3,client:'Алексей Морозов',contact:'@alex_demo',status:'contacted',estimate:4350000,createdHoursAgo:5,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'google' },
+              { id:'demo-ui-04',vehicleId:'toyota-yaris-cross-2025-74402',from:3,to:4,client:'Kim Min-ji',contact:'@minji_demo',status:'contacted',estimate:2800000,createdHoursAgo:7,paymentStatus:'pending',branchId:'branch-north',sourceChannel:'instagram' },
+              { id:'demo-ui-05',vehicleId:'yamaha-x-max-2024-76826',from:1,to:4,client:'Chen Wei',contact:'WeChat · demo05',status:'confirmed',estimate:7200000,createdHoursAgo:10,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
+              { id:'demo-ui-06',vehicleId:'honda-pcx-150cc-2022-73073',from:2,to:5,client:'Мария Лебедева',contact:'@maria_demo',status:'confirmed',estimate:2200000,createdHoursAgo:24,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'qr',provider:'momo' },
+              { id:'demo-ui-07',vehicleId:'honda-cb500x-2023-73325',from:0,to:2,client:'Sergey Volkov',contact:'@sergey_demo',status:'issued',estimate:7500000,createdHoursAgo:28,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'office' },
+              { id:'demo-ui-08',vehicleId:'honda-cb650r-2022-73228',from:-1,to:3,client:'Olga Petrova',contact:'@olga_demo',status:'active',estimate:12500000,createdHoursAgo:48,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vnpay' },
+              { id:'demo-ui-09',vehicleId:'honda-cbr-150cc-2021-76481',from:-2,to:1,client:'Park Ji-hoon',contact:'@jihoon_demo',status:'active',estimate:2800000,createdHoursAgo:72,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'partner',provider:'sbp' },
+              { id:'demo-ui-10',vehicleId:'honda-pcx-150cc-2022-73073',from:-5,to:0,client:'Trần Thu Hà',contact:'Zalo · demo10',status:'return_due',estimate:3850000,createdHoursAgo:96,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'office',provider:'zalopay' },
+              { id:'demo-ui-11',vehicleId:'honda-pcx-125cc-2018-76169',from:-7,to:-1,client:'Dmitry Orlov',contact:'@orlov_demo',status:'returned',estimate:3150000,createdHoursAgo:120,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'qr',provider:'vietqr' },
+              { id:'demo-ui-12',vehicleId:'hyundai-elantra-2025-74404',from:-8,to:-5,client:'Emily Carter',contact:'email-demo-12',status:'completed',estimate:5400000,createdHoursAgo:144,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'yookassa' },
+              { id:'demo-ui-13',vehicleId:'mazda-cx-5-2022-74405',from:-10,to:-7,client:'Ирина Соколова',contact:'@irina_demo',status:'completed',estimate:5800000,createdHoursAgo:192,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'website',provider:'vietqr' },
+              { id:'demo-ui-14',vehicleId:'kia-sorento-2023-74401',from:-14,to:-11,client:'Lê Quốc Bảo',contact:'Zalo · demo14',status:'completed',estimate:7800000,createdHoursAgo:288,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'google',provider:'tbank' },
+              { id:'demo-ui-15',vehicleId:'toyota-yaris-cross-2025-74402',from:1,to:2,client:'Максим Беляев',contact:'@max_demo',status:'cancelled',estimate:2800000,createdHoursAgo:51,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
+              { id:'demo-ui-16',vehicleId:'honda-cb500x-2023-73325',from:5,to:9,client:'Sofia Ivanova',contact:'@sofia_demo',status:'new',estimate:12500000,createdHoursAgo:54,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'partner' },
+              { id:'demo-ui-17',vehicleId:'honda-pcx-150cc-2022-73073',from:3,to:5,client:'Lee Soo-jin',contact:'@soojin_demo',status:'contacted',estimate:1650000,createdHoursAgo:74,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'qr' },
+              { id:'demo-ui-18',vehicleId:'yamaha-x-max-2024-76826',from:2,to:5,client:'Pavel Smirnov',contact:'@pavel_demo',status:'confirmed',estimate:7200000,createdHoursAgo:96,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
+              { id:'demo-ui-19',vehicleId:'toyota-yaris-cross-2025-74402',from:-3,to:2,client:'Vũ Hoàng Nam',contact:'Zalo · demo19',status:'active',estimate:8400000,createdHoursAgo:144,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'website',provider:'vnpay' },
+              { id:'demo-ui-20',vehicleId:'hyundai-elantra-2025-74404',from:-22,to:-18,client:'Елена Кузнецова',contact:'@elena_demo',status:'completed',estimate:6750000,createdHoursAgo:480,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'office' },
+            ];
+            return rows.map((row) => ({
+              id:row.id, vehicleId:row.vehicleId, from:shiftedDay(row.from), to:shiftedDay(row.to), client:row.client, contact:row.contact,
+              status:row.status, estimate:row.estimate, createdAt:shiftedCreated(row.createdHoursAgo), paymentStatus:row.paymentStatus,
+              branchId:row.branchId, sourceChannel:row.sourceChannel, demoBusiness:true,
+              ...(row.provider ? { paymentProvider:row.provider } : {}),
+            }));
+          }
+          '''
+              if anchor not in text: raise SystemExit('Demo request insertion anchor missing')
+              text=text.replace(anchor,anchor+block,1)
+              app.write_text(text,encoding='utf-8')
+
+          app=Path('src/features/prototype/PrototypeApp.tsx'); text=app.read_text(encoding='utf-8')
+          text=text.replace("request.status === 'active' || request.status === 'issued'", "['active','issued','return_due'].includes(request.status)")
+          if 'request-business-meta' not in text:
+              old="      <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>\n      <b>{money(request.estimate)}</b>"
+              new="      <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>\n      {role !== 'client' && request.demoBusiness ? <small className=\"request-business-meta\">{request.branchId === 'branch-north' ? 'Северный филиал' : 'Центр города'} · {({telegram_mini_app:'Telegram Mini App',website:'Сайт',office:'Офис',google:'Google',instagram:'Instagram',partner:'Партнёр',qr:'QR-код'} as Record<string,string>)[request.sourceChannel ?? ''] ?? 'Источник'} · DEMO</small> : null}\n      <b>{money(request.estimate)}</b>"
+              if old not in text: raise SystemExit('Request meta anchor missing')
+              text=text.replace(old,new,1)
+          app.write_text(text,encoding='utf-8')
+
+          patch('src/main.tsx',[("import './features/marketing/owner-marketing.css';", "import './features/marketing/owner-marketing.css';\nimport './features/analytics/owner-analytics.css';")])
+
+          patch('src/worker.ts',[
+            ("import { handleMarketingRequest } from './api/marketingWorker.js';", "import { handleMarketingRequest } from './api/marketingWorker.js';\nimport { handleAnalyticsRequest } from './api/analyticsWorker.js';"),
+            ("schemaVersion: env.DB ? 10 : null", "schemaVersion: env.DB ? 11 : null"),
+            ("marketingSegments: true", "marketingSegments: true, ownerAnalytics: true, analyticsFunnel: true, vehicleProfitability: true, demoRequestDataset: true"),
+            ("    const marketingResponse = await handleMarketingRequest(request, env, url);\n    if (marketingResponse) return marketingResponse;", "    const marketingResponse = await handleMarketingRequest(request, env, url);\n    if (marketingResponse) return marketingResponse;\n    const analyticsResponse = await handleAnalyticsRequest(request, env, url);\n    if (analyticsResponse) return analyticsResponse;"),
+          ])
+
+          tests=Path('tests/domain.test.mjs'); text=tests.read_text(encoding='utf-8')
+          if "stage 11 analytics and demo request contracts are present" not in text:
+              text += r'''
+
+          test('stage 11 analytics and demo request contracts are present',async()=>{
+            const migration=await readFile(new URL('../migrations/0011_stage11_analytics.sql',import.meta.url),'utf8');
+            const worker=await readFile(new URL('../src/api/analyticsWorker.ts',import.meta.url),'utf8');
+            const ui=await readFile(new URL('../src/features/analytics/OwnerAnalytics.tsx',import.meta.url),'utf8');
+            const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+            assert.ok(migration.includes('analytics_daily_funnel'));
+            assert.ok(migration.includes("'return_due'"));
+            assert.ok(migration.includes('demo-b11-20'));
+            assert.ok(worker.includes('/api/owner/analytics'));
+            assert.ok(worker.includes('vehicleProfitability') === false || worker.includes('vehicles'));
+            assert.ok(ui.includes('data-stage11-analytics'));
+            assert.ok(ui.includes('data-analytics-funnel'));
+            assert.ok(ui.includes('data-vehicle-profitability'));
+            assert.ok(app.includes('buildDemoBusinessRequests'));
+            assert.ok(app.includes("['analytics','Аналитика']"));
+            assert.ok(app.includes("return_due:'Возврат сегодня'"));
+          });
+          '''
+              tests.write_text(text,encoding='utf-8')
+
+          road=Path('DEVELOPMENT_ROADMAP.md'); text=road.read_text(encoding='utf-8')
+          old='### 🚧 Stage 11 — Analytics\nDashboard, charts, funnel, sources, vehicle profitability.\n'
+          new='''### 🚧 Stage 11 — Analytics\nDashboard, charts, funnel, sources, vehicle profitability.\n\nAcceptance target:\n- owner has a dedicated Analytics section;\n- Today / 7 days / 30 days and branch filters work;\n- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion are visible;\n- revenue/bookings trend is rendered without a chart library;\n- funnel covers views → vehicle opens → booking start → payment → paid;\n- sources compare Telegram Mini App, website, office, Google, Instagram, partners and QR;\n- North and Center branches are compared;\n- vehicle profitability ranks models by revenue, rentals, utilization and idle days;\n- D1 contains analytics funnel telemetry and 20 realistic DEMO bookings in multiple statuses;\n- seeded business requests are visible to Employee/Owner and hidden from the Client personal cabinet;\n- mobile and desktop browser acceptance passes before deployment.\n'''
+          if old in text: road.write_text(text.replace(old,new,1),encoding='utf-8')
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Full project check
+        run: npm run check
+
+      - name: Install Playwright
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+
+      - name: Stage 11 browser acceptance
+        run: python tests/stage11_e2e.py
+
+      - name: Commit verified Stage 11 wiring
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/features/prototype/PrototypeApp.tsx src/main.tsx src/worker.ts tests/domain.test.mjs DEVELOPMENT_ROADMAP.md
+          if ! git diff --cached --quiet; then
+            git commit -m 'Stage 11: wire analytics and varied demo requests'
+            git push origin HEAD:stage11/analytics-demo-requests
+          fi

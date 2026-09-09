@@ -21,3 +21,12 @@
 .hero-office-map>span small{font-size:9px;line-height:1.3;color:var(--green2)}
 .hero-office-map:hover{border-color:rgba(32,227,143,.55)}
 @media(max-width:620px){.hero-card>div.hero-office-maps{grid-template-columns:1fr 1fr}.hero-office-map{min-height:132px}.hero-office-map>span b{font-size:11px}.hero-office-map>span small{font-size:8px}}
+
+/* Stage 10 mobile text-spacing QA */
+.request-payment{grid-column:1/-1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;line-height:1.35}.request-payment>span{color:var(--muted);font-size:10px}.request-payment>b{font-size:11px;overflow-wrap:anywhere}.request-payment>small{font-size:9px;color:var(--muted)}.request-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:620px){.request-payment{gap:6px 8px}.request-payment>span{flex:0 0 auto}.request-payment>b{min-width:0}.request{row-gap:10px}}
+
+
+/* Stage 12 operations */
+.team-branch-actions{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:32px 0 16px}.team-branch-actions h2{margin:4px 0 0}.branch-editor label{display:grid;gap:7px;margin:14px 0}.payment-balance-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.payment-balance-summary span{display:grid;gap:5px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}.payment-balance-summary small{opacity:.68}.payment-balance-summary b{font-size:16px}.payment-settlement-callout{display:grid;gap:6px;padding:15px;border-radius:14px;background:rgba(46,204,113,.09);border:1px solid rgba(46,204,113,.25);margin:18px 0}.request-paid-progress{display:block;margin-top:-2px;margin-bottom:8px;opacity:.8}.request [data-client-extend],.request [data-pay-booking]{margin-top:8px;margin-right:8px}.extension-summary{margin:16px 0}.extension-summary span{display:block;margin-top:5px;opacity:.7}
+@media(max-width:640px){.team-branch-actions{align-items:stretch;flex-direction:column}.team-branch-actions .primary{width:100%}.payment-balance-summary{grid-template-columns:1fr}.request [data-client-extend],.request [data-pay-booking]{width:100%;margin-right:0}}

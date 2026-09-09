@@ -1,7 +1,7 @@
 import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 const root=path.resolve(new URL('..',import.meta.url).pathname);
-async function files(dir){const out=[];for(const name of await readdir(dir,{withFileTypes:true})){const p=path.join(dir,name.name);if(name.isDirectory())out.push(...await files(p));else if(/\.(ts|mjs|css|html)$/.test(name.name))out.push(p);}return out;}
+async function files(dir){const out=[];for(const name of await readdir(dir,{withFileTypes:true})){const p=path.join(dir,name.name);if(name.isDirectory())out.push(...await files(p));else if(/\.(tsx?|mjs|css|html)$/.test(name.name))out.push(p);}return out;}
 const checks=[
   {pattern:/\bdemoVisual\b/,message:'legacy demoVisual must not return'},
   {pattern:/\bpricePerDayVnd\b/,message:'legacy flat-price field must not return'},

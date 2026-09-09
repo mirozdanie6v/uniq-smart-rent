@@ -1,0 +1,109 @@
+name: Apply Stage 6 CRM
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - '.github/workflows/apply-stage6-crm.yml'
+      - '.stage6-ci-trigger'
+      - 'src/features/crm/**'
+      - 'src/features/prototype/PrototypeApp.tsx'
+      - 'src/main.tsx'
+      - 'tests/stage6_crm_e2e.py'
+      - 'DEVELOPMENT_ROADMAP.md'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/react-typescript-vite-demo
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wire CRM into owner navigation and normalize strict optional types
+        shell: python
+        run: |
+          from pathlib import Path
+
+          crm_path = Path('src/features/crm/OwnerCRM.tsx')
+          crm = crm_path.read_text(encoding='utf-8')
+          crm_replacements = [
+            ('  telegram?: string;', '  telegram?: string | undefined;'),
+            ('  zalo?: string;', '  zalo?: string | undefined;'),
+            ('  lastRental?: string;', '  lastRental?: string | undefined;'),
+          ]
+          crm_changed = False
+          for old, new in crm_replacements:
+            if new in crm:
+              continue
+            if old not in crm:
+              raise SystemExit(f'Expected CRM type anchor not found: {old}')
+            crm = crm.replace(old, new, 1)
+            crm_changed = True
+          if crm_changed:
+            crm_path.write_text(crm, encoding='utf-8')
+
+          path = Path('src/features/prototype/PrototypeApp.tsx')
+          text = path.read_text(encoding='utf-8')
+          replacements = [
+            (
+              "import { PaymentCheckout } from '../payments/PaymentCheckout';",
+              "import { PaymentCheckout } from '../payments/PaymentCheckout';\nimport { OwnerCRM } from '../crm/OwnerCRM';"
+            ),
+            (
+              "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar';",
+              "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers';"
+            ),
+            (
+              "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь']],",
+              "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты']],"
+            ),
+            (
+              "const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';",
+              "const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙'} as Partial<Record<Route,string>>)[route] ?? '•';"
+            ),
+            (
+              "  function ownerCalendar() {\n    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;\n  }",
+              "  function ownerCalendar() {\n    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;\n  }\n\n  function ownerCustomers() {\n    return <OwnerCRM requests={requests} fleet={fleet}/>;\n  }"
+            ),
+            (
+              "  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : ownerOverview();",
+              "  else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : ownerOverview();"
+            ),
+          ]
+          changed = False
+          for old, new in replacements:
+            if new in text:
+              continue
+            if old not in text:
+              raise SystemExit(f'Expected Stage 6 anchor not found: {old[:100]}')
+            text = text.replace(old, new, 1)
+            changed = True
+          if changed:
+            path.write_text(text, encoding='utf-8')
+      - run: npm install
+      - run: npm run check
+      - name: Install Playwright for Stage 6 acceptance
+        run: |
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Stage 6 CRM browser acceptance
+        run: python tests/stage6_crm_e2e.py
+      - name: Commit Stage 6 wiring
+        run: |
+          if git diff --quiet; then
+            echo "Stage 6 wiring already applied"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/prototype/PrototypeApp.tsx src/features/crm/OwnerCRM.tsx
+          git commit -m "Stage 6: wire CRM into owner application"
+          git push origin HEAD:refactor/react-typescript-vite-demo

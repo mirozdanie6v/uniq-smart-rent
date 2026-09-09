@@ -1,0 +1,48 @@
+name: Fix Stage 5 E2E booking fallback
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - '.stage5-e2e-fix-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refactor/react-typescript-vite-demo
+      - name: Mock persisted booking endpoint in legacy browser scenario
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/e2e.py')
+          s=p.read_text()
+          old="        page=ctx.new_page(); errors=[]\n        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))\n        page.on('console',lambda msg: capture_console_error(errors,msg))\n"
+          new="        page=ctx.new_page(); errors=[]\n        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{\"vehicles\":[],\"persisted\":false}'))\n        page.route('**/api/bookings',lambda route: route.fulfill(status=200,content_type='application/json',body='{}') if route.request.method=='POST' else route.continue_())\n        page.on('console',lambda msg: capture_console_error(errors,msg))\n"
+          if old not in s:
+              raise SystemExit('legacy scenario patch target missing')
+          p.write_text(s.replace(old,new,1))
+          PY
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run check
+      - name: Commit E2E fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/e2e.py
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Stage 5: mock booking API in legacy E2E"
+            git push origin HEAD:refactor/react-typescript-vite-demo
+          fi

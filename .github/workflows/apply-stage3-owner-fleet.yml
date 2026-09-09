@@ -1,0 +1,50 @@
+name: Apply Stage 3 Owner Fleet
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - 'scripts/apply-stage3-owner-fleet.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refactor/react-typescript-vite-demo
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply Stage 3 integration patches
+        run: node scripts/apply-stage3-owner-fleet.mjs
+      - name: Fix Stage 3 test import compatibility
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('tests/domain.test.mjs')
+          s=p.read_text()
+          s=s.replace("test('stage 3 owner fleet management contracts are present',()=>{", "test('stage 3 owner fleet management contracts are present',async()=>{")
+          s=s.replace("const migration=readFileSync(new URL('../migrations/0004_owner_fleet_management.sql',import.meta.url),'utf8');", "const migration=await readFile(new URL('../migrations/0004_owner_fleet_management.sql',import.meta.url),'utf8');")
+          s=s.replace("const worker=readFileSync(new URL('../src/api/ownerFleetWorker.ts',import.meta.url),'utf8');", "const worker=await readFile(new URL('../src/api/ownerFleetWorker.ts',import.meta.url),'utf8');")
+          s=s.replace("const ui=readFileSync(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');", "const ui=await readFile(new URL('../src/features/fleet/OwnerFleetManager.tsx',import.meta.url),'utf8');")
+          p.write_text(s)
+          PY
+      - run: npm install
+      - run: npm run check
+      - name: Commit generated Stage 3 integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/prototype/PrototypeApp.tsx src/worker.ts tests/domain.test.mjs
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Stage 3: integrate owner fleet management"
+            git push origin HEAD:refactor/react-typescript-vite-demo
+          fi

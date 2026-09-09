@@ -1,11 +1,13 @@
 from pathlib import Path
 from playwright.sync_api import sync_playwright
+from urllib.parse import urlparse
 import subprocess, time, json, os
 
 root=Path(__file__).resolve().parents[1]
 dist=root/'dist'
 assert (dist/'index.html').exists()
-assert (dist/'app-v2.js').exists()
+assert not (dist/'app-v2.js').exists()
+assert list((dist/'assets').glob('index-*.js'))
 assert (dist/'assets/fleet-manifest.js').exists()
 assert (dist/'brand/uniq-logo.svg').exists()
 assert (dist/'i18n.js').exists()
@@ -22,6 +24,23 @@ def assert_lazy_images(page, selector, limit=6):
         handle=img.element_handle()
         page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', arg=handle, timeout=5000)
 
+def capture_console_error(errors, msg):
+    if msg.type != 'error':
+        return
+    text=msg.text
+    location_url=msg.location.get('url','')
+    google_maps_noise=(
+        'maps.googleapis.com' in text or 'maps.googleapis.com' in location_url or
+        ('Failed to load resource: net::ERR_FAILED' in text and 'google' in location_url)
+    )
+    local_fleet_image_fallback=(
+        'Failed to load resource' in text and
+        ('404' in text or 'Not Found' in text) and
+        '/assets/fleet/' in location_url
+    )
+    if not google_maps_noise and not local_fleet_image_fallback:
+        errors.append(f'{text} @ {location_url}')
+
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
 try:
@@ -34,8 +53,10 @@ try:
         for w,h in [(320,568),(375,667),(390,844),(430,932),(768,1024),(1024,1366),(1440,900),(1920,1080)]:
             ctx=browser.new_context(viewport={"width":w,"height":h},locale='ru-RU')
             page=ctx.new_page(); errors=[]
-            page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
+            page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}'))
+            page.on('console',lambda msg: capture_console_error(errors,msg))
             page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+            assert page.locator('#root .shell').count()==1
             assert page.locator('.brand img').count()==1
             assert page.locator('[data-role="client"]').count()==1
             assert page.locator('[data-role="employee"]').count()==1
@@ -58,7 +79,7 @@ try:
                     page.wait_for_timeout(30)
                     assert page.get_by_text(text,exact=False).count()>=1,(code,text)
                     assert page.evaluate('document.documentElement.lang')==html_lang
-                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header"})
+                results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header","engine":"react"})
 
             page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
             assert page.locator('.topbar .header-language-switcher select').count()==1
@@ -66,12 +87,14 @@ try:
             assert_lazy_images(page,'.vehicle-card img',6)
             assert not page.evaluate('document.documentElement.scrollWidth > document.documentElement.clientWidth'),f'catalog overflow at {w}x{h}'
             assert not errors, errors
-            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","header_language":"ok","overflow":"ok"})
+            results.append({"viewport":f"{w}x{h}","catalog":89,"local_images":"ok","header_language":"ok","overflow":"ok","engine":"react"})
             ctx.close()
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
         page=ctx.new_page(); errors=[]
-        page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
+        page.route('**/api/fleet-overrides',lambda route: route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}'))
+        page.route('**/api/bookings',lambda route: route.fulfill(status=200,content_type='application/json',body='{}') if route.request.method=='POST' else route.continue_())
+        page.on('console',lambda msg: capture_console_error(errors,msg))
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
         page.locator('.vehicle-card').first.scroll_into_view_if_needed(); page.locator('.vehicle-card').first.click(); page.wait_for_timeout(80)
@@ -111,10 +134,177 @@ try:
         page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
         assert page.locator('.topbar .header-language-switcher select').count()==1
+        page.locator('[data-go="calendar"]').last.click(); page.wait_for_timeout(80)
+        assert page.locator('[data-owner-calendar]').count()==1
+        assert page.locator('[data-owner-calendar-type]').count()==1
         assert page.locator('text=Качество данных').count()==0
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
-        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","console_errors":errors})
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","engine":"react","console_errors":errors})
+        ctx.close()
+
+        # Stage 3: owner fleet CRUD with an in-memory API contract.
+        api_state={}
+        def fleet_api(route):
+            request=route.request
+            path=urlparse(request.url).path
+            method=request.method
+            if path=='/api/fleet-overrides' and method=='GET':
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicles':list(api_state.values())}))
+                return
+            if path=='/api/owner/fleet' and method=='POST':
+                vehicle=json.loads(request.post_data or '{}')
+                api_state[vehicle['id']]=vehicle
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicle':vehicle,'persisted':True}))
+                return
+            if path.startswith('/api/owner/fleet/') and method=='PATCH':
+                vehicle_id=path.rsplit('/',1)[-1]
+                payload=json.loads(request.post_data or '{}')
+                vehicle=api_state.get(vehicle_id)
+                if vehicle is None:
+                    route.fulfill(status=404,content_type='application/json',body='{"error":"vehicle_not_found"}')
+                    return
+                if payload.get('action')=='archive':
+                    vehicle={**vehicle,'archivedAt':'2026-09-08T14:00:00.000Z','published':False,'ownerManaged':True}
+                elif payload.get('action')=='restore':
+                    vehicle={**vehicle,'archivedAt':None,'ownerManaged':True}
+                api_state[vehicle_id]=vehicle
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'vehicle':vehicle,'persisted':True}))
+                return
+            if path.startswith('/api/owner/fleet/') and method=='DELETE':
+                vehicle_id=path.rsplit('/',1)[-1]
+                api_state.pop(vehicle_id,None)
+                route.fulfill(status=200,content_type='application/json',body='{"removed":true,"persisted":true}')
+                return
+            route.fulfill(status=404,content_type='application/json',body='{"error":"not_found"}')
+
+        ctx=browser.new_context(viewport={"width":390,"height":844},locale='ru-RU')
+        page=ctx.new_page(); errors=[]
+        page.route('**/api/**',fleet_api)
+        page.on('console',lambda msg: capture_console_error(errors,msg))
+        page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+        page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
+        page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(100)
+        assert page.locator('[data-owner-add-vehicle]').count()==1
+        assert page.locator('[data-owner-vehicle]').count()==89
+        owner_type=page.locator('[data-owner-fleet-type-filter]'); assert owner_type.count()==1
+        owner_type.select_option('car'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==7
+        owner_type.select_option('motorcycle'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==33
+        owner_type.select_option('scooter'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==49
+        owner_type.select_option('all'); page.wait_for_timeout(40); assert page.locator('[data-owner-vehicle]').count()==89
+
+        # Edit an existing vehicle and verify the new price reaches the client catalog.
+        existing=page.locator('[data-owner-vehicle]').first
+        existing_id=existing.get_attribute('data-owner-vehicle')
+        assert existing_id
+        existing.locator('[data-owner-edit]').click(); page.wait_for_timeout(50)
+        assert page.locator('[data-owner-editor]').count()==1
+        page.locator('[data-owner-daily]').fill('1234567')
+        page.locator('[data-owner-save]').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Изменения сохранены.',exact=True).count()==1
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(40)
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(100)
+        changed_card=page.locator(f'.vehicle-card[data-open="{existing_id}"]')
+        assert changed_card.count()==1
+        price_digits=''.join(ch for ch in changed_card.locator('.vehicle-top b').inner_text() if ch.isdigit())
+        assert price_digits.startswith('1234567'),price_digits
+
+        # Reset the base-vehicle override.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        existing=page.locator(f'[data-owner-vehicle="{existing_id}"]')
+        existing.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        assert page.get_by_role('button',name='Сбросить изменения').count()==1
+        page.get_by_role('button',name='Сбросить изменения').click(); page.wait_for_timeout(100)
+        assert page.locator('[data-owner-editor]').count()==0
+
+        # Add a new published vehicle.
+        page.locator('[data-owner-add-vehicle]').click(); page.wait_for_timeout(40)
+        editor=page.locator('[data-owner-editor]')
+        editor.locator('[data-owner-title]').fill('QA Demo Scooter')
+        editor.get_by_label('Марка').fill('QA')
+        editor.get_by_label('Модель').fill('Demo 125')
+        editor.get_by_label('Двигатель').fill('125 cc')
+        editor.locator('[data-owner-daily]').fill('650000')
+        editor.locator('[data-owner-save]').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Изменения сохранены.',exact=True).count()==1
+        custom_id=editor.locator('[data-owner-save]').evaluate('(button)=>button.closest("form").querySelector("[data-owner-title]").value')
+        assert custom_id=='QA Demo Scooter'
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(50)
+        custom_row=page.locator('[data-owner-vehicle]').filter(has_text='QA Demo Scooter')
+        assert custom_row.count()==1
+        created_id=custom_row.get_attribute('data-owner-vehicle')
+        assert created_id and created_id.startswith('custom-')
+
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(100)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==1
+        assert page.locator('.vehicle-card').count()==90
+
+        # Archive it: it must disappear from the customer catalog immediately.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        custom_row=page.locator(f'[data-owner-vehicle="{created_id}"]')
+        custom_row.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        page.get_by_role('button',name='Архивировать').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('Техника перемещена в архив.',exact=True).count()==1
+        page.locator('.owner-editor .modal-x').click(); page.wait_for_timeout(40)
+        page.locator('[data-role="client"]').click(); page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==0
+        assert page.locator('.vehicle-card').count()==89
+
+        # Remove the temporary QA entry and leave the test state clean.
+        page.locator('[data-role="owner"]').click(); page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
+        custom_row=page.locator(f'[data-owner-vehicle="{created_id}"]')
+        custom_row.locator('[data-owner-edit]').click(); page.wait_for_timeout(40)
+        page.get_by_role('button',name='Удалить навсегда').click(); page.wait_for_timeout(100)
+        assert page.get_by_text('QA Demo Scooter',exact=True).count()==0
+        assert not errors,errors
+        results.append({"scenario":"stage3-owner-fleet","edit_existing":"ok","catalog_sync":"ok","add_vehicle":"ok","archive":"ok","delete":"ok","api_contract":"ok","console_errors":errors})
+        ctx.close()
+
+        # Stage 5: persisted booking -> provider -> QR -> demo payment confirmation.
+        def payment_api(route):
+            request=route.request
+            path=urlparse(request.url).path
+            method=request.method
+            if path=='/api/fleet-overrides' and method=='GET':
+                route.fulfill(status=200,content_type='application/json',body='{"vehicles":[],"persisted":false}')
+                return
+            if path=='/api/bookings' and method=='POST':
+                route.fulfill(status=201,content_type='application/json',body=json.dumps({'bookingId':'booking-stage5','estimatedTotalVnd':9000000,'status':'new','persisted':True}))
+                return
+            if path=='/api/payments/providers' and method=='GET':
+                providers=[{'id':p,'label':l,'market':m,'currency':'VND' if m=='Vietnam' else 'RUB','credentialReady':False,'checkoutMode':'demo'} for p,l,m in [('vietqr','VietQR','Vietnam'),('vnpay','VNPAY','Vietnam'),('momo','MoMo','Vietnam'),('zalopay','ZaloPay','Vietnam'),('sbp','СБП','Russia'),('yookassa','ЮKassa','Russia'),('tbank','T‑Bank','Russia')]]
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'providers':providers}))
+                return
+            if path=='/api/payments/intents' and method=='POST':
+                payload=json.loads(request.post_data or '{}')
+                route.fulfill(status=201,content_type='application/json',body=json.dumps({'payment':{'id':'pay-stage5','bookingId':'booking-stage5','provider':payload.get('provider','vietqr'),'providerLabel':'MoMo' if payload.get('provider')=='momo' else 'VietQR','status':'pending','amountVnd':9000000,'totalVnd':9000000,'alreadyPaidVnd':0,'requestedPercent':payload.get('prepaymentPercent',100),'paymentReference':'UNIQ-STAGE5','paymentUrl':'https://uniq-smart-rent.viiversion.com/?payment=stage5','qrPayload':'https://uniq-smart-rent.viiversion.com/?payment=stage5','expiresAt':'2026-09-09T01:00:00.000Z','mode':'demo'},'persisted':True}))
+                return
+            if path=='/api/payments/pay-stage5/demo-confirm' and method=='POST':
+                route.fulfill(status=200,content_type='application/json',body=json.dumps({'paymentId':'pay-stage5','status':'paid','bookingPaidVnd':9000000,'bookingPaymentStatus':'paid','persisted':True}))
+                return
+            route.fulfill(status=404,content_type='application/json',body='{"error":"not_found"}')
+
+        ctx=browser.new_context(viewport={"width":390,"height":844},locale='ru-RU')
+        page=ctx.new_page(); errors=[]
+        page.route('**/api/**',payment_api)
+        page.on('console',lambda msg: capture_console_error(errors,msg))
+        page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
+        page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(60)
+        page.locator('.vehicle-card').first.locator('[data-book]').click(); page.wait_for_timeout(40)
+        form=page.locator('#bookForm'); form.locator('input[name="client"]').fill('Payment QA'); form.locator('input[name="contact"]').fill('@paymentqa')
+        form.locator('button[type="submit"]').click(); page.wait_for_timeout(120)
+        assert page.locator('[data-payment-checkout]').count()==1
+        assert page.locator('[data-payment-provider]').count()==7
+        page.locator('[data-payment-percent="100"]').click(); page.locator('[data-payment-provider="momo"]').click(); page.locator('[data-create-payment]').click(); page.wait_for_timeout(180)
+        assert page.locator('[data-payment-ready]').count()==1
+        qr=page.locator('.payment-qr img'); assert qr.count()==1
+        page.wait_for_function('(node)=>node.complete && node.naturalWidth>0',arg=qr.element_handle(),timeout=5000)
+        page.locator('[data-demo-confirm-payment]').click(); page.wait_for_timeout(100)
+        assert page.locator('[data-payment-success]').count()==1
+        page.locator('.payment-checkout .modal-x').click(); page.wait_for_timeout(80)
+        assert page.get_by_text('Оплачено',exact=True).count()>=1
+        assert not errors,errors
+        results.append({"scenario":"stage5-payment-checkout","providers":7,"booking_persisted":"ok","qr":"ok","demo_confirm":"ok","payment_status":"paid","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)

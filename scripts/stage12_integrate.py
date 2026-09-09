@@ -1,0 +1,275 @@
+from pathlib import Path
+import json
+import re
+
+
+def replace(path: str, old: str, new: str, required: bool = True) -> None:
+    p = Path(path)
+    text = p.read_text(encoding='utf-8')
+    if new in text:
+        return
+    if old not in text:
+        if required:
+            raise SystemExit(f'Anchor missing: {path}: {old[:120]}')
+        return
+    p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+
+def regex_replace(path: str, pattern: str, repl: str) -> None:
+    p = Path(path)
+    text = p.read_text(encoding='utf-8')
+    next_text, count = re.subn(pattern, repl, text, count=1, flags=re.S)
+    if count != 1:
+        raise SystemExit(f'Regex anchor missing: {path}: {pattern[:120]}')
+    p.write_text(next_text, encoding='utf-8')
+
+
+# Dynamic branch UI fix.
+replace(
+    'src/features/team/OwnerTeamBranches.tsx',
+    "const branchLabel = (id: string, branches: TeamBranch[]) => branches.find((item) => item.id === id)?.name ?? id || 'Без филиала';",
+    "const branchLabel = (id: string, branches: TeamBranch[]) => branches.find((item) => item.id === id)?.name ?? (id || 'Без филиала');",
+)
+
+# Client booking / extension / balance flow.
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "import { createPersistedBooking, PaymentProvider, updatePersistedBookingStatus } from '../../api/payments';",
+    "import { createPersistedBooking, extendPersistedBooking, PaymentProvider, PaymentPurpose, updatePersistedBookingStatus } from '../../api/payments';",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "  paymentProvider?: PaymentProvider;\n  branchId?: 'branch-north' | 'branch-center';",
+    "  paymentProvider?: PaymentProvider;\n  paidVnd?: number;\n  branchId?: string;",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "const requestKey = 'uniq-demo-requests-v3-stage11';",
+    "const requestKey = 'uniq-demo-requests-v4-stage12';",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "let days = Math.max(1, Math.floor((b.getTime() - a.getTime()) / 86_400_000) + 1);",
+    "let days = Math.max(1, Math.floor((b.getTime() - a.getTime()) / 86_400_000));",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "  const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);",
+    "  const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);\n  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);",
+)
+
+regex_replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    r"function ExtensionModal\(.*?\n}\n\nfunction ScrollTop",
+    r'''function ExtensionModal({ request, vehicle, clientMode, onClose, onSubmit }: { request: RentalRequest; vehicle: FleetVehicle; clientMode?: boolean; onClose: () => void; onSubmit: (newTo: string, additional: number) => Promise<void> | void }) {
+  const nextDay = new Date(`${request.to}T00:00:00Z`); nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  const minDate = dateISO(nextDay);
+  const [newTo, setNewTo] = useState(minDate);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const additional = newTo >= minDate ? publishedEstimate(vehicle, request.to, newTo) : 0;
+  async function submit() {
+    if (!newTo || newTo < minDate || busy) return;
+    setBusy(true); setError('');
+    try { await onSubmit(newTo, additional); }
+    catch (cause) {
+      const code = cause instanceof Error ? cause.message : '';
+      setError(code === 'vehicle_window_conflict' ? 'Эти дополнительные даты уже заняты. Выберите более раннюю дату возврата или свяжитесь с менеджером.' : code === 'booking_not_extendable' ? 'Эту аренду уже нельзя продлить.' : 'Продление сейчас недоступно. Проверьте даты и попробуйте ещё раз.');
+    } finally { setBusy(false); }
+  }
+  return <div className="modal-bg" onMouseDown={(event) => { if (event.currentTarget === event.target && !busy) onClose(); }}>
+    <section className="modal" data-extension-modal><button className="modal-x" disabled={busy} onClick={onClose}>×</button><span className="eyebrow">ПРОДЛЕНИЕ АРЕНДЫ</span><h2>{vehicle.title}</h2><p>Текущий возврат: <b>{request.to}</b></p>
+      <label>Новая дата возврата<input data-extension-to type="date" min={minDate} value={newTo} onChange={(event) => setNewTo(event.target.value)} /></label>
+      <div className="extension-summary"><b>Предварительная доплата: {money(additional)}</b><span>После подтверждения дат система пересчитает итоговую стоимость и точный остаток.</span></div>
+      {error ? <div className="owner-notice" data-extension-error>{error}</div> : null}
+      <button className="primary wide" data-extension-submit disabled={busy || !newTo || newTo < minDate} onClick={() => void submit()}>{busy ? 'Проверяем даты…' : clientMode ? 'Продлить и перейти к доплате' : 'Продлить аренду'}</button>
+    </section>
+  </div>;
+}
+
+function ScrollTop''',
+)
+
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "    let next: RentalRequest = { ...request, paymentStatus: 'unpaid' };",
+    "    let next: RentalRequest = { ...request, paymentStatus: 'unpaid', paidVnd:0 };",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "    if (next.backendBookingId) setPaymentRequestId(next.id);",
+    "    if (next.backendBookingId) { setPaymentPurpose('booking'); setPaymentRequestId(next.id); }",
+)
+
+app = Path('src/features/prototype/PrototypeApp.tsx')
+text = app.read_text(encoding='utf-8')
+if 'async function extendRentalRequest' not in text:
+    anchor = "  function requestCard(request: RentalRequest) {"
+    block = r'''  async function extendRentalRequest(request: RentalRequest, newTo: string, previewAdditional: number) {
+    if (request.backendBookingId) {
+      const actor = role === 'owner' ? 'owner' : role === 'employee' ? 'employee' : 'client';
+      const result = await extendPersistedBooking(request.backendBookingId,newTo,actor);
+      setRequests((current) => current.map((item) => item.id === request.id ? { ...item, to:result.newTo, estimate:result.totalVnd, paidVnd:result.paidVnd, paymentStatus:result.paymentStatus } : item));
+      setExtendingRequestId(null);
+      if (role === 'client' && result.remainingVnd > 0) { setPaymentPurpose('extension'); setPaymentRequestId(request.id); }
+      return;
+    }
+    if (role === 'client') throw new Error('booking_not_synced');
+    setRequests((current) => current.map((item) => item.id === request.id ? { ...item, to:newTo, estimate:item.estimate + previewAdditional, paymentStatus:item.paidVnd && item.paidVnd > 0 ? 'partially_paid' : item.paymentStatus } : item));
+    setExtendingRequestId(null);
+  }
+
+'''
+    if anchor not in text:
+        raise SystemExit('requestCard anchor missing')
+    app.write_text(text.replace(anchor, block + anchor, 1), encoding='utf-8')
+
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "      <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>\n      {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className=\"secondary\" data-pay-booking={request.id} onClick={() => setPaymentRequestId(request.id)}>Оплатить</button> : null}",
+    "      <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>\n      {request.paidVnd && request.paidVnd > 0 ? <small className=\"request-paid-progress\">Внесено {money(request.paidVnd)} · остаток {money(Math.max(0,request.estimate-request.paidVnd))}</small> : null}\n      {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className=\"secondary\" data-pay-booking={request.id} onClick={() => { setPaymentPurpose(request.paymentStatus === 'partially_paid' ? 'balance' : 'booking'); setPaymentRequestId(request.id); }}>{request.paymentStatus === 'partially_paid' ? 'Доплатить остаток' : 'Оплатить'}</button> : null}\n      {role === 'client' && request.backendBookingId && ['confirmed','issued','active','return_due'].includes(request.status) ? <button className=\"secondary\" data-client-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить аренду</button> : null}",
+)
+replace(
+    'src/features/prototype/PrototypeApp.tsx',
+    "    {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} onClose={() => { setPaymentRequestId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider } : item)); }}/>: null}\n    {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => { setRequests((current) => current.map((item) => item.id === extendingRequest.id ? { ...item, to: newTo, estimate: item.estimate + additional } : item)); setExtendingRequestId(null); }}/>: null}",
+    "    {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} paidVnd={paymentRequest.paidVnd ?? 0} purpose={paymentPurpose} onClose={() => { setPaymentRequestId(null); setPaymentPurpose('booking'); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider, paidVnd:result.bookingPaidVnd, estimate:result.bookingTotalVnd || item.estimate } : item)); }}/>: null}\n    {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} clientMode={role === 'client'} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => extendRentalRequest(extendingRequest,newTo,additional)}/>: null}",
+)
+
+# Dynamic branches in Owner Fleet.
+replace(
+    'src/features/fleet/OwnerFleetManager.tsx',
+    "import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useMemo, useState } from 'react';",
+    "import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from 'react';",
+)
+replace(
+    'src/features/fleet/OwnerFleetManager.tsx',
+    "import { archiveOwnerVehicle, fetchFleetOverrides, removeOwnerVehicle, saveOwnerVehicle } from '../../api/ownerFleet';",
+    "import { archiveOwnerVehicle, fetchFleetOverrides, removeOwnerVehicle, saveOwnerVehicle } from '../../api/ownerFleet';\nimport { fetchTeamSnapshot } from '../../api/team';",
+)
+replace(
+    'src/features/fleet/OwnerFleetManager.tsx',
+    "const branchLabel = (id?: string) => branchOptions.find((branch) => branch.id === id)?.label ?? 'Без привязки';",
+    "const fallbackBranchLabel = (id?: string) => branchOptions.find((branch) => branch.id === id)?.label ?? (id || 'Без привязки');",
+)
+replace(
+    'src/features/fleet/OwnerFleetManager.tsx',
+    "  const [branchFilter, setBranchFilter] = useState<'all' | 'branch-north' | 'branch-center'>('all');",
+    "  const [branchFilter, setBranchFilter] = useState<string>('all');\n  const [branches,setBranches] = useState<Array<{id:string;label:string;address:string}>>([...branchOptions]);",
+)
+replace(
+    'src/features/fleet/OwnerFleetManager.tsx',
+    "  const [notice, setNotice] = useState('');\n\n  const effectiveState",
+    "  const [notice, setNotice] = useState('');\n\n  useEffect(() => { let active=true; fetchTeamSnapshot().then((data) => { if(active) setBranches(data.branches.filter((item) => item.status === 'active').map((item) => ({ id:item.id,label:item.name,address:item.address }))); }); return () => { active=false; }; },[]);\n  const branchLabelForId = (id?:string) => branches.find((branch) => branch.id === id)?.label ?? fallbackBranchLabel(id);\n\n  const effectiveState",
+)
+replace('src/features/fleet/OwnerFleetManager.tsx', "{branchLabel(vehicle.branchId)}", "{branchLabelForId(vehicle.branchId)}")
+p = Path('src/features/fleet/OwnerFleetManager.tsx')
+text = p.read_text(encoding='utf-8')
+text = text.replace('{branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}', '{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}')
+text = text.replace('{branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.label} · {branch.address}</option>)}', '{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.label} · {branch.address}</option>)}')
+p.write_text(text, encoding='utf-8')
+
+# Dynamic branches in booking calendar.
+replace(
+    'src/features/bookings/OwnerBookingCalendar.tsx',
+    "import { useMemo, useState } from 'react';",
+    "import { useEffect, useMemo, useState } from 'react';\nimport { defaultBranches, fetchTeamSnapshot } from '../../api/team';",
+)
+replace('src/features/bookings/OwnerBookingCalendar.tsx', "type BranchFilter = 'all' | 'branch-north' | 'branch-center';", "type BranchFilter = string;")
+replace(
+    'src/features/bookings/OwnerBookingCalendar.tsx',
+    "  const [branch, setBranch] = useState<BranchFilter>('all');\n  const [selectedRequestId",
+    "  const [branch, setBranch] = useState<BranchFilter>('all');\n  const [branches,setBranches] = useState(defaultBranches);\n  const [selectedRequestId",
+)
+replace(
+    'src/features/bookings/OwnerBookingCalendar.tsx',
+    "  const days = useMemo(() => Array.from",
+    "  useEffect(() => { let active=true; fetchTeamSnapshot().then((data) => { if(active) setBranches(data.branches.filter((item) => item.status === 'active')); }); return () => { active=false; }; },[]);\n\n  const days = useMemo(() => Array.from",
+)
+replace(
+    'src/features/bookings/OwnerBookingCalendar.tsx',
+    '<select data-owner-calendar-branch value={branch} onChange={(event) => setBranch(event.target.value as BranchFilter)}><option value="all">Все точки</option><option value="branch-north">Север · 312 Đ. 2/4</option><option value="branch-center">Центр · 254 Nguyễn Thị Minh Khai</option></select>',
+    '<select data-owner-calendar-branch value={branch} onChange={(event) => setBranch(event.target.value)}><option value="all">Все точки</option>{branches.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}</select>',
+)
+
+# Worker health flags.
+replace('src/worker.ts', "schemaVersion: env.DB ? 11 : null, verifiedCatalog:", "schemaVersion: env.DB ? 12 : null, verifiedCatalog:")
+replace(
+    'src/worker.ts',
+    "vehicleProfitability: true, demoRequestDataset: true",
+    "vehicleProfitability: true, demoRequestDataset: true, dynamicBranches: true, clientBookingExtension: true, balancePayments: true, overpaymentProtection: true, fullOperationalFleet: true",
+)
+
+# Seed the full public fleet into D1 so every catalog vehicle can persist bookings/payments.
+migration = Path('migrations/0012_stage12_operations.sql')
+sql = migration.read_text(encoding='utf-8')
+if '-- Stage 12 full public fleet operational sync' not in sql:
+    data = json.loads(Path('assets/fleet-manifest.json').read_text(encoding='utf-8'))
+
+    def q(value: object) -> str:
+        return "'" + str(value).replace("'", "''") + "'"
+
+    rows = ['', '-- Stage 12 full public fleet operational sync -------------------------------']
+    for idx, item in enumerate(data['fleet']):
+        vid = str(item['id'])
+        title = str(item.get('title') or vid)
+        parts = title.split(' ', 1)
+        brand = parts[0]
+        model = parts[1] if len(parts) > 1 else title
+        kind = str(item.get('type') or 'motorcycle')
+        category = kind
+        year = int(item.get('year') or 2026)
+        engine = str(item.get('engine') or '—')
+        branch = 'branch-north' if idx % 2 == 0 else 'branch-center'
+        rows.append(
+            f"INSERT OR IGNORE INTO vehicles (id,slug,brand,model,year,category,engine_label,status,branch_id,kind,title,published,owner_managed,created_at,updated_at) VALUES ({q(vid)},{q('stage12-public-'+vid)},{q(brand)},{q(model)},{year},{q(category)},{q(engine)},'manager_confirmation',{q(branch)},{q(kind)},{q(title)},1,0,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP);"
+        )
+        rows.append(
+            f"INSERT OR IGNORE INTO pricing (vehicle_id,daily_vnd,weekly_vnd,monthly_vnd,deposit_usd,deposit_vnd,updated_at) VALUES ({q(vid)},{int(item.get('dailyVnd') or 0)},{int(item.get('weeklyVnd') or 0)},{int(item.get('monthlyVnd') or 0)},0,{int(item.get('depositVnd') or 0)},CURRENT_TIMESTAMP);"
+        )
+    migration.write_text(sql + '\n'.join(rows) + '\n', encoding='utf-8')
+
+# CSS.
+css = Path('styles.css')
+text = css.read_text(encoding='utf-8')
+if '/* Stage 12 operations */' not in text:
+    text += r'''
+
+/* Stage 12 operations */
+.team-branch-actions{display:flex;align-items:end;justify-content:space-between;gap:18px;margin:32px 0 16px}.team-branch-actions h2{margin:4px 0 0}.branch-editor label{display:grid;gap:7px;margin:14px 0}.payment-balance-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.payment-balance-summary span{display:grid;gap:5px;padding:13px;border:1px solid var(--line);border-radius:14px;background:var(--surface-2)}.payment-balance-summary small{opacity:.68}.payment-balance-summary b{font-size:16px}.payment-settlement-callout{display:grid;gap:6px;padding:15px;border-radius:14px;background:rgba(46,204,113,.09);border:1px solid rgba(46,204,113,.25);margin:18px 0}.request-paid-progress{display:block;margin-top:-2px;margin-bottom:8px;opacity:.8}.request [data-client-extend],.request [data-pay-booking]{margin-top:8px;margin-right:8px}.extension-summary{margin:16px 0}.extension-summary span{display:block;margin-top:5px;opacity:.7}
+@media(max-width:640px){.team-branch-actions{align-items:stretch;flex-direction:column}.team-branch-actions .primary{width:100%}.payment-balance-summary{grid-template-columns:1fr}.request [data-client-extend],.request [data-pay-booking]{width:100%;margin-right:0}}
+'''
+    css.write_text(text, encoding='utf-8')
+
+# Static tests.
+tests = Path('tests/domain.test.mjs')
+text = tests.read_text(encoding='utf-8')
+if "stage 12 operational expansion contracts are present" not in text:
+    text += r'''
+
+test('stage 12 operational expansion contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0012_stage12_operations.sql',import.meta.url),'utf8');
+  const teamWorker=await readFile(new URL('../src/api/teamWorker.ts',import.meta.url),'utf8');
+  const bookingWorker=await readFile(new URL('../src/api/bookingOperationsWorker.ts',import.meta.url),'utf8');
+  const paymentWorker=await readFile(new URL('../src/api/paymentWorker.ts',import.meta.url),'utf8');
+  const checkout=await readFile(new URL('../src/features/payments/PaymentCheckout.tsx',import.meta.url),'utf8');
+  const teamUi=await readFile(new URL('../src/features/team/OwnerTeamBranches.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/worker.ts',import.meta.url),'utf8');
+  assert.ok(migration.includes('stage12_operations'));
+  assert.ok(migration.includes('Stage 12 full public fleet operational sync'));
+  assert.ok(teamWorker.includes('/api/owner/branches'));
+  assert.ok(bookingWorker.includes('Client self-service extension'));
+  assert.ok(bookingWorker.includes('paymentStatus'));
+  assert.ok(paymentWorker.includes("UPDATE payments SET status='cancelled'"));
+  assert.ok(paymentWorker.includes('remainingBefore'));
+  assert.ok(checkout.includes('data-payment-balance-summary'));
+  assert.ok(checkout.includes('data-balance-settlement'));
+  assert.ok(teamUi.includes('data-add-branch'));
+  assert.ok(app.includes('data-client-extend'));
+  assert.ok(app.includes("requestKey = 'uniq-demo-requests-v4-stage12'"));
+  assert.ok(worker.includes('schemaVersion: env.DB ? 12 : null'));
+});
+'''
+    tests.write_text(text, encoding='utf-8')
+
+print('Stage 12 integration script completed')

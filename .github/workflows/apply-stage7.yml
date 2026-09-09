@@ -1,0 +1,116 @@
+name: Apply Stage 7 Employees and Branches
+
+on:
+  push:
+    branches:
+      - stage7/employees-branches
+    paths:
+      - '.github/workflows/apply-stage7.yml'
+      - '.stage7-ci-trigger'
+      - 'src/features/team/**'
+      - 'src/api/team.ts'
+      - 'src/api/teamWorker.ts'
+      - 'migrations/0007_stage7_employees_branches.sql'
+      - 'tests/stage7_e2e.py'
+
+permissions:
+  contents: write
+
+jobs:
+  wire-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage7/employees-branches
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wire Stage 7 into application
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def patch(path, replacements):
+              p=Path(path); text=p.read_text(encoding='utf-8'); changed=False
+              for old,new in replacements:
+                  if new in text: continue
+                  if old not in text: raise SystemExit(f'Anchor missing in {path}: {old[:100]}')
+                  text=text.replace(old,new,1); changed=True
+              if changed: p.write_text(text,encoding='utf-8')
+
+          patch('src/features/prototype/PrototypeApp.tsx',[
+            ("import { OwnerCRM } from '../crm/OwnerCRM';", "import { OwnerCRM } from '../crm/OwnerCRM';\nimport { OwnerTeamBranches } from '../team/OwnerTeamBranches';"),
+            ("type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'handover';", "type EmployeeRoute = 'dashboard' | 'requests' | 'fleet' | 'calendar' | 'handover';"),
+            ("type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers';", "type OwnerRoute = 'overview' | 'requests' | 'fleet' | 'calendar' | 'customers' | 'team';"),
+            ("employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['handover','Выдачи']],", "employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']],"),
+            ("owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты']],", "owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда']],"),
+            ("calendar:'▥',customers:'♙'}", "calendar:'▥',customers:'♙',team:'♟'}"),
+            ("  function ownerCalendar() {\n    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;\n  }", "  function ownerCalendar() {\n    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;\n  }\n\n  function employeeCalendar() {\n    return <OwnerBookingCalendar fleet={fleet} requests={requests} fleetStates={fleetStates}/>;\n  }"),
+            ("  function ownerCustomers() {\n    return <OwnerCRM requests={requests} fleet={fleet}/>;\n  }", "  function ownerCustomers() {\n    return <OwnerCRM requests={requests} fleet={fleet}/>;\n  }\n\n  function ownerTeam() {\n    return <OwnerTeamBranches fleet={fleet} setFleet={setFleet}/>;\n  }"),
+            ("else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'handover' ? handoverPage() : employeeDashboard();", "else if (role === 'employee') content = route === 'requests' ? requestsPage() : route === 'fleet' ? employeeFleet() : route === 'calendar' ? employeeCalendar() : route === 'handover' ? handoverPage() : employeeDashboard();"),
+            ("else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : ownerOverview();", "else content = route === 'requests' ? requestsPage() : route === 'fleet' ? ownerFleet() : route === 'calendar' ? ownerCalendar() : route === 'customers' ? ownerCustomers() : route === 'team' ? ownerTeam() : ownerOverview();"),
+            ("<nav className=\"bottom-nav\">{nav[role].map", "<nav className=\"bottom-nav\" data-nav-count={nav[role].length}>{nav[role].map"),
+          ])
+
+          patch('src/main.tsx',[
+            ("import './features/crm/owner-crm.css';", "import './features/crm/owner-crm.css';\nimport './features/team/stage7.css';"),
+          ])
+
+          patch('src/features/fleet/fleetManagement.ts',[
+            ("export function normalizeBaseVehicle(vehicle: ManagedFleetVehicle): ManagedFleetVehicle {", "export function demoBranchForVehicleId(id: string): 'branch-north' | 'branch-center' {\n  let hash = 0;\n  for (let i = 0; i < id.length; i += 1) hash = ((hash << 5) - hash + id.charCodeAt(i)) | 0;\n  return Math.abs(hash) % 2 === 0 ? 'branch-north' : 'branch-center';\n}\n\nexport function normalizeBaseVehicle(vehicle: ManagedFleetVehicle): ManagedFleetVehicle {"),
+            ("branchId: vehicle.branchId ?? '',", "branchId: vehicle.branchId || demoBranchForVehicleId(vehicle.id),"),
+          ])
+
+          patch('src/worker.ts',[
+            ("import { handlePaymentRequest } from './api/paymentWorker.js';", "import { handlePaymentRequest } from './api/paymentWorker.js';\nimport { handleTeamRequest } from './api/teamWorker.js';"),
+            ("schemaVersion: env.DB ? 6 : null", "schemaVersion: env.DB ? 7 : null"),
+            ("paymentProviders: 7", "paymentProviders: 7, employeesBranches: true, vehicleTransfers: true"),
+            ("    const paymentResponse = await handlePaymentRequest(request, env, url);\n    if (paymentResponse) return paymentResponse;", "    const paymentResponse = await handlePaymentRequest(request, env, url);\n    if (paymentResponse) return paymentResponse;\n    const teamResponse = await handleTeamRequest(request, env, url);\n    if (teamResponse) return teamResponse;"),
+          ])
+
+          patch('wrangler.jsonc',[
+            ('"observability":{"enabled":true}', '"vars":{"DEMO_MODE":"true"},\n  "observability":{"enabled":true}'),
+          ])
+
+          tests=Path('tests/domain.test.mjs')
+          text=tests.read_text(encoding='utf-8')
+          marker="test('stage 7 employees branches and transfers contracts are present'"
+          if marker not in text:
+              text += '''\n\ntest('stage 7 employees branches and transfers contracts are present',async()=>{\n  const migration=await readFile(new URL('../migrations/0007_stage7_employees_branches.sql',import.meta.url),'utf8');\n  const worker=await readFile(new URL('../src/api/teamWorker.ts',import.meta.url),'utf8');\n  const ui=await readFile(new URL('../src/features/team/OwnerTeamBranches.tsx',import.meta.url),'utf8');\n  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');\n  assert.ok(migration.includes('employee-demo-linh'));\n  assert.ok(migration.includes('idx_vehicle_transfers_status'));\n  assert.ok(worker.includes('/api/owner/team'));\n  assert.ok(worker.includes('/api/owner/transfers'));\n  assert.ok(ui.includes('data-stage7-team'));\n  assert.ok(ui.includes('data-permission-grid'));\n  assert.ok(ui.includes('data-create-transfer'));\n  assert.ok(app.includes("employee: [['dashboard','Рабочий стол'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['handover','Выдачи']]"));\n});\n'''
+              tests.write_text(text,encoding='utf-8')
+
+          ci=Path('.github/workflows/ci.yml')
+          text=ci.read_text(encoding='utf-8')
+          anchor='      - name: Browser E2E\n        run: python tests/e2e.py\n'
+          addition=anchor+'      - name: Stage 7 browser acceptance\n        run: python tests/stage7_e2e.py\n'
+          if 'Stage 7 browser acceptance' not in text:
+              if anchor not in text: raise SystemExit('CI browser anchor missing')
+              ci.write_text(text.replace(anchor,addition,1),encoding='utf-8')
+
+          road=Path('DEVELOPMENT_ROADMAP.md')
+          text=road.read_text(encoding='utf-8')
+          old='### 🚧 Stage 7 — Employees and branches\nRoles, permissions, two locations, vehicle transfers.\n'
+          new='''### 🚧 Stage 7 — Employees and branches\nRoles, permissions, two locations, vehicle transfers.\n\nAcceptance target:\n- owner sees both UNIQ branches with fleet and employee counts;\n- owner can add/edit employees, roles, branch assignment, status and permissions;\n- roles: owner, admin, manager, branch staff;\n- permissions cover bookings, CRM, fleet, prices, payments, finance, team and transfers;\n- owner can create and complete a vehicle transfer between North and Center;\n- completed transfer updates the vehicle branch in the interface;\n- employee panel includes the shared fleet occupancy calendar;\n- employee navigation remains usable on mobile and navigation labels are slightly larger;\n- Stage 7 browser acceptance passes on mobile and desktop before deployment.\n'''
+          if old in text: road.write_text(text.replace(old,new,1),encoding='utf-8')
+      - run: npm install
+      - run: npm run check
+      - name: Install Playwright
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install chromium
+      - name: Stage 7 browser acceptance
+        run: python tests/stage7_e2e.py
+      - name: Commit Stage 7 wiring
+        run: |
+          if git diff --quiet; then
+            echo "Stage 7 wiring already applied"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/features/prototype/PrototypeApp.tsx src/main.tsx src/features/fleet/fleetManagement.ts src/worker.ts wrangler.jsonc tests/domain.test.mjs .github/workflows/ci.yml DEVELOPMENT_ROADMAP.md
+          git commit -m "Stage 7: wire team branches employee calendar and navigation"
+          git push origin HEAD:stage7/employees-branches

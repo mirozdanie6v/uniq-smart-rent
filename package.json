@@ -1,5 +1,35 @@
 {
-  "name":"uniq-smart-rent","version":"1.1.0","private":true,"type":"module","engines":{"node":">=22"},
-  "scripts":{"clean":"node scripts/clean.mjs","lint":"node scripts/lint.mjs","typecheck":"tsc -p tsconfig.json --noEmit","build":"node scripts/build.mjs","test":"node --test tests/domain.test.mjs","test:e2e":"python tests/e2e.py","check":"npm run lint && npm run typecheck && npm run build && npm test","preview":"node scripts/preview.mjs","deploy":"wrangler deploy"},
-  "devDependencies":{"typescript":"latest","wrangler":"latest"}
+  "name": "uniq-smart-rent",
+  "version": "2.0.0-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "clean": "node scripts/clean.mjs",
+    "lint": "node scripts/lint.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json && vite build",
+    "test": "node --test tests/domain.test.mjs",
+    "test:e2e": "python tests/e2e.py",
+    "check": "npm run lint && npm run typecheck && npm run build && npm test",
+    "preview": "vite preview --host 0.0.0.0",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@vitejs/plugin-react": "latest",
+    "typescript": "latest",
+    "vite": "latest",
+    "wrangler": "latest"
+  }
 }
