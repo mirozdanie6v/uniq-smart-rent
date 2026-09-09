@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS customers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   contact TEXT NOT NULL,
+  contact_key TEXT NOT NULL DEFAULT '',
   preferred_channel TEXT NOT NULL DEFAULT 'other',
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
@@ -134,13 +135,33 @@ INSERT OR IGNORE INTO vehicle_photos (id, vehicle_id, url, sort_order, source_ur
 ('r7-2023-1','r7-2023','https://uniqmoto.com/assets/vehicles/client-fleet/yamaha-r7-2023.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/yamaha-r7-2023'),
 ('rebel-300-2023-1','rebel-300-2023','https://uniqmoto.com/assets/vehicles/client-fleet/honda-rebel-300-2023.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/honda-rebel-300-2023'),
 ('espero-50-2024-1','espero-50-2024','https://uniqmoto.com/assets/vehicles/client-fleet/detech-espero-50cc-2024.webp',1,'https://uniqmoto.com/en/rentals/motorcycles/detech-espero-50cc-2024');
-INSERT OR IGNORE INTO schema_meta (version) VALUES (2);
+INSERT OR IGNORE INTO schema_meta (version) VALUES (3);
 `;
+
+async function ensureColumn(db: D1DatabaseLike, table: string, column: string, definition: string): Promise<void> {
+  const info = await db.prepare(`PRAGMA table_info(${table})`).all<{ name: string }>();
+  if ((info.results ?? []).some(item => item.name === column)) return;
+  await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+}
+
+async function ensureCompatibilityMigrations(db: D1DatabaseLike): Promise<void> {
+  await ensureColumn(db, 'customers', 'contact_key', "TEXT NOT NULL DEFAULT ''");
+  await db.exec(`
+UPDATE customers
+SET contact_key = lower(
+  replace(replace(replace(replace(replace(trim(contact), ' ', ''), '-', ''), '(', ''), ')', ''), '.', '')
+)
+WHERE contact_key = '';
+CREATE INDEX IF NOT EXISTS idx_customers_contact_key ON customers(contact_key, updated_at DESC);
+INSERT OR IGNORE INTO schema_meta (version) VALUES (3);
+`);
+}
 
 export async function ensureDatabase(db: D1DatabaseLike): Promise<void> {
   if (!bootstrapPromise) {
     bootstrapPromise = (async () => {
       await db.exec(schemaSql);
+      await ensureCompatibilityMigrations(db);
       await db.exec(seedSql);
     })().catch((error) => {
       bootstrapPromise = null;
