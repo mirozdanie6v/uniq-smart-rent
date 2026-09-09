@@ -38,7 +38,10 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
     setIntent(null);
     setNotice('');
     setPercent(purpose !== 'booking' || paidVnd > 0 ? 100 : 30);
-  }, [bookingId, paidVnd, purpose]);
+    // Do not reset on paidVnd changes: parent updates paidVnd immediately after a
+    // successful payment and the success state must remain visible to the client.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingId, purpose]);
   useEffect(() => {
     let alive = true;
     if (!intent?.qrPayload) { setQr(''); return; }
