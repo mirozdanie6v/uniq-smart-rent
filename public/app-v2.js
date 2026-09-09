@@ -20,12 +20,24 @@
   if (!nav[state.role]) state.role = 'client';
   state.route = nav[state.role][0][0];
 
-  const requestKey = 'uniq-demo-requests-v2';
-  const fleetStateKey = 'uniq-demo-fleet-state-v2';
-  const load = (key, fallback) => { try { return JSON.parse(sessionStorage.getItem(key) || '') || fallback; } catch { return fallback; } };
-  const save = (key, value) => sessionStorage.setItem(key, JSON.stringify(value));
-  const requests = load(requestKey, []);
-  const fleetState = load(fleetStateKey, {});
+  const requestKey = 'uniq-data-requests-v3';
+  const fleetStateKey = 'uniq-data-fleet-state-v3';
+  const legacyRequestKey = 'uniq-demo-requests-v2';
+  const legacyFleetStateKey = 'uniq-demo-fleet-state-v2';
+  const bookingStatusOrder = ['new','contacted','awaiting_confirmation','confirmed','vehicle_issued','active','return_due','returned','completed','cancelled'];
+  const fleetStatusOrder = ['manager_confirmation','available','reserved','service'];
+  const bookingStatusAliases = {issued:'vehicle_issued'};
+  const fleetStatusAliases = {manager:'manager_confirmation',ready:'available',hold:'reserved'};
+  const normalizeBookingStatus = value => bookingStatusAliases[value] || (bookingStatusOrder.includes(value) ? value : 'new');
+  const normalizeFleetStatus = value => fleetStatusAliases[value] || (fleetStatusOrder.includes(value) ? value : 'manager_confirmation');
+  const parseStore = (storage, key) => { try { return JSON.parse(storage.getItem(key) || 'null'); } catch { return null; } };
+  const save = (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch {} };
+  const savedRequests = parseStore(localStorage, requestKey) || parseStore(sessionStorage, legacyRequestKey) || [];
+  const savedFleetState = parseStore(localStorage, fleetStateKey) || parseStore(sessionStorage, legacyFleetStateKey) || {};
+  const requests = Array.isArray(savedRequests) ? savedRequests.map(r=>({...r,status:normalizeBookingStatus(r.status),persistence:r.persistence||'local'})) : [];
+  const fleetState = Object.fromEntries(Object.entries(savedFleetState||{}).map(([id,value])=>[id,normalizeFleetStatus(value)]));
+  save(requestKey, requests); save(fleetStateKey, fleetState);
+
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = n => n ? new Intl.NumberFormat('ru-RU').format(n) + ' ₫' : 'уточнить';
   const dateISO = d => d.toISOString().slice(0,10);
@@ -33,22 +45,23 @@
   const fromDefault = new Date(today); fromDefault.setDate(fromDefault.getDate()+1);
   const toDefault = new Date(today); toDefault.setDate(toDefault.getDate()+4);
   const telegram = window.Telegram?.WebApp; telegram?.ready?.(); telegram?.expand?.();
+  const staffApiKey = () => sessionStorage.getItem('uniq-staff-api-key') || '';
 
+  function rentalDays(from,to) {
+    const a=new Date(from+'T00:00:00Z'), b=new Date(to+'T00:00:00Z');
+    if(Number.isNaN(a.getTime())||Number.isNaN(b.getTime())||b<a) return 0;
+    return Math.max(1,Math.ceil((b-a)/86400000));
+  }
   function publishedEstimate(v, from, to) {
-    const a = new Date(from+'T00:00:00'); const b = new Date(to+'T00:00:00');
-    if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
-    let days = Math.max(1, Math.floor((b-a)/86400000)+1), total = 0;
-    const month = v.monthlyVnd > 0 ? v.monthlyVnd : 0;
-    const week = v.weeklyVnd > 0 ? v.weeklyVnd : 0;
-    const day = v.dailyVnd > 0 ? v.dailyVnd : 0;
-    if (month) { const c = Math.floor(days/30); total += c*month; days -= c*30; }
-    if (week) { const c = Math.floor(days/7); total += c*week; days -= c*7; }
-    total += days*day;
-    return total;
+    const days=rentalDays(from,to); if(!days) return 0;
+    const packs=[{days:1,price:Number(v.dailyVnd)||0},{days:7,price:Number(v.weeklyVnd)||0},{days:30,price:Number(v.monthlyVnd)||0}].filter(x=>x.price>0);
+    const best=Array(days+1).fill(Infinity); best[0]=0;
+    for(let d=1;d<=days;d++) for(const pack of packs) best[d]=Math.min(best[d],best[Math.max(0,d-pack.days)]+pack.price);
+    return Number.isFinite(best[days])?best[days]:(Number(v.dailyVnd)||0)*days;
   }
   const typeLabel = t => t === 'car' ? 'Авто' : t === 'scooter' ? 'Скутер' : 'Мотоцикл';
-  const effectiveFleetState = id => fleetState[id] || 'manager';
-  const stateLabel = s => ({manager:'Подтверждает менеджер',ready:'Готов к выдаче',service:'В сервисе',hold:'Резерв'}[s] || s);
+  const effectiveFleetState = id => normalizeFleetStatus(fleetState[id] || 'manager_confirmation');
+  const stateLabel = s => ({manager_confirmation:'Подтверждает менеджер',available:'Готов к выдаче',service:'В сервисе',reserved:'Резерв'}[normalizeFleetStatus(s)] || s);
 
   function brand() {
     return `<button class="brand" data-go="${nav[state.role][0][0]}"><img src="./brand/uniq-logo.svg" alt="UNIQ Nha Trang Rent Bike"><span>SMART RENT</span></button>`;
@@ -107,10 +120,10 @@
   }
   function requestCard(r) {
     const v=fleet.find(x=>x.id===r.vehicleId);
-    const actions=state.role==='employee'?`<select data-status="${r.id}">${['new','contacted','confirmed','issued','active','returned','completed','cancelled'].map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${statusText(s)}</option>`).join('')}</select>`:'';
-    return `<article class="request"><div><span class="status">${statusText(r.status)}</span><small>${new Date(r.createdAt).toLocaleString('ru-RU')}</small></div><h3>${esc(v?.title||r.vehicleId)}</h3><p>${esc(r.from)} → ${esc(r.to)} · ${esc(r.client||'Клиент')}</p><b>${money(r.estimate)}</b>${actions}</article>`;
+    const actions=state.role==='employee'?`<select data-status="${r.id}">${bookingStatusOrder.map(s=>`<option value="${s}" ${r.status===s?'selected':''}>${statusText(s)}</option>`).join('')}</select>`:'';
+    return `<article class="request"><div><span class="status">${statusText(r.status)}</span><small>${new Date(r.createdAt).toLocaleString('ru-RU')}</small></div><h3>${esc(v?.title||r.vehicleId)}</h3><p>${esc(r.from)} → ${esc(r.to)} · ${esc(r.client||r.name||'Клиент')}</p><b>${money(r.estimate||r.estimatedTotalVnd)}</b>${actions}</article>`;
   }
-  function statusText(s){return ({new:'Новая',contacted:'Связались',confirmed:'Подтверждена',issued:'Выдана',active:'В аренде',returned:'Возвращена',completed:'Завершена',cancelled:'Отменена'}[s]||s);}
+  function statusText(s){return ({new:'Новая',contacted:'Связались',awaiting_confirmation:'Ждёт подтверждения',confirmed:'Подтверждена',vehicle_issued:'Выдана',active:'В аренде',return_due:'Ожидается возврат',returned:'Возвращена',completed:'Завершена',cancelled:'Отменена'}[normalizeBookingStatus(s)]||s);}
 
   function contacts() {
     return hero('UNIQ MOTO','Контакты и выдача.','Связь с менеджером и две точки UNIQ в Нячанге.')+
@@ -124,35 +137,43 @@
 
   function employeeDashboard() {
     const open=requests.filter(r=>!['completed','cancelled'].includes(r.status));
-    const ready=Object.values(fleetState).filter(x=>x==='ready').length;
+    const ready=Object.values(fleetState).filter(x=>normalizeFleetStatus(x)==='available').length;
     return hero('СОТРУДНИК','Рабочий стол сотрудника.','Заявки, парк и выдачи в одном мобильном интерфейсе.')+
       `<section class="metrics">${metric('Открытые заявки',open.length)}${metric('Парк',fleet.length)}${metric('Готовы к выдаче',ready)}</section>`+
       `<section class="section"><div class="section-head"><div><span class="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button class="text" data-go="requests">Все →</button></div>${open.length?`<div class="request-list">${open.slice(-5).reverse().map(requestCard).join('')}</div>`:`<div class="empty">Новых заявок нет</div>`}</section>`;
   }
 
   function employeeFleet() {
-    return hero('ПАРК СОТРУДНИКА','Парк техники.','Сотрудник видит весь каталог. Сотрудник видит весь парк и может быстро обновлять рабочий статус техники.')+
-      `<section class="fleet-table">${fleet.map(v=>`<article><div class="mini-photo">${photo(v)}</div><div><b>${esc(v.title)}</b><small>${v.year||''} · ${esc(v.engine||'')}</small></div><select data-fleet-state="${esc(v.id)}"><option value="manager" ${effectiveFleetState(v.id)==='manager'?'selected':''}>Подтверждает менеджер</option><option value="ready" ${effectiveFleetState(v.id)==='ready'?'selected':''}>Готов к выдаче</option><option value="service" ${effectiveFleetState(v.id)==='service'?'selected':''}>В сервисе</option><option value="hold" ${effectiveFleetState(v.id)==='hold'?'selected':''}>Резерв</option></select></article>`).join('')}</section>`;
+    return hero('ПАРК СОТРУДНИКА','Парк техники.','Сотрудник видит весь парк и может быстро обновлять рабочий статус техники.')+
+      `<section class="fleet-table">${fleet.map(v=>`<article><div class="mini-photo">${photo(v)}</div><div><b>${esc(v.title)}</b><small>${v.year||''} · ${esc(v.engine||'')}</small></div><select data-fleet-state="${esc(v.id)}"><option value="manager_confirmation" ${effectiveFleetState(v.id)==='manager_confirmation'?'selected':''}>Подтверждает менеджер</option><option value="available" ${effectiveFleetState(v.id)==='available'?'selected':''}>Готов к выдаче</option><option value="service" ${effectiveFleetState(v.id)==='service'?'selected':''}>В сервисе</option><option value="reserved" ${effectiveFleetState(v.id)==='reserved'?'selected':''}>Резерв</option></select></article>`).join('')}</section>`;
   }
 
   function handover() {
-    const rows=requests.filter(r=>['confirmed','issued','active','returned'].includes(r.status));
+    const rows=requests.filter(r=>['confirmed','vehicle_issued','active','return_due','returned'].includes(normalizeBookingStatus(r.status)));
     return hero('ВЫДАЧИ','Выдачи и возвраты.','Здесь отображаются только заявки, дошедшие до подтверждения.')+(rows.length?`<section class="request-list">${rows.map(requestCard).join('')}</section>`:`<div class="empty"><b>Подтверждённых выдач пока нет</b><span>Статус заявки можно изменить в разделе «Заявки».</span></div>`);
   }
 
-  function ownerOverview() {
-    const confirmed=requests.filter(r=>['confirmed','issued','active','returned','completed'].includes(r.status)).length;
-    const open=requests.filter(r=>!['completed','cancelled'].includes(r.status)).length;
-    const estimate=requests.filter(r=>r.status!=='cancelled').reduce((s,r)=>s+(r.estimate||0),0);
-    return hero('ВЛАДЕЛЕЦ','Пульс бизнеса — со смартфона.','Ключевые показатели по парку и заявкам в одном экране.')+
-      `<section class="metrics owner-metrics">${metric('Парк',fleet.length,'единиц техники')}${metric('Открытые заявки',open)}${metric('Подтверждены',confirmed)}${metric('Потенциал заявок',money(estimate),'по текущим тарифам')}</section>`+
-      `<section class="panel"><span class="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2>${statusBreakdown()}</section>`;
+  function customerSummary() {
+    const map=new Map();
+    for(const r of requests){const key=String(r.contact||'').trim().toLowerCase()||`id:${r.id}`;const current=map.get(key)||{name:r.client||r.name||'Клиент',contact:r.contact||'',count:0,total:0,last:r.createdAt};current.count++;current.total+=Number(r.estimate||r.estimatedTotalVnd)||0;if(String(r.createdAt)>String(current.last))current.last=r.createdAt;map.set(key,current);}
+    return [...map.values()].sort((a,b)=>String(b.last).localeCompare(String(a.last)));
   }
-  function statusBreakdown(){const statuses=['new','contacted','confirmed','issued','active','returned','completed','cancelled'];return `<div class="status-bars">${statuses.map(s=>{const n=requests.filter(r=>r.status===s).length;return `<div><span>${statusText(s)}</span><b>${n}</b><i style="width:${requests.length?Math.max(4,n/requests.length*100):4}%"></i></div>`}).join('')}</div>`;}
+
+  function ownerOverview() {
+    const confirmed=requests.filter(r=>['confirmed','vehicle_issued','active','return_due','returned','completed'].includes(normalizeBookingStatus(r.status))).length;
+    const open=requests.filter(r=>!['completed','cancelled'].includes(normalizeBookingStatus(r.status))).length;
+    const estimate=requests.filter(r=>normalizeBookingStatus(r.status)!=='cancelled').reduce((s,r)=>s+(Number(r.estimate||r.estimatedTotalVnd)||0),0);
+    const clients=customerSummary();
+    return hero('ВЛАДЕЛЕЦ','Пульс бизнеса — со смартфона.','Ключевые показатели по парку, клиентам и заявкам в одном экране.')+
+      `<section class="metrics owner-metrics">${metric('Парк',fleet.length,'единиц техники')}${metric('Клиенты',clients.length)}${metric('Открытые заявки',open)}${metric('Подтверждены',confirmed)}${metric('Потенциал заявок',money(estimate),'по текущим тарифам')}</section>`+
+      `<section class="panel"><span class="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2>${statusBreakdown()}</section>`+
+      `<section class="section"><div class="section-head"><div><span class="eyebrow">КЛИЕНТЫ</span><h2>Последние клиенты</h2></div></div>${clients.length?`<div class="request-list">${clients.slice(0,6).map(c=>`<article class="request"><div><span class="status">${c.count} заявок</span></div><h3>${esc(c.name)}</h3><p>${esc(c.contact)}</p><b>${money(c.total)}</b></article>`).join('')}</div>`:`<div class="empty">Клиенты появятся после первой заявки.</div>`}</section>`;
+  }
+  function statusBreakdown(){return `<div class="status-bars">${bookingStatusOrder.map(s=>{const n=requests.filter(r=>normalizeBookingStatus(r.status)===s).length;return `<div><span>${statusText(s)}</span><b>${n}</b><i style="width:${requests.length?Math.max(4,n/requests.length*100):4}%"></i></div>`}).join('')}</div>`;}
 
   function ownerFleet() {
-    const counts={manager:0,ready:0,service:0,hold:0}; fleet.forEach(v=>counts[effectiveFleetState(v.id)]++);
-    return hero('ПАРК ВЛАДЕЛЬЦА','Парк и состояние.','Сводка по состоянию парка и готовности техники к выдаче.')+`<section class="metrics">${metric('Всего',fleet.length)}${metric('Менеджер',counts.manager)}${metric('Готовы к выдаче',counts.ready)}${metric('В сервисе',counts.service)}</section>`+`<section class="grid">${fleet.slice(0,18).map(card).join('')}</section><div class="proof">Владелец видит общий срез по парку и текущим статусам техники.</div>`;
+    const counts={manager_confirmation:0,available:0,service:0,reserved:0}; fleet.forEach(v=>counts[effectiveFleetState(v.id)]++);
+    return hero('ПАРК ВЛАДЕЛЬЦА','Парк и состояние.','Сводка по состоянию парка и готовности техники к выдаче.')+`<section class="metrics">${metric('Всего',fleet.length)}${metric('Менеджер',counts.manager_confirmation)}${metric('Готовы к выдаче',counts.available)}${metric('В сервисе',counts.service)}${metric('Резерв',counts.reserved)}</section>`+`<section class="grid">${fleet.slice(0,18).map(card).join('')}</section><div class="proof">Владелец видит общий срез по парку и текущим статусам техники.</div>`;
   }
 
   function page() {
@@ -165,6 +186,16 @@
   function render(scroll=false) {
     root.innerHTML=shell(page()); bind(); if(scroll) window.scrollTo({top:0,behavior:'smooth'});
   }
+
+  async function persistBookingStatus(r,status) {
+    const key=staffApiKey(); if(!key||r.persistence!=='d1') return;
+    try { await fetch(`/api/bookings/${encodeURIComponent(r.id)}/status`,{method:'PATCH',headers:{'content-type':'application/json','x-uniq-admin-key':key},body:JSON.stringify({status})}); } catch {}
+  }
+  async function persistFleetStatus(id,status) {
+    const key=staffApiKey(); if(!key) return;
+    try { await fetch(`/api/vehicles/${encodeURIComponent(id)}/status`,{method:'PATCH',headers:{'content-type':'application/json','x-uniq-admin-key':key},body:JSON.stringify({status})}); } catch {}
+  }
+
   function bind() {
     document.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>{state.role=b.dataset.role;sessionStorage.setItem('uniq-role-v2',state.role);state.route=nav[state.role][0][0];state.selectedId=null;render(true)});
     document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>{state.route=b.dataset.go;state.selectedId=null;render(true)});
@@ -172,14 +203,14 @@
     document.querySelectorAll('[data-book]').forEach(b=>b.onclick=e=>{e.stopPropagation();openBooking(b.dataset.book)});
     document.querySelector('#fleetSearch')?.addEventListener('input',e=>{state.query=e.target.value;render()});
     document.querySelector('#typeFilter')?.addEventListener('change',e=>{state.type=e.target.value;render()});
-    document.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const r=requests.find(x=>x.id===s.dataset.status);if(r){r.status=s.value;save(requestKey,requests);render()}});
-    document.querySelectorAll('[data-fleet-state]').forEach(s=>s.onchange=()=>{fleetState[s.dataset.fleetState]=s.value;save(fleetStateKey,fleetState);render()});
+    document.querySelectorAll('[data-status]').forEach(s=>s.onchange=()=>{const r=requests.find(x=>x.id===s.dataset.status);if(r){r.status=normalizeBookingStatus(s.value);save(requestKey,requests);void persistBookingStatus(r,r.status);render()}});
+    document.querySelectorAll('[data-fleet-state]').forEach(s=>s.onchange=()=>{const status=normalizeFleetStatus(s.value);fleetState[s.dataset.fleetState]=status;save(fleetStateKey,fleetState);void persistFleetStatus(s.dataset.fleetState,status);render()});
     document.querySelectorAll('[data-photo]').forEach(b=>b.onclick=()=>{const v=fleet.find(x=>x.id===state.selectedId);const main=document.querySelector('.main-photo');if(v&&main)main.innerHTML=photo(v,Number(b.dataset.photo));});
   }
 
   function openBooking(id) {
     const v=fleet.find(x=>x.id===id); if(!v)return;
-    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">БРОНИРОВАНИЕ</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${dateISO(fromDefault)}" required></label><label>Возврат<input name="to" type="date" value="${dateISO(toDefault)}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Отправить заявку</button></form><small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString()};requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
+    const overlay=document.createElement('div');overlay.className='modal-bg';overlay.innerHTML=`<section class="modal"><button class="modal-x">×</button><span class="eyebrow">БРОНИРОВАНИЕ</span><h2>${esc(v.title)}</h2><p>${money(v.dailyVnd)} / день · финальная доступность подтверждается менеджером.</p><form id="bookForm"><div class="form-grid"><label>Получение<input name="from" type="date" value="${dateISO(fromDefault)}" required></label><label>Возврат<input name="to" type="date" value="${dateISO(toDefault)}" required></label><label>Имя<input name="client" required placeholder="Ваше имя"></label><label>Контакт<input name="contact" required placeholder="Телефон / @username"></label></div><button class="primary wide" type="submit">Отправить заявку</button></form><small>После отправки заявка появится в разделе «Мои заявки» и будет доступна сотруднику и владельцу.</small></section>`;document.body.append(overlay);overlay.querySelector('.modal-x').onclick=()=>overlay.remove();overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};overlay.querySelector('form').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target);const from=String(d.get('from')),to=String(d.get('to'));const r={id:crypto.randomUUID(),vehicleId:id,from,to,client:String(d.get('client')),contact:String(d.get('contact')),status:'new',estimate:publishedEstimate(v,from,to),createdAt:new Date().toISOString(),persistence:'local'};try{const response=await fetch('/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({vehicleId:id,from,to,client:r.client,contact:r.contact,channel:'other',deliveryLocation:'',note:''})});if(response.ok){const data=await response.json();if(data.persisted){r.id=data.bookingId||r.id;r.estimate=Number(data.estimatedTotalVnd)||r.estimate;r.persistence='d1';}}}catch{}requests.push(r);save(requestKey,requests);overlay.remove();state.route='requests';state.selectedId=null;render(true)};
   }
 
   if (!fleet.length) root.innerHTML='<div class="fatal"><b>Каталог временно недоступен.</b><span>Обновите страницу или свяжитесь с менеджером UNIQ.</span></div>'; else render();
