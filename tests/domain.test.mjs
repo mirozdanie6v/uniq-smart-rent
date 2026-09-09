@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rentalDays, calculateRentalTotal, calculatePriceBreakdown, canTransitionBooking, rangesOverlap } from '../.build/domain/booking.js';
+import { rentalDays, calculateRentalTotal, calculatePriceBreakdown, canTransitionBooking, rangesOverlap, normalizeBookingStatus } from '../.build/domain/booking.js';
 import { vehicles } from '../.build/domain/catalog.js';
 import { detectBrowserLanguage } from '../.build/domain/i18n.js';
 import { businessInfo } from '../.build/domain/business.js';
@@ -17,10 +17,12 @@ test('published X-Max tiers are used for estimates',()=>{
 
 test('booking lifecycle only allows explicit transitions',()=>{assert.equal(canTransitionBooking('new','contacted'),true);assert.equal(canTransitionBooking('new','completed'),false);assert.equal(canTransitionBooking('returned','completed'),true);});
 
+test('legacy booking status is normalized without losing data',()=>{assert.equal(normalizeBookingStatus('issued'),'vehicle_issued');assert.equal(normalizeBookingStatus('vehicle_issued'),'vehicle_issued');assert.equal(normalizeBookingStatus('unknown'),null);});
+
 test('date ranges detect conflicts inclusively',()=>{assert.equal(rangesOverlap('2026-09-01','2026-09-05','2026-09-05','2026-09-08'),true);assert.equal(rangesOverlap('2026-09-01','2026-09-04','2026-09-05','2026-09-08'),false);});
 
 test('catalog contains only manager-confirmed public entries with sources',()=>{assert.equal(vehicles.length,5);for(const v of vehicles){assert.equal(v.availability,'manager_confirmation');assert.match(v.sourceUrl,/^https:\/\/uniqmoto\.com\//);assert.ok(v.photos.length>=1);assert.ok(v.pricing.dailyVnd>0);}});
 
 test('browser language detection uses English fallback',()=>{assert.equal(detectBrowserLanguage('ru-RU'),'ru');assert.equal(detectBrowserLanguage('vi-VN'),'vi');assert.equal(detectBrowserLanguage('ko-KR'),'ko');assert.equal(detectBrowserLanguage('zh-CN'),'en');});
 
-test('verified business facts expose two branches and public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,82);assert.equal(businessInfo.phone,'+84372112370');});
+test('verified business facts expose two branches and synced public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,89);assert.equal(businessInfo.phone,'+84372112370');});
