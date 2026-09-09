@@ -19,6 +19,8 @@
   const vehicleTitle=request=>fleet().find(item=>String(item.id)===String(request?.vehicleId))?.title||request?.vehicleId||'UNIQ';
   const paymentAmount=(total,percent)=>percent===30?Math.ceil((Number(total)||0)*.3):(Number(total)||0;
 
+  window.__UNIQ_STAGE9_EXCLUSIVE__={loaded:true,claimed:0,lastRequest:null,lastError:null};
+
   function demoQr(reference){
     let seed=0;
     for(const ch of reference)seed=(seed*31+ch.charCodeAt(0))>>>0;
@@ -41,62 +43,95 @@
   }
 
   function openPayment(requestId){
-    const request=requestById(requestId);if(!request)return;
-    document.querySelector('#finishPaymentModal')?.remove();
-    document.querySelector('#releasePaymentModal')?.remove();
-    const total=Number(request.estimate||request.estimatedTotalVnd)||0;
-    let percent=30,provider='vietqr',stage='choose';
-    const overlay=document.createElement('div');
-    overlay.className='modal-bg finish-modal-bg';
-    overlay.id='releasePaymentModal';
+    try{
+      window.__UNIQ_STAGE9_EXCLUSIVE__.lastRequest=String(requestId||'');
+      const request=requestById(requestId);if(!request)throw new Error(`Request not found: ${requestId}`);
+      document.querySelector('#finishPaymentModal')?.remove();
+      document.querySelector('#releasePaymentModal')?.remove();
+      const total=Number(request.estimate||request.estimatedTotalVnd)||0;
+      let percent=30,provider='vietqr',stage='choose';
+      const overlay=document.createElement('div');
+      overlay.className='modal-bg finish-modal-bg';
+      overlay.id='releasePaymentModal';
 
-    const render=()=>{
-      const amount=paymentAmount(total,percent);
-      const reference=`UNIQ-${String(request.id).replace(/[^a-z0-9]/gi,'').slice(-8).toUpperCase()||'BOOKING'}`;
-      overlay.innerHTML=`<section class="modal payment-checkout" role="dialog" aria-modal="true" aria-labelledby="releasePaymentTitle">
-        <button class="modal-x" data-release-close>×</button>
-        <span class="eyebrow">ОПЛАТА БРОНИ</span><h2 id="releasePaymentTitle">${esc(vehicleTitle(request))}</h2>
-        <p class="payment-total">Стоимость аренды: <b>${money(total)}</b></p>
-        ${stage==='choose'?`
-          <div class="payment-section"><h3>1. Выберите сумму</h3><div class="payment-percent-grid">
-            <button type="button" data-percent="30" class="${percent===30?'active':''}"><b>30%</b><span>Предоплата</span><small>${money(paymentAmount(total,30))}</small></button>
-            <button type="button" data-percent="100" class="${percent===100?'active':''}"><b>100%</b><span>Полная оплата</span><small>${money(total)}</small></button>
-          </div></div>
-          <div class="payment-section"><h3>2. Способ оплаты</h3><div class="payment-provider-grid">${providers.map(([id,label,market])=>`<button type="button" data-provider="${id}" class="${provider===id?'active':''}"><span class="provider-logo provider-logo-${id}">${esc(label)}</span><span class="provider-copy"><b>${esc(label)}</b><span>${esc(market)}</span><small>Демо</small></span></button>`).join('')}</div></div>
-          <div class="payment-summary"><span>К оплате</span><b>${money(amount)}</b></div>
-          <button type="button" class="primary wide" data-create-payment>Получить QR / ссылку</button>`:`
-          <div class="payment-ready"><div class="payment-qr release-demo-qr">${demoQr(reference)}<span>DEMO QR</span></div><div class="payment-ready-copy">
-            <span class="provider-logo provider-logo-${provider}">${esc(providerLabel(provider))}</span><span>${esc(providerLabel(provider))}</span><h3>${money(amount)}</h3>
-            <p>Назначение: <b>${esc(reference)}</b></p>
-            <small>Демонстрационный платёжный intent. Боевой режим включается после подключения merchant-ключей выбранного провайдера.</small>
-            <button type="button" class="secondary payment-open-link" data-demo-link>Открыть ссылку оплаты ↗</button>
-          </div></div><button type="button" class="primary wide" data-confirm-stage9>Демо: подтвердить оплату</button>`}
-        <p class="payment-stage-note">Сценарий Stage 9: 30%/100% → провайдер → QR/ссылка → подтверждение оплаты.</p>
-      </section>`;
-      overlay.querySelector('[data-release-close]')?.addEventListener('click',()=>overlay.remove());
-      overlay.querySelectorAll('[data-percent]').forEach(button=>button.addEventListener('click',()=>{percent=Number(button.dataset.percent)===100?100:30;render()}));
-      overlay.querySelectorAll('[data-provider]').forEach(button=>button.addEventListener('click',()=>{provider=button.dataset.provider||'vietqr';render()}));
-      overlay.querySelector('[data-create-payment]')?.addEventListener('click',()=>{stage='ready';render()});
-      overlay.querySelector('[data-demo-link]')?.addEventListener('click',()=>{const note=overlay.querySelector('.payment-stage-note');if(note)note.textContent='Демо-ссылка подготовлена. Для реального перехода нужны merchant-ключи провайдера.'});
-      overlay.querySelector('[data-confirm-stage9]')?.addEventListener('click',()=>{
-        const map=payments();
-        map[request.id]={status:'paid',bookingPaymentStatus:percent===100?'paid':'partially_paid',prepaymentPercent:percent,amount:paymentAmount(total,percent),provider,paidAt:new Date().toISOString(),mode:'demo'};
-        write(PAYMENT_KEY,map);
-        overlay.remove();
-        refreshRequestUi();
-      });
-    };
-    overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove()});
-    document.body.append(overlay);
-    render();
+      const render=()=>{
+        const amount=paymentAmount(total,percent);
+        const reference=`UNIQ-${String(request.id).replace(/[^a-z0-9]/gi,'').slice(-8).toUpperCase()||'BOOKING'}`;
+        overlay.innerHTML=`<section class="modal payment-checkout" role="dialog" aria-modal="true" aria-labelledby="releasePaymentTitle">
+          <button class="modal-x" data-release-close>×</button>
+          <span class="eyebrow">ОПЛАТА БРОНИ</span><h2 id="releasePaymentTitle">${esc(vehicleTitle(request))}</h2>
+          <p class="payment-total">Стоимость аренды: <b>${money(total)}</b></p>
+          ${stage==='choose'?`
+            <div class="payment-section"><h3>1. Выберите сумму</h3><div class="payment-percent-grid">
+              <button type="button" data-percent="30" class="${percent===30?'active':''}"><b>30%</b><span>Предоплата</span><small>${money(paymentAmount(total,30))}</small></button>
+              <button type="button" data-percent="100" class="${percent===100?'active':''}"><b>100%</b><span>Полная оплата</span><small>${money(total)}</small></button>
+            </div></div>
+            <div class="payment-section"><h3>2. Способ оплаты</h3><div class="payment-provider-grid">${providers.map(([id,label,market])=>`<button type="button" data-provider="${id}" class="${provider===id?'active':''}"><span class="provider-logo provider-logo-${id}">${esc(label)}</span><span class="provider-copy"><b>${esc(label)}</b><span>${esc(market)}</span><small>Демо</small></span></button>`).join('')}</div></div>
+            <div class="payment-summary"><span>К оплате</span><b>${money(amount)}</b></div>
+            <button type="button" class="primary wide" data-create-payment>Получить QR / ссылку</button>`:`
+            <div class="payment-ready"><div class="payment-qr release-demo-qr">${demoQr(reference)}<span>DEMO QR</span></div><div class="payment-ready-copy">
+              <span class="provider-logo provider-logo-${provider}">${esc(providerLabel(provider))}</span><span>${esc(providerLabel(provider))}</span><h3>${money(amount)}</h3>
+              <p>Назначение: <b>${esc(reference)}</b></p>
+              <small>Демонстрационный платёжный intent. Боевой режим включается после подключения merchant-ключей выбранного провайдера.</small>
+              <button type="button" class="secondary payment-open-link" data-demo-link>Открыть ссылку оплаты ↗</button>
+            </div></div><button type="button" class="primary wide" data-confirm-stage9>Демо: подтвердить оплату</button>`}
+          <p class="payment-stage-note">Сценарий Stage 9: 30%/100% → провайдер → QR/ссылка → подтверждение оплаты.</p>
+        </section>`;
+        overlay.querySelector('[data-release-close]')?.addEventListener('click',()=>overlay.remove());
+        overlay.querySelectorAll('[data-percent]').forEach(button=>button.addEventListener('click',()=>{percent=Number(button.dataset.percent)===100?100:30;render()}));
+        overlay.querySelectorAll('[data-provider]').forEach(button=>button.addEventListener('click',()=>{provider=button.dataset.provider||'vietqr';render()}));
+        overlay.querySelector('[data-create-payment]')?.addEventListener('click',()=>{stage='ready';render()});
+        overlay.querySelector('[data-demo-link]')?.addEventListener('click',()=>{const note=overlay.querySelector('.payment-stage-note');if(note)note.textContent='Демо-ссылка подготовлена. Для реального перехода нужны merchant-ключи провайдера.'});
+        overlay.querySelector('[data-confirm-stage9]')?.addEventListener('click',()=>{
+          const map=payments();
+          map[request.id]={status:'paid',bookingPaymentStatus:percent===100?'paid':'partially_paid',prepaymentPercent:percent,amount:paymentAmount(total,percent),provider,paidAt:new Date().toISOString(),mode:'demo'};
+          write(PAYMENT_KEY,map);
+          overlay.remove();
+          refreshRequestUi();
+        });
+      };
+      overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove()});
+      document.body.append(overlay);
+      render();
+    }catch(error){
+      window.__UNIQ_STAGE9_EXCLUSIVE__.lastError=String(error?.stack||error);
+      console.error('[UNIQ Stage 9]',error);
+    }
   }
 
+  function claimPaymentButtons(){
+    document.querySelectorAll('[data-pay-request]').forEach(button=>{
+      const requestId=button.dataset.payRequest;
+      if(!requestId)return;
+      button.removeAttribute('data-pay-request');
+      button.dataset.stage9PayRequest=requestId;
+      button.dataset.paymentFlow='stage9';
+      button.onclick=event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        openPayment(requestId);
+      };
+      window.__UNIQ_STAGE9_EXCLUSIVE__.claimed+=1;
+    });
+  }
+
+  let claimTimer=0;
+  const scheduleClaim=()=>{clearTimeout(claimTimer);claimTimer=setTimeout(claimPaymentButtons,0)};
+  const observer=new MutationObserver(scheduleClaim);
+  observer.observe(document.body,{childList:true,subtree:true});
+
   window.addEventListener('click',event=>{
-    const pay=event.target.closest?.('[data-pay-request]');
-    if(!pay)return;
+    const legacyButton=event.target.closest?.('[data-pay-request]');
+    if(!legacyButton)return;
+    const requestId=legacyButton.dataset.payRequest;
+    legacyButton.removeAttribute('data-pay-request');
+    legacyButton.dataset.stage9PayRequest=requestId;
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    openPayment(pay.dataset.payRequest);
+    openPayment(requestId);
   },true);
+
+  claimPaymentButtons();
+  document.addEventListener('DOMContentLoaded',claimPaymentButtons);
 })();
