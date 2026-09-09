@@ -97,10 +97,10 @@ async function ensureVehicleRecord(db: D1DatabaseLike, vehicle: PublishedVehicle
     VALUES (?, ?, ?, ?, ?, ?, ?, 'manager_confirmation', ?, ?)
     ON CONFLICT(id) DO UPDATE SET slug = excluded.slug, brand = excluded.brand, model = excluded.model, year = excluded.year, category = excluded.category, engine_label = excluded.engine_label, updated_at = excluded.updated_at`)
     .bind(vehicle.id, vehicle.slug, brand, model, Number(vehicle.year) || 0, vehicle.type || 'vehicle', vehicle.engine || '', now, now).run();
-  await db.prepare(`INSERT INTO pricing (vehicle_id, daily_vnd, weekly_vnd, monthly_vnd, deposit_usd, updated_at)
-    VALUES (?, ?, ?, ?, COALESCE((SELECT deposit_usd FROM pricing WHERE vehicle_id = ?), 0), ?)
-    ON CONFLICT(vehicle_id) DO UPDATE SET daily_vnd = excluded.daily_vnd, weekly_vnd = excluded.weekly_vnd, monthly_vnd = excluded.monthly_vnd, updated_at = excluded.updated_at`)
-    .bind(vehicle.id, Number(vehicle.dailyVnd) || 0, Number(vehicle.weeklyVnd) || 0, Number(vehicle.monthlyVnd) || 0, vehicle.id, now).run();
+  await db.prepare(`INSERT INTO pricing (vehicle_id, daily_vnd, weekly_vnd, monthly_vnd, deposit_usd, deposit_vnd, updated_at)
+    VALUES (?, ?, ?, ?, COALESCE((SELECT deposit_usd FROM pricing WHERE vehicle_id = ?), 0), ?, ?)
+    ON CONFLICT(vehicle_id) DO UPDATE SET daily_vnd = excluded.daily_vnd, weekly_vnd = excluded.weekly_vnd, monthly_vnd = excluded.monthly_vnd, deposit_vnd = excluded.deposit_vnd, updated_at = excluded.updated_at`)
+    .bind(vehicle.id, Number(vehicle.dailyVnd) || 0, Number(vehicle.weeklyVnd) || 0, Number(vehicle.monthlyVnd) || 0, vehicle.id, Number(vehicle.depositVnd) || 0, now).run();
 }
 
 async function bookingConflict(db: D1DatabaseLike, vehicleId: string, from: string, to: string, excludeBookingId = ''): Promise<{ type: 'booking' | 'service'; id: string; status?: string } | null> {
@@ -196,7 +196,7 @@ async function syncFleetCatalog(request: Request, env: Env): Promise<Response> {
 async function listFleetState(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
-  const result = await env.DB.prepare(`SELECT v.id, v.slug, v.brand, v.model, v.year, v.category, v.engine_label, v.status, v.updated_at, p.daily_vnd, p.weekly_vnd, p.monthly_vnd FROM vehicles v LEFT JOIN pricing p ON p.vehicle_id = v.id ORDER BY v.brand, v.model, v.year DESC`).all<Record<string, unknown>>();
+  const result = await env.DB.prepare(`SELECT v.id, v.slug, v.brand, v.model, v.year, v.category, v.engine_label, v.status, v.updated_at, p.daily_vnd, p.weekly_vnd, p.monthly_vnd, p.deposit_vnd FROM vehicles v LEFT JOIN pricing p ON p.vehicle_id = v.id ORDER BY v.brand, v.model, v.year DESC`).all<Record<string, unknown>>();
   return json({ fleet: result.results ?? [] }, 200, corsHeaders);
 }
 
@@ -270,7 +270,7 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 3 : null, legacyVerifiedSubset: vehicles.length, publicFleetCount: businessInfo.publicFleetCount }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 4 : null, legacyVerifiedSubset: vehicles.length, publicFleetCount: businessInfo.publicFleetCount }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return listPublishedVehicles(request, env);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
