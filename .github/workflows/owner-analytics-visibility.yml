@@ -1,0 +1,24 @@
+name: Owner analytics production visibility
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - 'tests/owner_analytics_visibility.mjs'
+      - '.github/workflows/owner-analytics-visibility.yml'
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install --no-save --package-lock=false playwright
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/owner_analytics_visibility.mjs
+        env:
+          BASE_URL: https://uniq-smart-rent.viiversion.com
