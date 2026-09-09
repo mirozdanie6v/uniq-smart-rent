@@ -1,6 +1,7 @@
 export type Language = 'ru' | 'en' | 'vi' | 'ko';
 export type Role = 'client' | 'team' | 'owner';
 export type VehicleCategory = 'scooter' | 'naked' | 'cruiser' | 'sport';
+export type FleetStatus = 'manager_confirmation' | 'available' | 'reserved' | 'service';
 export type AvailabilityMode = 'manager_confirmation';
 export type BookingStatus =
   | 'draft'
