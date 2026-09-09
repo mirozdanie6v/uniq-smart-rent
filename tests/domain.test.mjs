@@ -171,3 +171,28 @@ test('stage 11 analytics and demo request contracts are present',async()=>{
   assert.ok(app.includes("['analytics','Аналитика']"));
   assert.ok(app.includes("return_due:'Возврат сегодня'"));
 });
+
+
+test('stage 12 operational expansion contracts are present',async()=>{
+  const migration=await readFile(new URL('../migrations/0012_stage12_operations.sql',import.meta.url),'utf8');
+  const teamWorker=await readFile(new URL('../src/api/teamWorker.ts',import.meta.url),'utf8');
+  const bookingWorker=await readFile(new URL('../src/api/bookingOperationsWorker.ts',import.meta.url),'utf8');
+  const paymentWorker=await readFile(new URL('../src/api/paymentWorker.ts',import.meta.url),'utf8');
+  const checkout=await readFile(new URL('../src/features/payments/PaymentCheckout.tsx',import.meta.url),'utf8');
+  const teamUi=await readFile(new URL('../src/features/team/OwnerTeamBranches.tsx',import.meta.url),'utf8');
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  const worker=await readFile(new URL('../src/worker.ts',import.meta.url),'utf8');
+  assert.ok(migration.includes('stage12_operations'));
+  assert.ok(migration.includes('Stage 12 full public fleet operational sync'));
+  assert.ok(teamWorker.includes('/api/owner/branches'));
+  assert.ok(bookingWorker.includes('Client self-service extension'));
+  assert.ok(bookingWorker.includes('paymentStatus'));
+  assert.ok(paymentWorker.includes("UPDATE payments SET status='cancelled'"));
+  assert.ok(paymentWorker.includes('remainingBefore'));
+  assert.ok(checkout.includes('data-payment-balance-summary'));
+  assert.ok(checkout.includes('data-balance-settlement'));
+  assert.ok(teamUi.includes('data-add-branch'));
+  assert.ok(app.includes('data-client-extend'));
+  assert.ok(app.includes("requestKey = 'uniq-demo-requests-v4-stage12'"));
+  assert.ok(worker.includes('schemaVersion: env.DB ? 12 : null'));
+});

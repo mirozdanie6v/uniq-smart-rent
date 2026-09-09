@@ -9,7 +9,7 @@ import { OwnerService } from '../service/OwnerService';
 import { OwnerMarketing } from '../marketing/OwnerMarketing';
 import { OwnerAnalytics } from '../analytics/OwnerAnalytics';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
-import { createPersistedBooking, PaymentProvider, updatePersistedBookingStatus } from '../../api/payments';
+import { createPersistedBooking, extendPersistedBooking, PaymentProvider, PaymentPurpose, updatePersistedBookingStatus } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
 
 type Role = 'client' | 'employee' | 'owner';
@@ -33,7 +33,8 @@ interface RentalRequest {
   paymentStatus?: 'unpaid' | 'pending' | 'partially_paid' | 'paid';
   paymentId?: string;
   paymentProvider?: PaymentProvider;
-  branchId?: 'branch-north' | 'branch-center';
+  paidVnd?: number;
+  branchId?: string;
   sourceChannel?: string;
   demoBusiness?: boolean;
 }
@@ -52,7 +53,7 @@ const nav: Record<Role, ReadonlyArray<readonly [Route, string]>> = {
   owner: [['overview','Обзор'],['requests','Заявки'],['fleet','Парк'],['calendar','Календарь'],['customers','Клиенты'],['team','Команда'],['finance','Финансы'],['service','Сервис'],['marketing','Маркетинг'],['analytics','Аналитика']],
 };
 
-const requestKey = 'uniq-demo-requests-v3-stage11';
+const requestKey = 'uniq-demo-requests-v4-stage12';
 const fleetStateKey = 'uniq-demo-fleet-state-v2';
 const roleKey = 'uniq-role-v2';
 
@@ -128,7 +129,7 @@ function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): num
   const a = new Date(`${from}T00:00:00`);
   const b = new Date(`${to}T00:00:00`);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime()) || b < a) return 0;
-  let days = Math.max(1, Math.floor((b.getTime() - a.getTime()) / 86_400_000) + 1);
+  let days = Math.max(1, Math.floor((b.getTime() - a.getTime()) / 86_400_000));
   let total = 0;
   const month = vehicle.monthlyVnd ?? 0;
   const week = vehicle.weeklyVnd ?? 0;
@@ -218,16 +219,28 @@ function BookingModal({ vehicle, onClose, onSubmit }: { vehicle: FleetVehicle; o
   </div>;
 }
 
-function ExtensionModal({ request, vehicle, onClose, onSubmit }: { request: RentalRequest; vehicle: FleetVehicle; onClose: () => void; onSubmit: (newTo: string, additional: number) => void }) {
+function ExtensionModal({ request, vehicle, clientMode, onClose, onSubmit }: { request: RentalRequest; vehicle: FleetVehicle; clientMode?: boolean; onClose: () => void; onSubmit: (newTo: string, additional: number) => Promise<void> | void }) {
   const nextDay = new Date(`${request.to}T00:00:00Z`); nextDay.setUTCDate(nextDay.getUTCDate() + 1);
   const minDate = dateISO(nextDay);
   const [newTo, setNewTo] = useState(minDate);
-  const additional = newTo >= minDate ? publishedEstimate(vehicle, minDate, newTo) : 0;
-  return <div className="modal-bg" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
-    <section className="modal" data-extension-modal><button className="modal-x" onClick={onClose}>×</button><span className="eyebrow">ПРОДЛЕНИЕ АРЕНДЫ</span><h2>{vehicle.title}</h2><p>Текущий возврат: <b>{request.to}</b></p>
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const additional = newTo >= minDate ? publishedEstimate(vehicle, request.to, newTo) : 0;
+  async function submit() {
+    if (!newTo || newTo < minDate || busy) return;
+    setBusy(true); setError('');
+    try { await onSubmit(newTo, additional); }
+    catch (cause) {
+      const code = cause instanceof Error ? cause.message : '';
+      setError(code === 'vehicle_window_conflict' ? 'Эти дополнительные даты уже заняты. Выберите более раннюю дату возврата или свяжитесь с менеджером.' : code === 'booking_not_extendable' ? 'Эту аренду уже нельзя продлить.' : 'Продление сейчас недоступно. Проверьте даты и попробуйте ещё раз.');
+    } finally { setBusy(false); }
+  }
+  return <div className="modal-bg" onMouseDown={(event) => { if (event.currentTarget === event.target && !busy) onClose(); }}>
+    <section className="modal" data-extension-modal><button className="modal-x" disabled={busy} onClick={onClose}>×</button><span className="eyebrow">ПРОДЛЕНИЕ АРЕНДЫ</span><h2>{vehicle.title}</h2><p>Текущий возврат: <b>{request.to}</b></p>
       <label>Новая дата возврата<input data-extension-to type="date" min={minDate} value={newTo} onChange={(event) => setNewTo(event.target.value)} /></label>
-      <div className="extension-summary"><b>Доплата: {money(additional)}</b><span>Расчёт по опубликованным тарифам. Финальная сумма подтверждается системой оплаты.</span></div>
-      <button className="primary wide" data-extension-submit disabled={!newTo || newTo < minDate} onClick={() => onSubmit(newTo, additional)}>Продлить аренду</button>
+      <div className="extension-summary"><b>Предварительная доплата: {money(additional)}</b><span>После подтверждения дат система пересчитает итоговую стоимость и точный остаток.</span></div>
+      {error ? <div className="owner-notice" data-extension-error>{error}</div> : null}
+      <button className="primary wide" data-extension-submit disabled={busy || !newTo || newTo < minDate} onClick={() => void submit()}>{busy ? 'Проверяем даты…' : clientMode ? 'Продлить и перейти к доплате' : 'Продлить аренду'}</button>
     </section>
   </div>;
 }
@@ -263,6 +276,7 @@ export function PrototypeApp() {
   const [bookingVehicleId, setBookingVehicleId] = useState<string | null>(null);
   const [extendingRequestId, setExtendingRequestId] = useState<string | null>(null);
   const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
+  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
 
   useEffect(() => { window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.(); }, []);
@@ -333,7 +347,7 @@ export function PrototypeApp() {
   }
 
   async function submitClientBooking(request: RentalRequest) {
-    let next: RentalRequest = { ...request, paymentStatus: 'unpaid' };
+    let next: RentalRequest = { ...request, paymentStatus: 'unpaid', paidVnd:0 };
     try {
       const persisted = await createPersistedBooking({ vehicleId: request.vehicleId, from: request.from, to: request.to, client: request.client, contact: request.contact });
       next = { ...next, backendBookingId: persisted.bookingId, estimate: persisted.estimatedTotalVnd || request.estimate };
@@ -341,8 +355,22 @@ export function PrototypeApp() {
     setRequests((current) => [...current, next]);
     setBookingVehicleId(null);
     setSelectedId(null);
-    if (next.backendBookingId) setPaymentRequestId(next.id);
+    if (next.backendBookingId) { setPaymentPurpose('booking'); setPaymentRequestId(next.id); }
     else { setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+  }
+
+  async function extendRentalRequest(request: RentalRequest, newTo: string, previewAdditional: number) {
+    if (request.backendBookingId) {
+      const actor = role === 'owner' ? 'owner' : role === 'employee' ? 'employee' : 'client';
+      const result = await extendPersistedBooking(request.backendBookingId,newTo,actor);
+      setRequests((current) => current.map((item) => item.id === request.id ? { ...item, to:result.newTo, estimate:result.totalVnd, paidVnd:result.paidVnd, paymentStatus:result.paymentStatus } : item));
+      setExtendingRequestId(null);
+      if (role === 'client' && result.remainingVnd > 0) { setPaymentPurpose('extension'); setPaymentRequestId(request.id); }
+      return;
+    }
+    if (role === 'client') throw new Error('booking_not_synced');
+    setRequests((current) => current.map((item) => item.id === request.id ? { ...item, to:newTo, estimate:item.estimate + previewAdditional, ...(item.paidVnd && item.paidVnd > 0 ? { paymentStatus:'partially_paid' as const } : {}) } : item));
+    setExtendingRequestId(null);
   }
 
   function requestCard(request: RentalRequest) {
@@ -354,7 +382,9 @@ export function PrototypeApp() {
       {role !== 'client' && request.demoBusiness ? <small className="request-business-meta">{request.branchId === 'branch-north' ? 'Северный филиал' : 'Центр города'} · {({telegram_mini_app:'Telegram Mini App',website:'Сайт',office:'Офис',google:'Google',instagram:'Instagram',partner:'Партнёр',qr:'QR-код'} as Record<string,string>)[request.sourceChannel ?? ''] ?? 'Источник'} · DEMO</small> : null}
       <b>{money(request.estimate)}</b>
       <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>
-      {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => setPaymentRequestId(request.id)}>Оплатить</button> : null}
+      {request.paidVnd && request.paidVnd > 0 ? <small className="request-paid-progress">Внесено {money(request.paidVnd)} · остаток {money(Math.max(0,request.estimate-request.paidVnd))}</small> : null}
+      {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => { setPaymentPurpose(request.paymentStatus === 'partially_paid' ? 'balance' : 'booking'); setPaymentRequestId(request.id); }}>{request.paymentStatus === 'partially_paid' ? 'Доплатить остаток' : 'Оплатить'}</button> : null}
+      {role === 'client' && request.backendBookingId && ['confirmed','issued','active','return_due'].includes(request.status) ? <button className="secondary" data-client-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить аренду</button> : null}
       {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => { void setLifecycleStatus(request, event.target.value as RequestStatus); }}>
         {(['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
@@ -491,8 +521,8 @@ export function PrototypeApp() {
       <nav className="bottom-nav" data-nav-count={nav[role].length}>{nav[role].map(([id,label]) => <button key={id} data-go={id} className={route === id ? 'active' : ''} onClick={() => go(id)}><span>{icon(id)}</span><b>{label}</b></button>)}</nav>
     </div>
     {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={submitClientBooking}/>: null}
-    {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} onClose={() => { setPaymentRequestId(null); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider } : item)); }}/>: null}
-    {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => { setRequests((current) => current.map((item) => item.id === extendingRequest.id ? { ...item, to: newTo, estimate: item.estimate + additional } : item)); setExtendingRequestId(null); }}/>: null}
+    {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} paidVnd={paymentRequest.paidVnd ?? 0} purpose={paymentPurpose} onClose={() => { setPaymentRequestId(null); setPaymentPurpose('booking'); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider, paidVnd:result.bookingPaidVnd, estimate:result.bookingTotalVnd || item.estimate } : item)); }}/>: null}
+    {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} clientMode={role === 'client'} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => extendRentalRequest(extendingRequest,newTo,additional)}/>: null}
     <ScrollTop/>
   </>;
 }

@@ -13,7 +13,7 @@ type BranchDraft = TeamBranch;
 const roleLabels: Record<TeamRole,string> = { owner:'Владелец', admin:'Администратор', manager:'Менеджер', branch_staff:'Сотрудник точки' };
 const transferLabels: Record<TeamTransfer['status'],string> = { planned:'Запланировано', in_transit:'В пути', completed:'Завершено', cancelled:'Отменено' };
 const nowIso = () => new Date().toISOString();
-const branchLabel = (id: string, branches: TeamBranch[]) => branches.find((item) => item.id === id)?.name ?? id || 'Без филиала';
+const branchLabel = (id: string, branches: TeamBranch[]) => branches.find((item) => item.id === id)?.name ?? (id || 'Без филиала');
 
 function slugify(value: string): string {
   const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);

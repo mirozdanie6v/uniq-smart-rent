@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { defaultBranches, fetchTeamSnapshot } from '../../api/team';
 import type { ManagedFleetVehicle, VehicleType } from '../fleet/fleetManagement';
 
 type CalendarRequestStatus = 'new' | 'contacted' | 'confirmed' | 'issued' | 'active' | 'return_due' | 'returned' | 'completed' | 'cancelled';
@@ -19,7 +20,7 @@ type Props = {
 };
 
 type TypeFilter = 'all' | VehicleType;
-type BranchFilter = 'all' | 'branch-north' | 'branch-center';
+type BranchFilter = string;
 
 const dayMs = 86_400_000;
 const dateISO = (date: Date) => date.toISOString().slice(0, 10);
@@ -33,7 +34,10 @@ export function OwnerBookingCalendar({ fleet, requests, fleetStates }: Props) {
   const [anchor, setAnchor] = useState(() => new Date());
   const [type, setType] = useState<TypeFilter>('all');
   const [branch, setBranch] = useState<BranchFilter>('all');
+  const [branches,setBranches] = useState(defaultBranches);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+
+  useEffect(() => { let active=true; fetchTeamSnapshot().then((data) => { if(active) setBranches(data.branches.filter((item) => item.status === 'active')); }); return () => { active=false; }; },[]);
 
   const days = useMemo(() => Array.from({ length: 7 }, (_, index) => {
     const date = new Date(Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate()));
@@ -56,7 +60,7 @@ export function OwnerBookingCalendar({ fleet, requests, fleetStates }: Props) {
 
     <section className="owner-calendar-toolbar">
       <select data-owner-calendar-type value={type} onChange={(event) => setType(event.target.value as TypeFilter)}><option value="all">Все типы</option><option value="car">Авто</option><option value="motorcycle">Мотоциклы</option><option value="scooter">Скутеры</option></select>
-      <select data-owner-calendar-branch value={branch} onChange={(event) => setBranch(event.target.value as BranchFilter)}><option value="all">Все точки</option><option value="branch-north">Север · 312 Đ. 2/4</option><option value="branch-center">Центр · 254 Nguyễn Thị Minh Khai</option></select>
+      <select data-owner-calendar-branch value={branch} onChange={(event) => setBranch(event.target.value)}><option value="all">Все точки</option>{branches.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}</select>
       <span>{rows.length} единиц</span>
     </section>
 
