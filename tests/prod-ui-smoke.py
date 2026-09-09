@@ -4,7 +4,7 @@ import subprocess, time
 
 root=Path(__file__).resolve().parents[1]
 dist=root/'dist'
-for name in ['prod-ui.js','prod-ui.css','finish-ui.js','finish-ui.css','release-fix.js','release-fix.css']:
+for name in ['prod-ui.js','prod-ui.css','finish-ui.js','finish-ui.css','release-fix.js','release-fix.css','payment-stage9-exclusive.js']:
     assert (dist/name).exists(), name
 
 server=subprocess.Popen(['python','-m','http.server','8765','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
@@ -55,11 +55,14 @@ try:
         page.evaluate("(vehicleId)=>localStorage.setItem('uniq-data-requests-v3',JSON.stringify([{id:'smoke-request-1',vehicleId,from:'2026-09-15',to:'2026-09-18',client:'Анна Смирнова',contact:'@anna',status:'new',estimate:1200000,createdAt:new Date().toISOString(),persistence:'local'}]))",vehicle_id)
         page.reload(wait_until='networkidle'); page.wait_for_timeout(180)
 
-        # Restored Stage 9 payment scenario.
-        page.locator('.bottom-nav [data-go="requests"]').click(); page.wait_for_timeout(100)
-        assert page.locator('[data-pay-request="smoke-request-1"]').count()==1
-        page.locator('[data-pay-request="smoke-request-1"]').click(); page.wait_for_timeout(60)
-        assert page.locator('#releasePaymentModal').count()==1
+        # Restored Stage 9 payment scenario is the only active checkout.
+        assert page.evaluate('()=>Boolean(window.__UNIQ_STAGE9_EXCLUSIVE__?.loaded)')
+        page.locator('.bottom-nav [data-go="requests"]').click(); page.wait_for_timeout(140)
+        assert page.locator('[data-pay-request="smoke-request-1"]').count()==0
+        assert page.locator('[data-stage9-pay-request="smoke-request-1"]').count()==1
+        page.locator('[data-stage9-pay-request="smoke-request-1"]').click(); page.wait_for_timeout(60)
+        assert page.locator('#finishPaymentModal').count()==0
+        assert page.locator('#releasePaymentModal').count()==1, page.evaluate('()=>window.__UNIQ_STAGE9_EXCLUSIVE__')
         assert page.get_by_text('1. Выберите сумму',exact=True).count()==1
         assert page.locator('[data-payment-provider]').count()==0
         assert page.locator('[data-provider]').count()==7
