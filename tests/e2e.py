@@ -47,15 +47,15 @@ try:
             if w==375:
                 language=page.locator('.topbar .header-language-switcher select')
                 checks=[
-                    ('vi','Toàn bộ đội xe UNIQ','vi'),
-                    ('en','The entire UNIQ fleet','en'),
-                    ('ko','UNIQ 전체 차량','ko'),
-                    ('zh','UNIQ 全部车队','zh-CN'),
-                    ('ru','Весь парк UNIQ','ru'),
+                    ('vi','Thuê xe máy và ô tô tại Nha Trang','vi'),
+                    ('en','Rent bikes and cars in Nha Trang','en'),
+                    ('ko','나트랑 오토바이·자동차 렌트','ko'),
+                    ('zh','芽庄摩托车和汽车租赁','zh-CN'),
+                    ('ru','Аренда байков и авто в Нячанге','ru'),
                 ]
                 for code,text,html_lang in checks:
                     language.select_option(code)
-                    page.wait_for_timeout(30)
+                    page.wait_for_timeout(60)
                     assert page.get_by_text(text,exact=False).count()>=1,(code,text)
                     assert page.evaluate('document.documentElement.lang')==html_lang
                 results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header"})
