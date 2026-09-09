@@ -17,7 +17,6 @@ const json = (data: unknown, status = 200) => new Response(JSON.stringify(data),
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 const boolStatus = (value: unknown) => value === 'inactive' ? 'inactive' : 'active';
 const roles = new Set(['owner','admin','manager','branch_staff']);
-const branches = new Set(['branch-north','branch-center']);
 const permissions = new Set(['bookings.view','bookings.manage','customers.view','fleet.status','fleet.pricing','payments.manage','finance.view','team.manage','transfers.manage']);
 const transferStatuses = new Set(['planned','in_transit','completed','cancelled']);
 
@@ -30,9 +29,24 @@ async function body(request: Request): Promise<Record<string, unknown> | null> {
   try { return await request.json() as Record<string, unknown>; } catch { return null; }
 }
 
+function slugify(value: string): string {
+  return value.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+}
+
+async function branchExists(db: D1DatabaseLike, id: string, activeOnly = true): Promise<boolean> {
+  if (!id) return false;
+  const row = await db.prepare(`SELECT id FROM branches WHERE id=?${activeOnly ? " AND status='active'" : ''} LIMIT 1`).bind(id).first<{ id:string }>();
+  return Boolean(row);
+}
+
+const branchFromRow = (row: Record<string, unknown>) => ({
+  id:String(row.id ?? ''), code:String(row.code ?? ''), name:String(row.name ?? ''), address:String(row.address ?? ''),
+  mapsUrl:String(row.maps_url ?? ''), phone:String(row.phone ?? ''), status:String(row.status ?? 'active') as 'active'|'inactive',
+});
+
 async function listTeam(env: TeamEnv): Promise<Response> {
   if (!env.DB) return json({ error:'persistence_not_configured', persisted:false }, 503);
-  const branchRows = await env.DB.prepare(`SELECT id, code, name, address, maps_url, COALESCE(phone,'') phone, status FROM branches ORDER BY CASE id WHEN 'branch-north' THEN 1 ELSE 2 END`).all<Record<string, unknown>>();
+  const branchRows = await env.DB.prepare(`SELECT id, code, name, address, maps_url, COALESCE(phone,'') phone, status FROM branches ORDER BY CASE id WHEN 'branch-north' THEN 1 WHEN 'branch-center' THEN 2 ELSE 3 END, name`).all<Record<string, unknown>>();
   const employeeRows = await env.DB.prepare(`SELECT id, COALESCE(branch_id,'branch-center') branch_id, name, role, COALESCE(phone,'') phone, COALESCE(telegram,'') telegram, COALESCE(zalo,'') zalo, status FROM employees ORDER BY status DESC, role, name`).all<Record<string, unknown>>();
   const employees = [] as Record<string, unknown>[];
   for (const row of employeeRows.results ?? []) {
@@ -50,13 +64,37 @@ async function listTeam(env: TeamEnv): Promise<Response> {
     employeeId:String(row.employee_id ?? ''), plannedAt:String(row.planned_at ?? ''), completedAt:String(row.completed_at ?? ''), note:String(row.note ?? ''), persisted:true,
   }));
   return json({
-    branches:(branchRows.results ?? []).map((row) => ({
-      id:String(row.id ?? ''), code:String(row.code ?? ''), name:String(row.name ?? ''), address:String(row.address ?? ''), mapsUrl:String(row.maps_url ?? ''), phone:String(row.phone ?? ''), status:String(row.status ?? 'active'),
-    })),
+    branches:(branchRows.results ?? []).map(branchFromRow),
     employees,
     transfers,
     persisted:true,
   });
+}
+
+async function saveBranch(request: Request, env: TeamEnv): Promise<Response> {
+  if (!env.DB) return json({ error:'persistence_not_configured' },503);
+  const payload = await body(request);
+  if (!payload) return json({ error:'invalid_json' },400);
+  const name = text(payload.name);
+  const address = text(payload.address);
+  const rawCode = text(payload.code) || name;
+  const code = slugify(rawCode);
+  const id = text(payload.id) || `branch-${code}`;
+  const mapsUrl = text(payload.mapsUrl);
+  const phone = text(payload.phone);
+  const status = boolStatus(payload.status);
+  if (!name || !address || !code || !/^branch-[a-z0-9-]+$/.test(id)) return json({ error:'invalid_branch' },400);
+  const duplicate = await env.DB.prepare('SELECT id FROM branches WHERE code=? AND id<>? LIMIT 1').bind(code,id).first<{ id:string }>();
+  if (duplicate) return json({ error:'branch_code_exists', branchId:duplicate.id },409);
+  const now = new Date().toISOString();
+  await env.DB.prepare(`INSERT INTO branches (id,code,name,address,maps_url,phone,timezone,status,created_at,updated_at)
+    VALUES (?,?,?,?,?,?, 'Asia/Ho_Chi_Minh',?,?,?)
+    ON CONFLICT(id) DO UPDATE SET code=excluded.code,name=excluded.name,address=excluded.address,maps_url=excluded.maps_url,phone=excluded.phone,status=excluded.status,updated_at=excluded.updated_at`)
+    .bind(id,code,name,address,mapsUrl,phone || null,status,now,now).run();
+  await env.DB.prepare(`INSERT INTO activity_log (id,entity_type,entity_id,action,payload_json,created_at) VALUES (?, 'branch', ?, 'owner_saved', ?, ?)`)
+    .bind(crypto.randomUUID(),id,JSON.stringify({ code,name,address,status }),now).run();
+  const row = await env.DB.prepare(`SELECT id,code,name,address,maps_url,COALESCE(phone,'') phone,status FROM branches WHERE id=? LIMIT 1`).bind(id).first<Record<string, unknown>>();
+  return json({ branch:row ? branchFromRow(row) : { id,code,name,address,mapsUrl,phone,status }, persisted:true },201);
 }
 
 async function saveEmployee(request: Request, env: TeamEnv): Promise<Response> {
@@ -69,7 +107,7 @@ async function saveEmployee(request: Request, env: TeamEnv): Promise<Response> {
   const branchId = text(payload.branchId);
   const status = boolStatus(payload.status);
   const requestedPermissions = Array.isArray(payload.permissions) ? payload.permissions.map(text).filter((item) => permissions.has(item)) : [];
-  if (!name || !roles.has(role) || !branches.has(branchId)) return json({ error:'invalid_employee' }, 400);
+  if (!name || !roles.has(role) || !(await branchExists(env.DB,branchId,true))) return json({ error:'invalid_employee' }, 400);
   const now = new Date().toISOString();
   await env.DB.prepare(`INSERT INTO employees (id,branch_id,name,role,phone,telegram,zalo,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET branch_id=excluded.branch_id,name=excluded.name,role=excluded.role,phone=excluded.phone,telegram=excluded.telegram,zalo=excluded.zalo,status=excluded.status,updated_at=excluded.updated_at`)
     .bind(id, branchId, name, role, text(payload.phone), text(payload.telegram), text(payload.zalo), status, now, now).run();
@@ -90,7 +128,7 @@ async function createTransfer(request: Request, env: TeamEnv): Promise<Response>
   const employeeId = text(payload.employeeId);
   const plannedAt = text(payload.plannedAt) || new Date().toISOString();
   const note = text(payload.note);
-  if (!vehicleId || !branches.has(fromBranchId) || !branches.has(toBranchId) || fromBranchId === toBranchId) return json({ error:'invalid_transfer' }, 400);
+  if (!vehicleId || fromBranchId === toBranchId || !(await branchExists(env.DB,fromBranchId,true)) || !(await branchExists(env.DB,toBranchId,true))) return json({ error:'invalid_transfer' }, 400);
   const vehicle = await env.DB.prepare('SELECT id FROM vehicles WHERE id=? LIMIT 1').bind(vehicleId).first<{ id:string }>();
   if (!vehicle) return json({ transfer:{ id,vehicleId,vehicleTitle,fromBranchId,toBranchId,status:'planned',employeeId,plannedAt,completedAt:'',note,persisted:false }, persisted:false, reason:'vehicle_not_synced_to_d1' }, 200);
   await env.DB.prepare(`INSERT INTO vehicle_transfers (id,vehicle_id,from_branch_id,to_branch_id,status,planned_at,employee_id,note,created_at) VALUES (?,?,?,?, 'planned',?,?,?,?)`)
@@ -116,9 +154,10 @@ async function updateTransfer(request: Request, env: TeamEnv, transferId: string
 }
 
 export async function handleTeamRequest(request: Request, env: TeamEnv, url: URL): Promise<Response | null> {
-  if (!url.pathname.startsWith('/api/owner/team') && !url.pathname.startsWith('/api/owner/employees') && !url.pathname.startsWith('/api/owner/transfers')) return null;
+  if (!url.pathname.startsWith('/api/owner/team') && !url.pathname.startsWith('/api/owner/branches') && !url.pathname.startsWith('/api/owner/employees') && !url.pathname.startsWith('/api/owner/transfers')) return null;
   if (!isOwner(request, env)) return json({ error:'unauthorized' }, 401);
   if (url.pathname === '/api/owner/team' && request.method === 'GET') return listTeam(env);
+  if (url.pathname === '/api/owner/branches' && request.method === 'POST') return saveBranch(request,env);
   if (url.pathname === '/api/owner/employees' && request.method === 'POST') return saveEmployee(request, env);
   if (url.pathname === '/api/owner/transfers' && request.method === 'POST') return createTransfer(request, env);
   const transferMatch = url.pathname.match(/^\/api\/owner\/transfers\/([^/]+)$/);
