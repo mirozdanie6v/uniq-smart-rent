@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { rentalDays, calculateRentalTotal, calculatePriceBreakdown, calculateRentalTotalForPricing, canTransitionBooking, rangesOverlap, normalizeBookingStatus } from '../.build/domain/booking.js';
 import { normalizeContactKey } from '../.build/domain/customer.js';
 import { normalizeFleetStatus } from '../.build/domain/fleet.js';
 import { vehicles } from '../.build/domain/catalog.js';
 import { detectBrowserLanguage } from '../.build/domain/i18n.js';
 import { businessInfo } from '../.build/domain/business.js';
+import worker from '../.build/worker.js';
+
+const fleetManifest=JSON.parse(readFileSync(new URL('../assets/fleet-manifest.json',import.meta.url),'utf8'));
+const assetOnlyEnv={ASSETS:{fetch:async()=>new Response(JSON.stringify(fleetManifest),{status:200,headers:{'content-type':'application/json'}})}};
 
 test('rental day calculation keeps a one-day minimum',()=>{assert.equal(rentalDays('2026-08-27','2026-08-27'),1);assert.equal(rentalDays('2026-08-27','2026-08-30'),3);});
 
@@ -34,3 +39,7 @@ test('catalog contains only manager-confirmed public entries with sources',()=>{
 test('browser language detection uses English fallback',()=>{assert.equal(detectBrowserLanguage('ru-RU'),'ru');assert.equal(detectBrowserLanguage('vi-VN'),'vi');assert.equal(detectBrowserLanguage('ko-KR'),'ko');assert.equal(detectBrowserLanguage('zh-CN'),'en');});
 
 test('verified business facts expose two branches and synced public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,89);assert.equal(businessInfo.phone,'+84372112370');});
+
+test('Worker vehicle API exposes the same 89-unit manifest used by the UI',async()=>{const response=await worker.fetch(new Request('https://uniq.test/api/vehicles'),assetOnlyEnv);assert.equal(response.status,200);const data=await response.json();assert.equal(data.totalPublishedFleet,89);assert.equal(data.vehicles.length,89);assert.equal(data.vehicles[0].id,fleetManifest.fleet[0].id);});
+
+test('Worker recognizes a manifest vehicle outside the legacy five-item subset',async()=>{const vehicle=fleetManifest.fleet.find(v=>!vehicles.some(old=>old.id===v.id));assert.ok(vehicle);const response=await worker.fetch(new Request('https://uniq.test/api/bookings',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({vehicleId:vehicle.id,from:'2026-09-10',to:'2026-09-12',client:'QA Rider',contact:'+84000000000',channel:'other'})}),assetOnlyEnv);assert.equal(response.status,503);const data=await response.json();assert.equal(data.error,'persistence_not_configured');});
