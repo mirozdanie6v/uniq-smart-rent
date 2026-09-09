@@ -97,7 +97,7 @@ try:
         assert page.locator('text=Подтверждена').count()>=1
         page.locator('[data-go="fleet"]').last.click(); page.wait_for_timeout(80)
         fleet_state=page.locator('[data-fleet-state]').first; assert fleet_state.count()==1
-        fleet_state.select_option('ready'); page.wait_for_timeout(80)
+        fleet_state.select_option('available'); page.wait_for_timeout(80)
         assert page.locator('text=Готов к выдаче').count()>=1
         page.locator('[data-go="handover"]').last.click(); page.wait_for_timeout(80)
         assert page.locator('text=QA Rider').count()>=1
@@ -110,11 +110,12 @@ try:
         assert page.locator('.map-panel iframe').count()==1
         page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
+        assert page.locator('text=Последние клиенты').count()>=1
         assert page.locator('.topbar .header-language-switcher select').count()==1
         assert page.locator('text=Качество данных').count()==0
         assert page.locator('[data-go="system"]').count()==0
         assert not errors, errors
-        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clean":"ok","header_language":"ok","console_errors":errors})
+        results.append({"scenario":"client+employee+owner","booking":"ok","status_flow":"ok","fleet_state":"ok","handover":"ok","contacts":"ok","owner_clients":"ok","owner_clean":"ok","header_language":"ok","console_errors":errors})
         ctx.close(); browser.close()
 finally:
     server.terminate(); server.wait(timeout=5)
