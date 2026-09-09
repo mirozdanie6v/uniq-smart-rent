@@ -1,6 +1,6 @@
-import { vehicles, getVehicle } from './domain/catalog.js';
+import { vehicles } from './domain/catalog.js';
 import { businessInfo } from './domain/business.js';
-import { calculateRentalTotal, isValidDateRange, normalizeBookingStatus } from './domain/booking.js';
+import { calculateRentalTotalForPricing, isValidDateRange, normalizeBookingStatus } from './domain/booking.js';
 import { normalizeContactKey } from './domain/customer.js';
 import type { BookingStatus } from './domain/types.js';
 import { ensureDatabase } from './db/bootstrap.js';
@@ -12,6 +12,34 @@ interface Env {
   DB?: D1DatabaseLike;
   STAFF_API_KEY?: string;
 }
+
+interface PublishedVehicle {
+  id: string;
+  slug: string;
+  sourceUrl?: string;
+  type: string;
+  title: string;
+  year: number;
+  engine?: string;
+  weight?: string;
+  cruiseSpeed?: string;
+  fuelUse?: string;
+  capacity?: string;
+  dailyVnd: number;
+  weeklyVnd: number;
+  monthlyVnd: number;
+  depositVnd?: number;
+  photos?: string[];
+  sourcePhotoCount?: number;
+}
+
+interface FleetManifest {
+  generatedAt?: string;
+  typeCounts?: Record<string, number>;
+  fleet?: PublishedVehicle[];
+}
+
+let publishedFleetPromise: Promise<PublishedVehicle[]> | null = null;
 
 const json = (data: unknown, status = 200, headers: HeadersInit = {}): Response => new Response(JSON.stringify(data), {
   status,
@@ -32,6 +60,43 @@ async function parseBody(request: Request): Promise<Record<string, unknown> | nu
 }
 
 function text(value: unknown): string { return typeof value === 'string' ? value.trim() : ''; }
+
+async function loadPublishedFleet(request: Request, env: Env): Promise<PublishedVehicle[]> {
+  if (!publishedFleetPromise) {
+    publishedFleetPromise = (async () => {
+      const assetUrl = new URL('/assets/fleet-manifest.json', request.url);
+      const response = await env.ASSETS.fetch(new Request(assetUrl.toString(), { method: 'GET' }));
+      if (!response.ok) throw new Error(`fleet_manifest_http_${response.status}`);
+      const manifest = await response.json() as FleetManifest;
+      if (!Array.isArray(manifest.fleet) || manifest.fleet.length === 0) throw new Error('fleet_manifest_empty');
+      return manifest.fleet;
+    })().catch(error => {
+      publishedFleetPromise = null;
+      throw error;
+    });
+  }
+  return publishedFleetPromise;
+}
+
+async function findPublishedVehicle(request: Request, env: Env, vehicleId: string): Promise<PublishedVehicle | null> {
+  const fleet = await loadPublishedFleet(request, env);
+  return fleet.find(vehicle => vehicle.id === vehicleId) ?? null;
+}
+
+function splitVehicleTitle(title: string): { brand: string; model: string } {
+  const parts = title.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { brand: parts[0] ?? 'UNIQ', model: parts[0] ?? 'Vehicle' };
+  return { brand: parts[0] ?? 'UNIQ', model: parts.slice(1).join(' ') };
+}
+
+async function ensureVehicleRecord(db: D1DatabaseLike, vehicle: PublishedVehicle): Promise<void> {
+  const { brand, model } = splitVehicleTitle(vehicle.title);
+  const now = new Date().toISOString();
+  await db.prepare(`INSERT INTO vehicles (id, slug, brand, model, year, category, engine_label, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'manager_confirmation', ?, ?)
+    ON CONFLICT(id) DO UPDATE SET slug = excluded.slug, brand = excluded.brand, model = excluded.model, year = excluded.year, category = excluded.category, engine_label = excluded.engine_label, updated_at = excluded.updated_at`)
+    .bind(vehicle.id, vehicle.slug, brand, model, Number(vehicle.year) || 0, vehicle.type || 'vehicle', vehicle.engine || '', now, now).run();
+}
 
 async function bookingConflict(db: D1DatabaseLike, vehicleId: string, from: string, to: string, excludeBookingId = ''): Promise<{ type: 'booking' | 'service'; id: string; status?: string } | null> {
   const placeholders = blockingStatuses.map(() => '?').join(',');
@@ -68,21 +133,26 @@ async function createBooking(request: Request, env: Env): Promise<Response> {
   const vehicleId = text(body.vehicleId), from = text(body.from), to = text(body.to), client = text(body.client), contact = text(body.contact);
   const channel = text(body.channel) || 'other';
   const deliveryLocation = text(body.deliveryLocation), note = text(body.note);
-  const vehicle = getVehicle(vehicleId);
-  if (!vehicle || !client || !contact || !isValidDateRange(from, to)) return json({ error: 'invalid_booking_payload' }, 400, corsHeaders);
+  if (!vehicleId || !client || !contact || !isValidDateRange(from, to)) return json({ error: 'invalid_booking_payload' }, 400, corsHeaders);
+
+  let vehicle: PublishedVehicle | null = null;
+  try { vehicle = await findPublishedVehicle(request, env, vehicleId); } catch { return json({ error: 'fleet_manifest_unavailable' }, 503, corsHeaders); }
+  if (!vehicle || !(vehicle.dailyVnd > 0)) return json({ error: 'invalid_booking_payload' }, 400, corsHeaders);
   if (!env.DB) return json({ error: 'persistence_not_configured', fallback: 'manager_contact', persisted: false }, 503, corsHeaders);
 
+  await ensureVehicleRecord(env.DB, vehicle);
   const conflict = await bookingConflict(env.DB, vehicleId, from, to);
   if (conflict) return json({ error: 'vehicle_window_conflict', persisted: false, conflict }, 409, corsHeaders);
 
   const bookingId = crypto.randomUUID();
   const now = new Date().toISOString();
   const customerId = await findOrCreateCustomer(env.DB, { name: client, contact, channel, now });
+  const estimatedTotalVnd = calculateRentalTotalForPricing(vehicle, from, to);
   await env.DB.prepare(`INSERT INTO bookings (id, vehicle_id, customer_id, from_at, to_at, status, estimated_total_vnd, delivery_location, note, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, 'smart-rent', ?, ?)`)
-    .bind(bookingId, vehicleId, customerId, from, to, calculateRentalTotal(vehicle, from, to), deliveryLocation, note, now, now).run();
+    .bind(bookingId, vehicleId, customerId, from, to, estimatedTotalVnd, deliveryLocation, note, now, now).run();
   await env.DB.prepare('INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), 'booking', bookingId, 'created', JSON.stringify({ source: 'smart-rent', customerId }), now).run();
-  return json({ bookingId, customerId, persisted: true, status: 'new' }, 201, corsHeaders);
+    .bind(crypto.randomUUID(), 'booking', bookingId, 'created', JSON.stringify({ source: 'smart-rent', customerId, vehicleId }), now).run();
+  return json({ bookingId, customerId, persisted: true, status: 'new', estimatedTotalVnd }, 201, corsHeaders);
 }
 
 async function availability(request: Request, env: Env): Promise<Response> {
@@ -90,10 +160,32 @@ async function availability(request: Request, env: Env): Promise<Response> {
   const vehicleId = url.searchParams.get('vehicleId') ?? '';
   const from = url.searchParams.get('from') ?? '';
   const to = url.searchParams.get('to') ?? '';
-  if (!getVehicle(vehicleId) || !isValidDateRange(from, to)) return json({ error: 'invalid_query' }, 400, corsHeaders);
+  if (!vehicleId || !isValidDateRange(from, to)) return json({ error: 'invalid_query' }, 400, corsHeaders);
+  let vehicle: PublishedVehicle | null = null;
+  try { vehicle = await findPublishedVehicle(request, env, vehicleId); } catch { return json({ error: 'fleet_manifest_unavailable' }, 503, corsHeaders); }
+  if (!vehicle) return json({ error: 'invalid_query' }, 400, corsHeaders);
   if (!env.DB) return json({ vehicleId, from, to, mode: 'manager_confirmation', liveData: false, requestAllowed: true }, 200, corsHeaders);
+  await ensureVehicleRecord(env.DB, vehicle);
   const conflict = await bookingConflict(env.DB, vehicleId, from, to);
   return json({ vehicleId, from, to, mode: 'd1', liveData: true, requestAllowed: !conflict, conflict }, 200, corsHeaders);
+}
+
+async function listPublishedVehicles(request: Request, env: Env): Promise<Response> {
+  try {
+    const fleet = await loadPublishedFleet(request, env);
+    return json({ totalPublishedFleet: fleet.length, vehicles: fleet }, 200, corsHeaders);
+  } catch {
+    return json({ error: 'fleet_manifest_unavailable', totalPublishedFleet: businessInfo.publicFleetCount, vehicles: [] }, 503, corsHeaders);
+  }
+}
+
+async function syncFleetCatalog(request: Request, env: Env): Promise<Response> {
+  if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
+  let fleet: PublishedVehicle[];
+  try { fleet = await loadPublishedFleet(request, env); } catch { return json({ error: 'fleet_manifest_unavailable' }, 503, corsHeaders); }
+  for (const vehicle of fleet) await ensureVehicleRecord(env.DB, vehicle);
+  return json({ synced: fleet.length, source: 'assets/fleet-manifest.json' }, 200, corsHeaders);
 }
 
 async function listBookings(request: Request, env: Env): Promise<Response> {
@@ -148,13 +240,14 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 3 : null, verifiedCatalog: vehicles.length, publicFleetCount: businessInfo.publicFleetCount }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 3 : null, legacyVerifiedSubset: vehicles.length, publicFleetCount: businessInfo.publicFleetCount }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
-    if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
+    if (url.pathname === '/api/vehicles' && request.method === 'GET') return listPublishedVehicles(request, env);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'GET') return listBookings(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'POST') return createBooking(request, env);
     if (url.pathname === '/api/customers' && request.method === 'GET') return listCustomers(request, env);
+    if (url.pathname === '/api/admin/sync-fleet' && request.method === 'POST') return syncFleetCatalog(request, env);
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);
