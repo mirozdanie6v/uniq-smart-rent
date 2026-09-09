@@ -24,6 +24,10 @@ function isStaff(request: Request, env: BookingOpsEnv): boolean {
   return env.DEMO_MODE === 'true' && (role === 'owner' || role === 'employee');
 }
 
+function isDemoClient(request: Request, env: BookingOpsEnv): boolean {
+  return env.DEMO_MODE === 'true' && request.headers.get('x-uniq-demo-role') === 'client';
+}
+
 async function body(request: Request): Promise<Record<string, unknown> | null> {
   try { return await request.json() as Record<string, unknown>; } catch { return null; }
 }
@@ -37,6 +41,33 @@ async function conflict(db: D1DatabaseLike, vehicleId: string, from: string, to:
     .bind(vehicleId, to, from).first<{ id: string; block_type: string }>();
   if (block) return { type: 'block', id: block.id, status: block.block_type };
   return null;
+}
+
+function addDays(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0,10);
+}
+
+function priceExtensionDays(days: number, pricing: { daily:number; threeDay:number; weekly:number; fourteenDay:number; monthly:number }): number {
+  if (days <= 0) return 0;
+  const tiers = [
+    [1,pricing.daily],
+    [3,pricing.threeDay],
+    [7,pricing.weekly],
+    [14,pricing.fourteenDay],
+    [30,pricing.monthly],
+  ].filter(([,amount]) => amount > 0) as Array<[number,number]>;
+  if (!tiers.length) return 0;
+  const dp = Array<number>(days + 1).fill(Number.POSITIVE_INFINITY);
+  dp[0] = 0;
+  for (let current=1; current<=days; current+=1) {
+    for (const [tierDays, amount] of tiers) {
+      if (tierDays <= current && Number.isFinite(dp[current-tierDays])) dp[current] = Math.min(dp[current], dp[current-tierDays] + amount);
+    }
+  }
+  if (Number.isFinite(dp[days])) return Math.round(dp[days]);
+  return days * Math.max(0,pricing.daily);
 }
 
 async function calendar(request: Request, env: BookingOpsEnv, url: URL): Promise<Response> {
@@ -81,6 +112,10 @@ async function createBlock(request: Request, env: BookingOpsEnv): Promise<Respon
   if (!vehicleId || !isoDate(from) || !isoDate(to) || from > to || !['reservation','rental','service','manual'].includes(blockType)) return json({ error: 'invalid_payload' }, 400);
   const vehicle = await env.DB.prepare('SELECT id FROM vehicles WHERE id = ? LIMIT 1').bind(vehicleId).first<{ id: string }>();
   if (!vehicle) return json({ error: 'vehicle_not_found' }, 404);
+  if (branchId) {
+    const branch = await env.DB.prepare("SELECT id FROM branches WHERE id=? AND status='active' LIMIT 1").bind(branchId).first<{ id:string }>();
+    if (!branch) return json({ error:'branch_not_found' },400);
+  }
   const overlap = await conflict(env.DB, vehicleId, from, to);
   if (overlap) return json({ error: 'vehicle_window_conflict', conflict: overlap }, 409);
   const id = crypto.randomUUID();
@@ -98,33 +133,46 @@ async function deleteBlock(request: Request, env: BookingOpsEnv, id: string): Pr
 
 async function extendBooking(request: Request, env: BookingOpsEnv, bookingId: string): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503);
-  if (!isStaff(request, env)) return json({ error: 'unauthorized' }, 401);
+  if (!isStaff(request, env) && !isDemoClient(request,env)) return json({ error: 'unauthorized' }, 401);
   const payload = await body(request);
   const newTo = text(payload?.newTo);
   const note = text(payload?.note);
   if (!isoDate(newTo)) return json({ error: 'invalid_new_end_date' }, 400);
-  const booking = await env.DB.prepare(`SELECT b.id, b.vehicle_id, b.to_at, b.status, b.estimated_total_vnd, b.total_vnd,
-      COALESCE(p.daily_vnd,0) AS daily_vnd
+  const booking = await env.DB.prepare(`SELECT b.id, b.vehicle_id, b.to_at, b.status, b.estimated_total_vnd, b.subtotal_vnd, b.total_vnd, b.paid_vnd, b.payment_status,
+      COALESCE(p.daily_vnd,0) AS daily_vnd, COALESCE(p.three_day_vnd,0) AS three_day_vnd, COALESCE(p.weekly_vnd,0) AS weekly_vnd,
+      COALESCE(p.fourteen_day_vnd,0) AS fourteen_day_vnd, COALESCE(p.monthly_vnd,0) AS monthly_vnd
     FROM bookings b LEFT JOIN pricing p ON p.vehicle_id = b.vehicle_id WHERE b.id = ? LIMIT 1`)
-    .bind(bookingId).first<{ id: string; vehicle_id: string; to_at: string; status: string; estimated_total_vnd: number; total_vnd: number; daily_vnd: number }>();
+    .bind(bookingId).first<{ id:string; vehicle_id:string; to_at:string; status:string; estimated_total_vnd:number; subtotal_vnd:number; total_vnd:number; paid_vnd:number; payment_status:string; daily_vnd:number; three_day_vnd:number; weekly_vnd:number; fourteen_day_vnd:number; monthly_vnd:number }>();
   if (!booking) return json({ error: 'booking_not_found' }, 404);
   if (!['confirmed','vehicle_issued','active','return_due'].includes(booking.status)) return json({ error: 'booking_not_extendable' }, 409);
   const previousTo = booking.to_at.slice(0,10);
   if (newTo <= previousTo) return json({ error: 'new_end_must_be_later' }, 400);
-  const overlap = await conflict(env.DB, booking.vehicle_id, previousTo, newTo, bookingId);
+  const extensionFrom = addDays(previousTo,1);
+  const overlap = await conflict(env.DB, booking.vehicle_id, extensionFrom, newTo, bookingId);
   if (overlap) return json({ error: 'vehicle_window_conflict', conflict: overlap }, 409);
   const days = Math.round((new Date(`${newTo}T00:00:00Z`).getTime() - new Date(`${previousTo}T00:00:00Z`).getTime()) / 86400000);
-  const additionalAmount = Math.max(0, days * Number(booking.daily_vnd ?? 0));
+  const additionalAmount = priceExtensionDays(days, {
+    daily:Number(booking.daily_vnd ?? 0), threeDay:Number(booking.three_day_vnd ?? 0), weekly:Number(booking.weekly_vnd ?? 0),
+    fourteenDay:Number(booking.fourteen_day_vnd ?? 0), monthly:Number(booking.monthly_vnd ?? 0),
+  });
+  if (additionalAmount <= 0) return json({ error:'extension_price_unavailable' },409);
+  const currentTotal = Math.max(0,Number(booking.total_vnd || booking.estimated_total_vnd || 0));
+  const currentSubtotal = Math.max(0,Number(booking.subtotal_vnd || booking.estimated_total_vnd || currentTotal));
+  const paidVnd = Math.max(0,Number(booking.paid_vnd || 0));
+  const newTotal = currentTotal + additionalAmount;
+  const newSubtotal = currentSubtotal + additionalAmount;
+  const paymentStatus = paidVnd >= newTotal ? 'paid' : paidVnd > 0 ? 'partially_paid' : booking.payment_status === 'pending' ? 'pending' : 'unpaid';
+  const remainingVnd = Math.max(0,newTotal-paidVnd);
   const now = new Date().toISOString();
   const extensionId = crypto.randomUUID();
   await env.DB.prepare(`UPDATE bookings SET original_to_at = COALESCE(original_to_at, to_at), to_at = ?, extension_count = extension_count + 1,
-      extended_at = ?, estimated_total_vnd = estimated_total_vnd + ?, subtotal_vnd = subtotal_vnd + ?, total_vnd = total_vnd + ?, updated_at = ? WHERE id = ?`)
-    .bind(newTo, now, additionalAmount, additionalAmount, additionalAmount, now, bookingId).run();
+      extended_at = ?, estimated_total_vnd = ?, subtotal_vnd = ?, total_vnd = ?, payment_status = ?, updated_at = ? WHERE id = ?`)
+    .bind(newTo, now, newTotal, newSubtotal, newTotal, paymentStatus, now, bookingId).run();
   await env.DB.prepare(`INSERT INTO booking_extensions (id, booking_id, previous_to_at, new_to_at, additional_days, additional_amount_vnd, note, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(extensionId, bookingId, previousTo, newTo, days, additionalAmount, note, now).run();
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(extensionId, bookingId, previousTo, newTo, days, additionalAmount, note || (isDemoClient(request,env) ? 'Client self-service extension' : 'Staff extension'), now).run();
   await env.DB.prepare('INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), 'booking', bookingId, 'extended', JSON.stringify({ previousTo, newTo, days, additionalAmount }), now).run();
-  return json({ bookingId, previousTo, newTo, additionalDays: days, additionalAmountVnd: additionalAmount, persisted: true });
+    .bind(crypto.randomUUID(), 'booking', bookingId, 'extended', JSON.stringify({ previousTo, newTo, days, additionalAmount, paidVnd, remainingVnd, actor:isDemoClient(request,env)?'client':'staff' }), now).run();
+  return json({ bookingId, extensionId, previousTo, newTo, additionalDays:days, additionalAmountVnd:additionalAmount, totalVnd:newTotal, paidVnd, remainingVnd, paymentStatus, persisted:true });
 }
 
 async function lifecycle(request: Request, env: BookingOpsEnv, bookingId: string): Promise<Response> {

@@ -3,7 +3,7 @@ export type TeamStatus = 'active' | 'inactive';
 export type TransferStatus = 'planned' | 'in_transit' | 'completed' | 'cancelled';
 
 export interface TeamBranch {
-  id: 'branch-north' | 'branch-center';
+  id: string;
   code: string;
   name: string;
   address: string;
@@ -46,6 +46,7 @@ export interface TeamSnapshot {
 }
 
 const storageKey = 'uniq-stage7-team-v1';
+const branchStorageKey = 'uniq-stage12-branches-v1';
 const transferStorageKey = 'uniq-stage7-transfers-v1';
 
 export const permissionCatalog = [
@@ -88,9 +89,16 @@ function writeLocal<T>(key: string, value: T) {
   try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
+function localBranches(): TeamBranch[] {
+  const stored = readLocal<TeamBranch[]>(branchStorageKey, []);
+  const map = new Map<string,TeamBranch>();
+  for (const branch of [...defaultBranches, ...stored]) map.set(branch.id, branch);
+  return [...map.values()];
+}
+
 export function localTeamSnapshot(): TeamSnapshot {
   return {
-    branches: defaultBranches,
+    branches: localBranches(),
     employees: readLocal<TeamEmployee[]>(storageKey, defaultEmployees),
     transfers: readLocal<TeamTransfer[]>(transferStorageKey, []),
     persisted: false,
@@ -99,12 +107,16 @@ export function localTeamSnapshot(): TeamSnapshot {
 
 function normalizeSnapshot(data: Partial<TeamSnapshot>): TeamSnapshot {
   const local = localTeamSnapshot();
-  const branches = Array.isArray(data.branches) && data.branches.length ? data.branches : local.branches;
+  const remoteBranches = Array.isArray(data.branches) && data.branches.length ? data.branches : [];
+  const branchMap = new Map<string,TeamBranch>();
+  for (const branch of [...local.branches, ...remoteBranches]) branchMap.set(branch.id, branch);
+  const branches = [...branchMap.values()];
   const employees = Array.isArray(data.employees) && data.employees.length ? data.employees : local.employees;
   const remoteTransfers = Array.isArray(data.transfers) ? data.transfers : [];
   const localTransfers = local.transfers;
   const transferMap = new Map<string,TeamTransfer>();
   for (const item of [...remoteTransfers, ...localTransfers]) transferMap.set(item.id, item);
+  writeLocal(branchStorageKey, branches.filter((item) => !defaultBranches.some((base) => base.id === item.id)));
   writeLocal(storageKey, employees);
   writeLocal(transferStorageKey, [...transferMap.values()]);
   return { branches, employees, transfers:[...transferMap.values()], persisted:Boolean(data.persisted) };
@@ -116,6 +128,30 @@ export async function fetchTeamSnapshot(): Promise<TeamSnapshot> {
     if (!response.ok) return localTeamSnapshot();
     return normalizeSnapshot(await response.json() as Partial<TeamSnapshot>);
   } catch { return localTeamSnapshot(); }
+}
+
+export async function createBranch(branch: TeamBranch): Promise<TeamBranch> {
+  const current = localBranches();
+  writeLocal(branchStorageKey, [...current.filter((item) => !defaultBranches.some((base) => base.id === item.id) && item.id !== branch.id), branch].filter((item) => !defaultBranches.some((base) => base.id === item.id)));
+  try {
+    const response = await fetch('/api/owner/branches', {
+      method:'POST',
+      headers:{ 'content-type':'application/json', 'x-uniq-demo-role':'owner' },
+      body:JSON.stringify(branch),
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({})) as { error?:string };
+      throw new Error(data.error ?? `HTTP ${response.status}`);
+    }
+    const data = await response.json() as { branch?:TeamBranch };
+    const saved = data.branch ?? branch;
+    const custom = localBranches().filter((item) => !defaultBranches.some((base) => base.id === item.id) && item.id !== saved.id);
+    writeLocal(branchStorageKey, [...custom, saved]);
+    return saved;
+  } catch (error) {
+    if (error instanceof Error && error.message !== 'Failed to fetch') throw error;
+    return branch;
+  }
 }
 
 export async function saveEmployee(employee: TeamEmployee): Promise<TeamEmployee> {

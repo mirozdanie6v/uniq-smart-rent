@@ -49,7 +49,6 @@ const asInt = (value: unknown, fallback = 0) => {
 const asBool = (value: unknown, fallback = true) => typeof value === 'boolean' ? value : fallback;
 const validTypes = new Set(['car','scooter','motorcycle']);
 const validStates = new Set(['manager','ready','service','hold']);
-const validBranches = new Set(['','branch-north','branch-center']);
 
 function isOwner(request: Request, env: FleetEnv): boolean {
   if (env.STAFF_API_KEY && request.headers.get('x-uniq-admin-key') === env.STAFF_API_KEY) return true;
@@ -72,7 +71,7 @@ function normalize(input: VehiclePayload) {
   const engine = asText(input.engine) || '—';
   const branchId = asText(input.branchId);
   const status = asText(input.status) || 'manager';
-  if (!title || !validTypes.has(type) || !validBranches.has(branchId) || !validStates.has(status)) return null;
+  if (!title || !validTypes.has(type) || !validStates.has(status)) return null;
   const photos = Array.isArray(input.photos) ? input.photos.map(asText).filter(Boolean).slice(0, 12) : [];
   return {
     id: asText(input.id) || `custom-${slugify(title)}-${Date.now()}`,
@@ -144,6 +143,10 @@ async function listManaged(db: D1DatabaseLike) {
 async function saveVehicle(db: D1DatabaseLike, raw: VehiclePayload) {
   const vehicle = normalize(raw);
   if (!vehicle) return json({ error: 'invalid_vehicle_payload' }, 400);
+  if (vehicle.branchId) {
+    const branch = await db.prepare("SELECT id FROM branches WHERE id=? AND status='active' LIMIT 1").bind(vehicle.branchId).first<{ id:string }>();
+    if (!branch) return json({ error:'branch_not_found', branchId:vehicle.branchId },400);
+  }
   const now = new Date().toISOString();
   const category = vehicle.type === 'motorcycle' ? 'motorcycle' : vehicle.type;
   const archivedAt = vehicle.archivedAt;

@@ -1,6 +1,7 @@
 import type { D1DatabaseLike } from '../db/bootstrap.js';
 
 type PaymentProvider = 'vietqr' | 'vnpay' | 'momo' | 'zalopay' | 'sbp' | 'yookassa' | 'tbank';
+type PaymentPurpose = 'booking' | 'balance' | 'extension';
 
 type PaymentEnv = {
   DB?: D1DatabaseLike;
@@ -35,6 +36,7 @@ const providerMeta: Record<PaymentProvider, { label: string; market: string; cur
 };
 
 const providers = Object.keys(providerMeta) as PaymentProvider[];
+const purposes = new Set<PaymentPurpose>(['booking','balance','extension']);
 
 function isStaff(request: Request, env: PaymentEnv): boolean {
   if (env.STAFF_API_KEY && request.headers.get('x-uniq-admin-key') === env.STAFF_API_KEY) return true;
@@ -68,18 +70,21 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
   const bookingId = text(payload.bookingId);
   const provider = text(payload.provider) as PaymentProvider;
   const requestedPercent = int(payload.prepaymentPercent, 100);
-  if (!bookingId || !providers.includes(provider) || ![30,100].includes(requestedPercent)) return json({ error: 'invalid_payment_payload' }, 400);
+  const purposeRaw = text(payload.purpose) || (requestedPercent === 100 ? 'balance' : 'booking');
+  const purpose = purposeRaw as PaymentPurpose;
+  if (!bookingId || !providers.includes(provider) || ![30,100].includes(requestedPercent) || !purposes.has(purpose)) return json({ error: 'invalid_payment_payload' }, 400);
 
   const booking = await env.DB.prepare(`SELECT id, customer_id, vehicle_id, status, estimated_total_vnd, total_vnd, paid_vnd, payment_status
     FROM bookings WHERE id = ? LIMIT 1`).bind(bookingId).first<{ id: string; customer_id: string; vehicle_id: string; status: string; estimated_total_vnd: number; total_vnd: number; paid_vnd: number; payment_status: string }>();
   if (!booking) return json({ error: 'booking_not_found' }, 404);
-  if (booking.status === 'cancelled') return json({ error: 'booking_cancelled' }, 409);
+  if (['cancelled','returned','completed'].includes(booking.status)) return json({ error: 'booking_not_payable', status:booking.status }, 409);
 
   const totalVnd = Math.max(0, Number(booking.total_vnd || booking.estimated_total_vnd || 0));
   const paidVnd = Math.max(0, Number(booking.paid_vnd || 0));
+  const remainingVnd = Math.max(0,totalVnd-paidVnd);
   const targetPaid = requestedPercent === 100 ? totalVnd : Math.ceil(totalVnd * requestedPercent / 100);
-  const amountVnd = Math.max(0, targetPaid - paidVnd);
-  if (!amountVnd) return json({ error: 'nothing_to_pay', bookingId, totalVnd, paidVnd }, 409);
+  const amountVnd = Math.max(0, Math.min(remainingVnd,targetPaid - paidVnd));
+  if (!amountVnd) return json({ error: 'nothing_to_pay', bookingId, totalVnd, paidVnd, remainingVnd }, 409);
 
   const paymentId = crypto.randomUUID();
   const checkoutToken = crypto.randomUUID().replaceAll('-', '');
@@ -90,7 +95,10 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
   const paymentUrl = `${origin}/?payment=${checkoutToken}`;
   const qrPayload = paymentUrl;
   const mode = credentialReady(env, provider) && env.DEMO_MODE !== 'true' ? 'live-ready' : 'demo';
-  const providerPayload = JSON.stringify({ mode, requestedPercent, checkoutToken, paymentReference, methodLabel: providerMeta[provider].label });
+  const providerPayload = JSON.stringify({ mode, requestedPercent, purpose, checkoutToken, paymentReference, methodLabel: providerMeta[provider].label });
+
+  // Only one pending checkout per booking. A new provider/QR safely supersedes an old unpaid intent.
+  await env.DB.prepare(`UPDATE payments SET status='cancelled', updated_at=? WHERE booking_id=? AND status IN ('created','pending')`).bind(now,bookingId).run();
 
   await env.DB.prepare(`INSERT INTO payments (id, booking_id, customer_id, provider, provider_payment_id, status, currency, amount_vnd, display_amount, qr_payload, payment_url, expires_at, provider_payload_json, is_demo, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, 'pending', 'VND', ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -100,7 +108,7 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
     .bind(requestedPercent, now, bookingId).run();
 
   await env.DB.prepare(`INSERT INTO payment_events (id, payment_id, provider, event_type, payload_json, created_at) VALUES (?, ?, ?, 'intent_created', ?, ?)`)
-    .bind(crypto.randomUUID(), paymentId, provider, JSON.stringify({ amountVnd, requestedPercent, mode, paymentReference }), now).run();
+    .bind(crypto.randomUUID(), paymentId, provider, JSON.stringify({ amountVnd, requestedPercent, purpose, mode, paymentReference, alreadyPaidVnd:paidVnd, remainingVnd }), now).run();
 
   return json({
     payment: {
@@ -112,7 +120,9 @@ async function createIntent(request: Request, env: PaymentEnv): Promise<Response
       amountVnd,
       totalVnd,
       alreadyPaidVnd: paidVnd,
+      remainingVnd,
       requestedPercent,
+      purpose,
       paymentReference,
       paymentUrl,
       qrPayload,
@@ -145,30 +155,43 @@ async function confirmDemo(env: PaymentEnv, paymentId: string): Promise<Response
     .bind(paymentId).first<{ id: string; booking_id: string; customer_id: string; provider: string; status: string; amount_vnd: number; is_demo: number }>();
   if (!payment) return json({ error: 'payment_not_found' }, 404);
   if (payment.status === 'paid') {
-    const booking = await env.DB.prepare('SELECT paid_vnd, total_vnd, payment_status FROM bookings WHERE id = ?').bind(payment.booking_id).first<Record<string, unknown>>();
-    return json({ paymentId, status: 'paid', idempotent: true, booking });
+    const booking = await env.DB.prepare('SELECT paid_vnd, total_vnd, estimated_total_vnd, payment_status FROM bookings WHERE id = ?').bind(payment.booking_id).first<Record<string, unknown>>();
+    const totalVnd = Math.max(0,Number(booking?.total_vnd || booking?.estimated_total_vnd || 0));
+    return json({ paymentId, bookingId:payment.booking_id, status:'paid', amountVnd:Number(payment.amount_vnd||0), bookingPaidVnd:Number(booking?.paid_vnd||0), bookingTotalVnd:totalVnd, bookingPaymentStatus:String(booking?.payment_status ?? 'paid'), idempotent:true });
   }
   if (payment.status !== 'pending' || Number(payment.is_demo) !== 1) return json({ error: 'payment_not_confirmable' }, 409);
 
   const now = new Date().toISOString();
-  const booking = await env.DB.prepare('SELECT id, vehicle_id, total_vnd, estimated_total_vnd, paid_vnd FROM bookings WHERE id = ? LIMIT 1')
-    .bind(payment.booking_id).first<{ id: string; vehicle_id: string; total_vnd: number; estimated_total_vnd: number; paid_vnd: number }>();
+  const booking = await env.DB.prepare('SELECT id, vehicle_id, status, total_vnd, estimated_total_vnd, paid_vnd FROM bookings WHERE id = ? LIMIT 1')
+    .bind(payment.booking_id).first<{ id: string; vehicle_id: string; status:string; total_vnd: number; estimated_total_vnd: number; paid_vnd: number }>();
   if (!booking) return json({ error: 'booking_not_found' }, 404);
+  if (booking.status === 'cancelled') {
+    await env.DB.prepare(`UPDATE payments SET status='cancelled', updated_at=? WHERE id=?`).bind(now,paymentId).run();
+    return json({ error:'booking_cancelled' },409);
+  }
   const totalVnd = Math.max(0, Number(booking.total_vnd || booking.estimated_total_vnd || 0));
-  const newPaid = Math.min(totalVnd, Math.max(0, Number(booking.paid_vnd || 0)) + Number(payment.amount_vnd || 0));
+  const paidBefore = Math.max(0,Number(booking.paid_vnd || 0));
+  const remainingBefore = Math.max(0,totalVnd-paidBefore);
+  if (remainingBefore <= 0) {
+    await env.DB.prepare(`UPDATE payments SET status='cancelled', updated_at=? WHERE id=?`).bind(now,paymentId).run();
+    return json({ error:'booking_already_paid', bookingId:payment.booking_id, totalVnd, paidVnd:paidBefore },409);
+  }
+  const creditedAmount = Math.min(remainingBefore,Math.max(0,Number(payment.amount_vnd || 0)));
+  if (creditedAmount <= 0) return json({ error:'invalid_payment_amount' },409);
+  const newPaid = paidBefore + creditedAmount;
   const paymentStatus = newPaid >= totalVnd ? 'paid' : 'partially_paid';
 
-  await env.DB.prepare(`UPDATE payments SET status = 'paid', paid_at = ?, updated_at = ? WHERE id = ?`).bind(now, now, paymentId).run();
+  await env.DB.prepare(`UPDATE payments SET status = 'paid', amount_vnd=?, display_amount=?, paid_at = ?, updated_at = ? WHERE id = ?`).bind(creditedAmount,creditedAmount,now,now,paymentId).run();
   await env.DB.prepare(`UPDATE bookings SET paid_vnd = ?, payment_status = ?, updated_at = ? WHERE id = ?`).bind(newPaid, paymentStatus, now, payment.booking_id).run();
   await env.DB.prepare(`INSERT INTO transactions (id, booking_id, payment_id, vehicle_id, customer_id, type, status, amount_vnd, method, occurred_at, note, created_at)
-    VALUES (?, ?, ?, ?, ?, 'payment', 'completed', ?, ?, ?, 'Stage 5 demo payment confirmation', ?)`)
-    .bind(crypto.randomUUID(), payment.booking_id, paymentId, booking.vehicle_id, payment.customer_id, payment.amount_vnd, payment.provider, now, now).run();
+    VALUES (?, ?, ?, ?, ?, 'payment', 'completed', ?, ?, ?, 'Stage 12 demo payment confirmation', ?)`)
+    .bind(crypto.randomUUID(), payment.booking_id, paymentId, booking.vehicle_id, payment.customer_id, creditedAmount, payment.provider, now, now).run();
   await env.DB.prepare(`INSERT INTO payment_events (id, payment_id, provider, event_type, provider_event_id, payload_json, created_at) VALUES (?, ?, ?, 'demo_paid', ?, ?, ?)`)
-    .bind(crypto.randomUUID(), paymentId, payment.provider, `demo-${paymentId}`, JSON.stringify({ amountVnd: payment.amount_vnd }), now).run();
+    .bind(crypto.randomUUID(), paymentId, payment.provider, `demo-${paymentId}`, JSON.stringify({ amountVnd:creditedAmount, paidBefore, newPaid, totalVnd }), now).run();
   await env.DB.prepare(`INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, 'payment', ?, 'paid', ?, ?)`)
-    .bind(crypto.randomUUID(), paymentId, JSON.stringify({ bookingId: payment.booking_id, amountVnd: payment.amount_vnd, provider: payment.provider }), now).run();
+    .bind(crypto.randomUUID(), paymentId, JSON.stringify({ bookingId: payment.booking_id, amountVnd:creditedAmount, provider: payment.provider, bookingPaymentStatus:paymentStatus }), now).run();
 
-  return json({ paymentId, bookingId: payment.booking_id, status: 'paid', amountVnd: payment.amount_vnd, bookingPaidVnd: newPaid, bookingPaymentStatus: paymentStatus, persisted: true });
+  return json({ paymentId, bookingId: payment.booking_id, status: 'paid', amountVnd:creditedAmount, bookingPaidVnd:newPaid, bookingTotalVnd:totalVnd, bookingPaymentStatus:paymentStatus, persisted:true });
 }
 
 async function cancelPayment(request: Request, env: PaymentEnv, paymentId: string): Promise<Response> {

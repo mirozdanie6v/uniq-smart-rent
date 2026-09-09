@@ -21,7 +21,7 @@ export interface ManagedFleetVehicle {
   registrationNumber?: string;
   internalNumber?: string;
   description?: string;
-  branchId?: 'branch-north' | 'branch-center' | '';
+  branchId?: string;
   status?: FleetState;
   published?: boolean;
   archivedAt?: string | null;
@@ -31,9 +31,9 @@ export interface ManagedFleetVehicle {
 }
 
 export const branchOptions = [
-  { id: 'branch-north' as const, label: 'Северный филиал', address: '312 Đ. 2/4' },
-  { id: 'branch-center' as const, label: 'Центр города', address: '254 Nguyễn Thị Minh Khai' },
-];
+  { id: 'branch-north', label: 'Северный филиал', address: '312 Đ. 2/4' },
+  { id: 'branch-center', label: 'Центр города', address: '254 Nguyễn Thị Minh Khai' },
+] as const;
 
 export function demoBranchForVehicleId(id: string): 'branch-north' | 'branch-center' {
   let hash = 0;

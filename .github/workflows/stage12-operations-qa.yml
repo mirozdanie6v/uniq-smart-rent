@@ -1,0 +1,70 @@
+name: Stage 12 Operations QA
+
+on:
+  push:
+    branches:
+      - stage12/branch-extension-balance
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-test:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: stage12/branch-extension-balance
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Integrate Stage 12
+        run: |
+          python scripts/stage12_integrate.py
+          python scripts/stage12_postfix.py
+
+      - name: Install dependencies and full check
+        run: |
+          npm install
+          npm run check
+
+      - name: Apply local D1 migrations
+        run: npx wrangler d1 migrations apply uniq-smart-rent-db --local --config wrangler.jsonc
+
+      - name: Start local Worker
+        run: |
+          nohup npx wrangler dev --local --port 8787 --config wrangler.jsonc >/tmp/stage12-wrangler.log 2>&1 &
+          echo $! >/tmp/stage12-wrangler.pid
+          ready=0
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/tmp/stage12-health.json; then ready=1; break; fi
+            sleep 1
+          done
+          cat /tmp/stage12-health.json || true
+          test "$ready" -eq 1
+
+      - name: Run API business scenarios
+        run: python tests/stage12_business_scenarios.py
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+
+      - name: Browser acceptance desktop and mobile
+        run: node tests/stage12_browser.mjs
+
+      - name: Commit verified integration
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src migrations tests styles.css
+          if ! git diff --cached --quiet; then
+            git commit -m 'Stage 12: wire dynamic branches and client settlement flows'
+            git push origin HEAD:stage12/branch-extension-balance
+          fi

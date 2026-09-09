@@ -1,5 +1,6 @@
-import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useMemo, useState } from 'react';
+import { ChangeEvent, Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from 'react';
 import { archiveOwnerVehicle, fetchFleetOverrides, removeOwnerVehicle, saveOwnerVehicle } from '../../api/ownerFleet';
+import { fetchTeamSnapshot } from '../../api/team';
 import { branchOptions, FleetState, ManagedFleetVehicle, mergeFleetOverrides, VehicleType } from './fleetManagement';
 
 type Props = {
@@ -27,7 +28,7 @@ const blankDraft = (): Draft => ({
 });
 
 const numberValue = (value: string) => Math.max(0, Number.parseInt(value.replace(/\D/g, ''), 10) || 0);
-const branchLabel = (id?: string) => branchOptions.find((branch) => branch.id === id)?.label ?? 'Без привязки';
+const fallbackBranchLabel = (id?: string) => branchOptions.find((branch) => branch.id === id)?.label ?? (id || 'Без привязки');
 const money = (value?: number) => `${new Intl.NumberFormat('ru-RU').format(value ?? 0)} ₫`;
 
 async function imageFileToDataUrl(file: File): Promise<string> {
@@ -58,10 +59,14 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | FleetState | 'archived'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | VehicleType>('all');
-  const [branchFilter, setBranchFilter] = useState<'all' | 'branch-north' | 'branch-center'>('all');
+  const [branchFilter, setBranchFilter] = useState<string>('all');
+  const [branches,setBranches] = useState<Array<{id:string;label:string;address:string}>>([...branchOptions]);
   const [photoUrl, setPhotoUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
+
+  useEffect(() => { let active=true; fetchTeamSnapshot().then((data) => { if(active) setBranches(data.branches.filter((item) => item.status === 'active').map((item) => ({ id:item.id,label:item.name,address:item.address }))); }); return () => { active=false; }; },[]);
+  const branchLabelForId = (id?:string) => branches.find((branch) => branch.id === id)?.label ?? fallbackBranchLabel(id);
 
   const effectiveState = (vehicle: ManagedFleetVehicle): FleetState => fleetStates[vehicle.id] ?? vehicle.status ?? 'manager';
   const visible = useMemo(() => fleet.filter((vehicle) => {
@@ -182,7 +187,7 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
         <option value="all">Все типы</option><option value="car">Авто</option><option value="motorcycle">Мотоциклы</option><option value="scooter">Скутеры</option>
       </select>
       <select value={branchFilter} onChange={(event) => setBranchFilter(event.target.value as typeof branchFilter)}>
-        <option value="all">Все точки</option>{branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}
+        <option value="all">Все точки</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.label}</option>)}
       </select>
       <span>{visible.length} позиций</span>
     </section>
@@ -190,7 +195,7 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
     <section className="owner-fleet-list">
       {visible.map((vehicle) => <article className={`owner-fleet-row ${vehicle.archivedAt ? 'is-archived' : ''}`} key={vehicle.id} data-owner-vehicle={vehicle.id}>
         <div className="owner-fleet-photo">{vehicle.photos?.[0] ? <img src={vehicle.photos[0]} alt={vehicle.title} loading="lazy" /> : <span>UNIQ</span>}</div>
-        <div className="owner-fleet-copy"><div><span className="pill">{typeLabels[vehicle.type]}</span>{vehicle.archivedAt ? <span className="pill muted">Архив</span> : vehicle.published === false ? <span className="pill muted">Скрыта</span> : null}</div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? '—'} · {branchLabel(vehicle.branchId)}</small></div>
+        <div className="owner-fleet-copy"><div><span className="pill">{typeLabels[vehicle.type]}</span>{vehicle.archivedAt ? <span className="pill muted">Архив</span> : vehicle.published === false ? <span className="pill muted">Скрыта</span> : null}</div><b>{vehicle.title}</b><small>{vehicle.year ?? ''} · {vehicle.engine ?? '—'} · {branchLabelForId(vehicle.branchId)}</small></div>
         <div className="owner-fleet-price"><b>{money(vehicle.dailyVnd)}</b><small>{stateLabels[effectiveState(vehicle)]}</small></div>
         <button className="secondary" data-owner-edit={vehicle.id} onClick={() => openVehicle(vehicle)}>Редактировать</button>
       </article>)}
@@ -212,7 +217,7 @@ export function OwnerFleetManager({ fleet, baseFleet, fleetStates, setFleet, set
             <label>Цвет<input value={editing.color ?? ''} onChange={(e) => update('color', e.target.value)} /></label>
             <label>Госномер<input value={editing.registrationNumber ?? ''} onChange={(e) => update('registrationNumber', e.target.value)} /></label>
             <label>Внутренний №<input value={editing.internalNumber ?? ''} onChange={(e) => update('internalNumber', e.target.value)} /></label>
-            <label>Точка<select value={editing.branchId ?? ''} onChange={(e) => update('branchId', e.target.value as Draft['branchId'])}><option value="">Без привязки</option>{branchOptions.map((branch) => <option key={branch.id} value={branch.id}>{branch.label} · {branch.address}</option>)}</select></label>
+            <label>Точка<select value={editing.branchId ?? ''} onChange={(e) => update('branchId', e.target.value as Draft['branchId'])}><option value="">Без привязки</option>{branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.label} · {branch.address}</option>)}</select></label>
             <label>Состояние<select data-owner-status value={editing.status ?? 'manager'} onChange={(e) => update('status', e.target.value as FleetState)}>{Object.entries(stateLabels).map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           </div><label>Описание<textarea rows={4} value={editing.description ?? ''} onChange={(e) => update('description', e.target.value)} /></label></div>
 
