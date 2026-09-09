@@ -65,13 +65,14 @@
     return `c${(hash>>>0).toString(16)}`;
   }
   function customerSummary() {
+    const paymentMap = payments();
     const map = new Map();
     for (const request of requests()) {
       const id = customerId(request);
       const current = map.get(id) || {id,name:request.client||request.name||'Клиент',contact:request.contact||'',count:0,total:0,paid:0,last:request.createdAt||'',requests:[]};
       const amount = Number(request.estimate || request.estimatedTotalVnd) || 0;
       current.count += 1; current.total += amount; current.requests.push(request);
-      if (payments()[request.id]?.status === 'paid') current.paid += amount;
+      if (paymentMap[request.id]?.status === 'paid') current.paid += amount;
       if (String(request.createdAt||'') > String(current.last||'')) current.last = request.createdAt;
       if (request.client || request.name) current.name = request.client || request.name;
       if (request.contact) current.contact = request.contact;
@@ -89,9 +90,10 @@
     const hero = main?.querySelector('.hero');
     if (!hero) return;
     const currentLang = lang();
+    const copy = heroCopy[currentLang] || heroCopy.ru;
     const intro = hero.firstElementChild;
-    if (intro && intro.dataset.finishHero !== currentLang) {
-      const copy = heroCopy[currentLang] || heroCopy.ru;
+    const currentTitle = intro?.querySelector('h1')?.textContent?.trim() || '';
+    if (intro && (intro.dataset.finishHero !== currentLang || currentTitle !== copy.title)) {
       intro.innerHTML = `<span class="eyebrow">UNIQ SMART RENT · NHA TRANG</span><h1>${esc(copy.title)}</h1><p>${esc(copy.text)}</p>`;
       intro.dataset.finishHero = currentLang;
     }
@@ -117,6 +119,8 @@
 
   function paymentState(requestId) { return payments()[requestId]?.status === 'paid' ? 'paid' : 'pending'; }
   function enhanceRequestCards() {
+    const requestsButton = document.querySelector('.bottom-nav [data-go="requests"]');
+    if (!requestsButton?.classList.contains('active')) return;
     const main = document.querySelector('main');
     const list = main?.querySelector('.request-list');
     if (!main || !list) return;
@@ -126,6 +130,9 @@
     const role = activeRole();
     cards.forEach((card,index) => {
       const request = all[index]; if (!request) return;
+      const pay = paymentState(request.id);
+      const signature = `${lang()}:${role}:${String(request.id)}:${pay}`;
+      if (card.dataset.finishRequestSignature === signature) return;
       card.dataset.finishRequestId = String(request.id || '');
       const paragraph = card.querySelector('p');
       const name = request.client || request.name || 'Клиент';
@@ -136,7 +143,6 @@
           : `${dateText} · ${esc(name)}`;
       }
       card.querySelector('.finish-payment-state')?.remove();
-      const pay = paymentState(request.id);
       const row = document.createElement('div'); row.className = 'finish-payment-state';
       if (role === 'client') {
         const status = card.querySelector('.status');
@@ -148,6 +154,7 @@
         row.innerHTML = `<span class="payment-badge ${pay==='paid'?'paid':'pending'}">${pay==='paid'?esc(tr('paid')):esc(tr('ready'))}</span>`;
       }
       card.append(row);
+      card.dataset.finishRequestSignature = signature;
     });
   }
 
@@ -205,12 +212,10 @@
   }
 
   let applying = false;
-  function refresh(force = false) {
+  function refresh() {
     if (applying) return; applying = true;
-    try {
-      if (force) document.querySelectorAll('[data-finish-processed]').forEach(node=>node.removeAttribute('data-finish-processed'));
-      enhanceHero(); ensureOwnerNav(); enhanceRequestCards(); enhanceOwnerClients();
-    } finally { applying = false; }
+    try { enhanceHero(); ensureOwnerNav(); enhanceRequestCards(); enhanceOwnerClients(); }
+    finally { applying = false; }
   }
 
   document.addEventListener('click', event => {
@@ -221,9 +226,9 @@
     else if (target.hasAttribute('data-finish-close')) target.closest('.modal-bg')?.remove();
   }, true);
   document.addEventListener('click', event => { if (event.target?.classList?.contains('finish-modal-bg')) event.target.remove(); });
-  document.addEventListener('change', event => { if (event.target?.id === 'uniqLanguageSelect') setTimeout(()=>refresh(true),30); }, true);
-  const observer = new MutationObserver(() => queueMicrotask(()=>refresh(false)));
+  document.addEventListener('change', event => { if (event.target?.id === 'uniqLanguageSelect') setTimeout(refresh,30); }, true);
+  const observer = new MutationObserver(() => queueMicrotask(refresh));
   observer.observe(document.body,{childList:true,subtree:true});
-  document.addEventListener('DOMContentLoaded',()=>refresh(true));
-  setTimeout(()=>refresh(true),0);
+  document.addEventListener('DOMContentLoaded',refresh);
+  setTimeout(refresh,0);
 })();
