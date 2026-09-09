@@ -83,6 +83,10 @@
     setTimeout(() => document.querySelector(`[data-open="${CSS.escape(id)}"]`)?.click(), 40);
   }
 
+  function openCatalog() {
+    document.querySelector('.bottom-nav [data-go="catalog"]')?.click();
+  }
+
   function buildLocations() {
     const existing = document.querySelector('.home-locations');
     if (existing) return existing;
@@ -119,7 +123,7 @@
     let showcase = hero.querySelector('.hero-card');
     if (!showcase) { showcase = document.createElement('div'); hero.append(showcase); }
     showcase.className = 'hero-card hero-fleet-card';
-    showcase.innerHTML = `<div class="showcase-head"><div><b>${fleet().length}</b><span>единиц техники</span></div><div class="slide-controls"><button type="button" data-slide="prev" aria-label="Previous">←</button><button type="button" data-slide="next" aria-label="Next">→</button></div></div>
+    showcase.innerHTML = `<div class="showcase-head"><button type="button" class="fleet-count-link" data-release-catalog aria-label="Открыть каталог — ${fleet().length} единиц техники"><b>${fleet().length}</b><span>единиц техники</span></button><div class="slide-controls"><button type="button" data-slide="prev" aria-label="Previous">←</button><button type="button" data-slide="next" aria-label="Next">→</button></div></div>
       <div class="showcase-title"><div><span class="eyebrow">ПАРК</span><strong>Популярная техника</strong></div><span class="swipe-hint">${esc(copy.swipe[currentLang])}</span></div>
       <div class="featured-slider-wrap"><div class="featured-slider">${featured.map(v=>featuredCard(v,currentLang)).join('')}</div></div>
       <button class="text showcase-catalog" data-go="catalog" type="button">Весь каталог →</button>`;
@@ -141,7 +145,8 @@
     const slider = showcase.querySelector('.featured-slider');
     showcase.querySelector('[data-slide="next"]')?.addEventListener('click', () => slider?.scrollBy({left: Math.max(240, slider.clientWidth * .78), behavior:'smooth'}));
     showcase.querySelector('[data-slide="prev"]')?.addEventListener('click', () => slider?.scrollBy({left: -Math.max(240, slider.clientWidth * .78), behavior:'smooth'}));
-    showcase.querySelector('.showcase-catalog')?.addEventListener('click', () => document.querySelector('.bottom-nav [data-go="catalog"]')?.click());
+    showcase.querySelector('.showcase-catalog')?.addEventListener('click', openCatalog);
+    showcase.querySelector('.fleet-count-link')?.addEventListener('click', openCatalog);
 
     main.dataset.prodClient = currentLang;
   }
