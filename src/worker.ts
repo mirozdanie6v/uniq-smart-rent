@@ -1,6 +1,7 @@
 import { vehicles, getVehicle } from './domain/catalog.js';
 import { businessInfo } from './domain/business.js';
-import { calculateRentalTotal, isValidDateRange } from './domain/booking.js';
+import { calculateRentalTotal, isValidDateRange, normalizeBookingStatus } from './domain/booking.js';
+import { normalizeContactKey } from './domain/customer.js';
 import type { BookingStatus } from './domain/types.js';
 import { ensureDatabase } from './db/bootstrap.js';
 import type { D1DatabaseLike } from './db/bootstrap.js';
@@ -43,6 +44,24 @@ async function bookingConflict(db: D1DatabaseLike, vehicleId: string, from: stri
   return service ? { type: 'service', id: service.id } : null;
 }
 
+async function findOrCreateCustomer(db: D1DatabaseLike, input: { name: string; contact: string; channel: string; now: string }): Promise<string> {
+  const contactKey = normalizeContactKey(input.contact);
+  const existing = contactKey
+    ? await db.prepare('SELECT id FROM customers WHERE contact_key = ? ORDER BY updated_at DESC LIMIT 1').bind(contactKey).first<{ id: string }>()
+    : null;
+
+  if (existing) {
+    await db.prepare('UPDATE customers SET name = ?, contact = ?, contact_key = ?, preferred_channel = ?, updated_at = ? WHERE id = ?')
+      .bind(input.name, input.contact, contactKey, input.channel, input.now, existing.id).run();
+    return existing.id;
+  }
+
+  const customerId = crypto.randomUUID();
+  await db.prepare('INSERT INTO customers (id, name, contact, contact_key, preferred_channel, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(customerId, input.name, input.contact, contactKey, input.channel, input.now, input.now).run();
+  return customerId;
+}
+
 async function createBooking(request: Request, env: Env): Promise<Response> {
   const body = await parseBody(request);
   if (!body) return json({ error: 'invalid_json' }, 400, corsHeaders);
@@ -56,16 +75,14 @@ async function createBooking(request: Request, env: Env): Promise<Response> {
   const conflict = await bookingConflict(env.DB, vehicleId, from, to);
   if (conflict) return json({ error: 'vehicle_window_conflict', persisted: false, conflict }, 409, corsHeaders);
 
-  const customerId = crypto.randomUUID();
   const bookingId = crypto.randomUUID();
   const now = new Date().toISOString();
-  await env.DB.prepare('INSERT INTO customers (id, name, contact, preferred_channel, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(customerId, client, contact, channel, now, now).run();
+  const customerId = await findOrCreateCustomer(env.DB, { name: client, contact, channel, now });
   await env.DB.prepare(`INSERT INTO bookings (id, vehicle_id, customer_id, from_at, to_at, status, estimated_total_vnd, delivery_location, note, source, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 'new', ?, ?, ?, 'smart-rent', ?, ?)`)
     .bind(bookingId, vehicleId, customerId, from, to, calculateRentalTotal(vehicle, from, to), deliveryLocation, note, now, now).run();
   await env.DB.prepare('INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), 'booking', bookingId, 'created', JSON.stringify({ source: 'smart-rent' }), now).run();
-  return json({ bookingId, persisted: true, status: 'new' }, 201, corsHeaders);
+    .bind(crypto.randomUUID(), 'booking', bookingId, 'created', JSON.stringify({ source: 'smart-rent', customerId }), now).run();
+  return json({ bookingId, customerId, persisted: true, status: 'new' }, 201, corsHeaders);
 }
 
 async function availability(request: Request, env: Env): Promise<Response> {
@@ -82,16 +99,24 @@ async function availability(request: Request, env: Env): Promise<Response> {
 async function listBookings(request: Request, env: Env): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
-  const result = await env.DB.prepare(`SELECT b.id, b.vehicle_id, b.from_at, b.to_at, b.status, b.estimated_total_vnd, b.delivery_location, b.note, b.source, b.created_at, b.updated_at, c.name AS customer_name, c.contact, c.preferred_channel FROM bookings b JOIN customers c ON c.id = b.customer_id ORDER BY b.created_at DESC LIMIT 200`).all<Record<string, unknown>>();
+  const result = await env.DB.prepare(`SELECT b.id, b.vehicle_id, b.customer_id, b.from_at, b.to_at, b.status, b.estimated_total_vnd, b.delivery_location, b.note, b.source, b.created_at, b.updated_at, c.name AS customer_name, c.contact, c.preferred_channel FROM bookings b JOIN customers c ON c.id = b.customer_id ORDER BY b.created_at DESC LIMIT 200`).all<Record<string, unknown>>();
   return json({ bookings: result.results ?? [] }, 200, corsHeaders);
+}
+
+async function listCustomers(request: Request, env: Env): Promise<Response> {
+  if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
+  if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
+  const result = await env.DB.prepare(`SELECT c.id, c.name, c.contact, c.preferred_channel, c.created_at, c.updated_at, COUNT(b.id) AS booking_count, MAX(b.created_at) AS last_booking_at FROM customers c LEFT JOIN bookings b ON b.customer_id = c.id GROUP BY c.id, c.name, c.contact, c.preferred_channel, c.created_at, c.updated_at ORDER BY COALESCE(MAX(b.created_at), c.updated_at) DESC LIMIT 200`).all<Record<string, unknown>>();
+  return json({ customers: result.results ?? [] }, 200, corsHeaders);
 }
 
 async function updateBookingStatus(request: Request, env: Env, bookingId: string): Promise<Response> {
   if (!env.DB) return json({ error: 'persistence_not_configured' }, 503, corsHeaders);
   if (!isAdmin(request, env)) return json({ error: 'unauthorized' }, 401, corsHeaders);
   const body = await parseBody(request);
-  const status = text(body?.status) as BookingStatus;
-  if (!allowedStatuses.includes(status)) return json({ error: 'invalid_status' }, 400, corsHeaders);
+  const rawStatus = text(body?.status);
+  const status = normalizeBookingStatus(rawStatus);
+  if (!status || !allowedStatuses.includes(status)) return json({ error: 'invalid_status' }, 400, corsHeaders);
 
   const booking = await env.DB.prepare('SELECT id, vehicle_id, from_at, to_at, status FROM bookings WHERE id = ? LIMIT 1')
     .bind(bookingId).first<{ id: string; vehicle_id: string; from_at: string; to_at: string; status: string }>();
@@ -105,7 +130,7 @@ async function updateBookingStatus(request: Request, env: Env, bookingId: string
   const now = new Date().toISOString();
   await env.DB.prepare('UPDATE bookings SET status = ?, updated_at = ? WHERE id = ?').bind(status, now, bookingId).run();
   await env.DB.prepare('INSERT INTO activity_log (id, entity_type, entity_id, action, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(crypto.randomUUID(), 'booking', bookingId, 'status_changed', JSON.stringify({ from: booking.status, to: status }), now).run();
+    .bind(crypto.randomUUID(), 'booking', bookingId, 'status_changed', JSON.stringify({ from: booking.status, to: status, requested: rawStatus }), now).run();
   return json({ bookingId, status, persisted: true }, 200, corsHeaders);
 }
 
@@ -123,12 +148,13 @@ export default {
       }
     }
 
-    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 2 : null, verifiedCatalog: vehicles.length }, 200, corsHeaders);
+    if (url.pathname === '/api/health') return json({ ok: true, service: 'uniq-smart-rent', d1: Boolean(env.DB), d1Ready: Boolean(env.DB), schemaVersion: env.DB ? 3 : null, verifiedCatalog: vehicles.length, publicFleetCount: businessInfo.publicFleetCount }, 200, corsHeaders);
     if (url.pathname === '/api/business' && request.method === 'GET') return json(businessInfo, 200, corsHeaders);
     if (url.pathname === '/api/vehicles' && request.method === 'GET') return json({ totalPublishedFleet: businessInfo.publicFleetCount, verifiedSubset: vehicles }, 200, corsHeaders);
     if (url.pathname === '/api/availability' && request.method === 'GET') return availability(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'GET') return listBookings(request, env);
     if (url.pathname === '/api/bookings' && request.method === 'POST') return createBooking(request, env);
+    if (url.pathname === '/api/customers' && request.method === 'GET') return listCustomers(request, env);
     const statusMatch = url.pathname.match(/^\/api\/bookings\/([^/]+)\/status$/);
     if (statusMatch && request.method === 'PATCH') return updateBookingStatus(request, env, decodeURIComponent(statusMatch[1] ?? ''));
     if (url.pathname.startsWith('/api/')) return json({ error: 'not_found' }, 404, corsHeaders);
