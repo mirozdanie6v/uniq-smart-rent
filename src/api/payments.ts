@@ -1,4 +1,5 @@
 export type PaymentProvider = 'vietqr' | 'vnpay' | 'momo' | 'zalopay' | 'sbp' | 'yookassa' | 'tbank';
+export type PaymentPurpose = 'booking' | 'balance' | 'extension';
 
 export type PaymentIntent = {
   id: string;
@@ -9,7 +10,9 @@ export type PaymentIntent = {
   amountVnd: number;
   totalVnd: number;
   alreadyPaidVnd: number;
+  remainingVnd: number;
   requestedPercent: 30 | 100;
+  purpose: PaymentPurpose;
   paymentReference: string;
   paymentUrl: string;
   qrPayload: string;
@@ -24,6 +27,20 @@ export type PaymentProviderInfo = {
   currency: 'VND' | 'RUB';
   credentialReady: boolean;
   checkoutMode: 'demo' | 'live-ready';
+};
+
+export type BookingExtensionResult = {
+  bookingId: string;
+  extensionId: string;
+  previousTo: string;
+  newTo: string;
+  additionalDays: number;
+  additionalAmountVnd: number;
+  totalVnd: number;
+  paidVnd: number;
+  remainingVnd: number;
+  paymentStatus: 'unpaid' | 'pending' | 'partially_paid' | 'paid';
+  persisted: boolean;
 };
 
 const json = async <T>(response: Response): Promise<T> => {
@@ -54,20 +71,28 @@ export async function updatePersistedBookingStatus(bookingId: string, status: 'c
   }));
 }
 
+export async function extendPersistedBooking(bookingId: string, newTo: string, actor: 'client' | 'employee' | 'owner' = 'client'): Promise<BookingExtensionResult> {
+  return json(await fetch(`/api/bookings/${encodeURIComponent(bookingId)}/extend`, {
+    method:'PATCH',
+    headers:{ 'content-type':'application/json', 'x-uniq-demo-role':actor },
+    body:JSON.stringify({ newTo, note:actor === 'client' ? 'Продление клиентом из MY UNIQ' : 'Продление сотрудником' }),
+  }));
+}
+
 export async function fetchPaymentProviders(): Promise<PaymentProviderInfo[]> {
   const data = await json<{ providers: PaymentProviderInfo[] }>(await fetch('/api/payments/providers', { cache: 'no-store' }));
   return data.providers;
 }
 
-export async function createPaymentIntent(input: { bookingId: string; provider: PaymentProvider; prepaymentPercent: 30 | 100 }): Promise<PaymentIntent> {
+export async function createPaymentIntent(input: { bookingId: string; provider: PaymentProvider; prepaymentPercent: 30 | 100; purpose?: PaymentPurpose }): Promise<PaymentIntent> {
   const data = await json<{ payment: PaymentIntent }>(await fetch('/api/payments/intents', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', 'x-uniq-demo-role':'client' },
     body: JSON.stringify(input),
   }));
   return data.payment;
 }
 
-export async function confirmDemoPayment(paymentId: string): Promise<{ paymentId: string; status: 'paid'; bookingPaidVnd: number; bookingPaymentStatus: string }> {
-  return json(await fetch(`/api/payments/${encodeURIComponent(paymentId)}/demo-confirm`, { method: 'POST' }));
+export async function confirmDemoPayment(paymentId: string): Promise<{ paymentId: string; bookingId: string; status: 'paid'; amountVnd: number; bookingPaidVnd: number; bookingTotalVnd: number; bookingPaymentStatus: string }> {
+  return json(await fetch(`/api/payments/${encodeURIComponent(paymentId)}/demo-confirm`, { method: 'POST', headers:{ 'x-uniq-demo-role':'client' } }));
 }
