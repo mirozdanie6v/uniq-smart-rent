@@ -22,6 +22,9 @@ def assert_lazy_images(page, selector, limit=6):
         handle=img.element_handle()
         page.wait_for_function('(node)=>node.complete && node.naturalWidth>0', arg=handle, timeout=5000)
 
+def isolate_third_party_maps(page):
+    page.route('https://www.google.com/maps**', lambda route: route.fulfill(status=204, body=''))
+
 server=subprocess.Popen(['python','-m','http.server','8764','--bind','127.0.0.1','--directory',str(dist)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 results=[]
 try:
@@ -34,6 +37,7 @@ try:
         for w,h in [(320,568),(375,667),(390,844),(430,932),(768,1024),(1024,1366),(1440,900),(1920,1080)]:
             ctx=browser.new_context(viewport={"width":w,"height":h},locale='ru-RU')
             page=ctx.new_page(); errors=[]
+            isolate_third_party_maps(page)
             page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
             page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
             assert page.locator('.brand img').count()==1
@@ -47,15 +51,15 @@ try:
             if w==375:
                 language=page.locator('.topbar .header-language-switcher select')
                 checks=[
-                    ('vi','Toàn bộ đội xe UNIQ','vi'),
-                    ('en','The entire UNIQ fleet','en'),
-                    ('ko','UNIQ 전체 차량','ko'),
-                    ('zh','UNIQ 全部车队','zh-CN'),
-                    ('ru','Весь парк UNIQ','ru'),
+                    ('vi','Thuê xe máy và ô tô tại Nha Trang','vi'),
+                    ('en','Rent bikes and cars in Nha Trang','en'),
+                    ('ko','나트랑 오토바이·자동차 렌트','ko'),
+                    ('zh','芽庄摩托车和汽车租赁','zh-CN'),
+                    ('ru','Аренда байков и авто в Нячанге','ru'),
                 ]
                 for code,text,html_lang in checks:
                     language.select_option(code)
-                    page.wait_for_timeout(30)
+                    page.wait_for_timeout(60)
                     assert page.get_by_text(text,exact=False).count()>=1,(code,text)
                     assert page.evaluate('document.documentElement.lang')==html_lang
                 results.append({"scenario":"languages","languages":["ru","vi","en","ko","zh"],"switcher":"header"})
@@ -71,6 +75,7 @@ try:
 
         ctx=browser.new_context(viewport={"width":1440,"height":900},locale='ru-RU')
         page=ctx.new_page(); errors=[]
+        isolate_third_party_maps(page)
         page.on('console',lambda msg: errors.append(msg.text) if msg.type=='error' else None)
         page.goto('http://127.0.0.1:8764/',wait_until='networkidle')
         page.locator('[data-go="catalog"]').last.click(); page.wait_for_timeout(80)

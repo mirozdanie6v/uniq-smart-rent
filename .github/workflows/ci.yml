@@ -29,6 +29,8 @@ jobs:
           python -m playwright install chromium
       - name: Browser E2E
         run: python tests/e2e.py
+      - name: Production UI smoke
+        run: python tests/prod-ui-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: uniq-smart-rent-e2e
