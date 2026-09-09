@@ -118,24 +118,38 @@ Delivered and verified:
 - Stage 10 browser acceptance verified on mobile 390×844 and desktop 1440×900, including payment-text spacing and no horizontal overflow;
 - production schemaVersion 10, marketingCampaigns/promotionsMarketing/marketingSegments health flags and D1 marketing API verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 11 — Analytics
+### ✅ Stage 11 — Analytics
 Dashboard, charts, funnel, sources, vehicle profitability.
 
-Acceptance target:
-- owner has a dedicated Analytics section;
-- Today / 7 days / 30 days and branch filters work;
-- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion are visible;
-- revenue/bookings trend is rendered without a chart library;
-- funnel covers views → vehicle opens → booking start → payment → paid;
-- sources compare Telegram Mini App, website, office, Google, Instagram, partners and QR;
-- North and Center branches are compared;
-- vehicle profitability ranks models by revenue, rentals, utilization and idle days;
-- D1 contains analytics funnel telemetry and 20 realistic DEMO bookings in multiple statuses;
-- seeded business requests are visible to Employee/Owner and hidden from the Client personal cabinet;
-- mobile and desktop browser acceptance passes before deployment.
+Delivered and verified:
+- dedicated Owner Analytics section;
+- Today / 7 days / 30 days and branch filters;
+- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion KPIs;
+- revenue/bookings trend rendered without a chart library;
+- funnel from views → vehicle opens → booking start → payment → paid;
+- source comparison for Telegram Mini App, website, office, Google, Instagram, partners and QR;
+- North and Center branch comparison;
+- vehicle profitability ranking by revenue, rentals, utilization and idle days;
+- D1 analytics funnel telemetry plus 20 realistic DEMO bookings in multiple statuses;
+- business DEMO requests visible to Employee/Owner and hidden from Client personal cabinet;
+- mobile 390×844 and desktop 1440×900 browser acceptance passed;
+- production schemaVersion 11 and D1 analytics API verified on uniq-smart-rent.viiversion.com.
 
-### ⏳ Stage 12 — AI Owner
+### 🚧 Stage 12 — AI Owner
 Questions over business data + demonstration actions.
+
+Operational prerequisites delivered and production-verified before AI Owner implementation:
+- owner can create additional branches dynamically;
+- employees, fleet, calendar and transfers work with dynamically created branches;
+- client can extend a persisted confirmed/active rental with availability conflict validation;
+- extension recalculates booking total and creates an exact balance due;
+- client can pay the remaining balance after a 30% prepayment;
+- fully paid booking that is extended becomes partially paid only for the new balance;
+- only one active pending payment intent is kept per booking and repeated payment confirmation is idempotent;
+- overpayment and payment/extension attempts on closed bookings are guarded;
+- the complete 89-position public catalog is synchronized into the operational D1 model;
+- D1 schemaVersion 12 and operational fleet count >= 89 verified in production;
+- full API business-scenario suite and desktop/mobile browser acceptance passed.
 
 ### ⏳ Stage 13 — Final end-to-end scenario
 Client → QR payment → employee → handover → owner → analytics → return.
