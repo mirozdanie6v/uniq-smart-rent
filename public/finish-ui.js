@@ -209,14 +209,19 @@
     const request = requests().find(item => String(item.id) === String(requestId)); if (!request) return;
     const data = payments();
     data[request.id] = {status:'paid',paidAt:new Date().toISOString(),amount:Number(request.estimate||request.estimatedTotalVnd)||0,method:document.querySelector('#finishPaymentMethod')?.value||'demo'};
-    savePayments(data); document.querySelector('#finishPaymentModal')?.remove(); refresh();
+    savePayments(data); document.querySelector('#finishPaymentModal')?.remove(); scheduleRefresh(0);
   }
 
   let applying = false;
+  let refreshTimer = 0;
   function refresh() {
     if (applying) return; applying = true;
     try { enhanceHero(); ensureOwnerNav(); enhanceRequestCards(); enhanceOwnerClients(); }
     finally { applying = false; }
+  }
+  function scheduleRefresh(delay = 0) {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refresh, delay);
   }
 
   document.addEventListener('click', event => {
@@ -226,10 +231,13 @@
     else if (target.dataset.confirmPayment) { event.preventDefault(); confirmPayment(target.dataset.confirmPayment); }
     else if (target.hasAttribute('data-finish-close')) target.closest('.modal-bg')?.remove();
   }, true);
-  document.addEventListener('click', event => { if (event.target?.classList?.contains('finish-modal-bg')) event.target.remove(); });
-  document.addEventListener('change', event => { if (event.target?.id === 'uniqLanguageSelect') setTimeout(refresh,30); }, true);
-  const observer = new MutationObserver(() => queueMicrotask(refresh));
+  document.addEventListener('click', event => {
+    if (event.target?.classList?.contains('finish-modal-bg')) event.target.remove();
+    if (event.target.closest?.('[data-role],[data-go]')) scheduleRefresh(0);
+  }, true);
+  document.addEventListener('change', event => { if (event.target?.id === 'uniqLanguageSelect') scheduleRefresh(30); }, true);
+  const observer = new MutationObserver(() => scheduleRefresh(12));
   observer.observe(document.body,{childList:true,subtree:true});
-  document.addEventListener('DOMContentLoaded',refresh);
-  setTimeout(refresh,0);
+  document.addEventListener('DOMContentLoaded',() => scheduleRefresh(0));
+  scheduleRefresh(0);
 })();
