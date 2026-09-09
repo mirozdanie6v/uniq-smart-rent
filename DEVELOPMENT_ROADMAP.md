@@ -87,7 +87,7 @@ Maintenance, repairs, inspections, expenses.
 
 Delivered and verified:
 - fixed Employee → Ready for handover flow: the matching booking is created/synchronized in D1 when necessary, confirmed, and client test payment becomes available;
-- client payment selector now displays seven provider brand marks: VietQR, VNPAY, MoMo, ZaloPay, SBP, YooKassa and T-Bank;
+- client payment selector displays seven provider brand marks: VietQR, VNPAY, MoMo, ZaloPay, SBP, YooKassa and T-Bank;
 - owner Service section with maintenance, repair, inspection, cleaning and other work types;
 - mileage, next-service mileage, supplier, notes, cost and inspection checklist;
 - service start moves the vehicle to service state and creates an availability block;
@@ -118,24 +118,40 @@ Delivered and verified:
 - Stage 10 browser acceptance verified on mobile 390×844 and desktop 1440×900, including payment-text spacing and no horizontal overflow;
 - production schemaVersion 10, marketingCampaigns/promotionsMarketing/marketingSegments health flags and D1 marketing API verified on uniq-smart-rent.viiversion.com.
 
-### 🚧 Stage 11 — Analytics
+### ✅ Stage 11 — Analytics
 Dashboard, charts, funnel, sources, vehicle profitability.
 
-Acceptance target:
-- owner has a dedicated Analytics section;
-- Today / 7 days / 30 days and branch filters work;
-- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion are visible;
-- revenue/bookings trend is rendered without a chart library;
-- funnel covers views → vehicle opens → booking start → payment → paid;
-- sources compare Telegram Mini App, website, office, Google, Instagram, partners and QR;
-- North and Center branches are compared;
-- vehicle profitability ranks models by revenue, rentals, utilization and idle days;
-- D1 contains analytics funnel telemetry and 20 realistic DEMO bookings in multiple statuses;
-- seeded business requests are visible to Employee/Owner and hidden from the Client personal cabinet;
-- mobile and desktop browser acceptance passes before deployment.
+Delivered and verified:
+- dedicated owner Analytics section;
+- Today / 7 days / 30 days and branch filters;
+- revenue, bookings, average check, utilization, repeat share, new customers and payment conversion;
+- revenue/bookings trend without a chart library;
+- funnel: views → vehicle opens → booking start → payment → paid;
+- source comparison for Telegram Mini App, website, office, Google, Instagram, partners and QR;
+- North and Center branch comparison;
+- vehicle profitability by revenue, rentals, utilization and idle days;
+- D1 analytics funnel telemetry and realistic DEMO bookings in multiple statuses;
+- business requests visible to Employee/Owner and hidden from Client personal cabinet;
+- mobile and desktop browser acceptance;
+- production Analytics API and Stage 11 UI verified.
 
-### ⏳ Stage 12 — AI Owner
+### 🚧 Stage 12 — AI Owner
 Questions over business data + demonstration actions.
+
+Operational corrections completed before AI implementation:
+- owner can add new branches dynamically;
+- employees, vehicles and transfers support dynamic branch IDs;
+- full public 89-vehicle catalog is synchronized into the operational D1 layer;
+- client can extend an eligible booking/rental with collision validation;
+- extension recalculates booking total and creates the exact additional balance;
+- client can pay the remaining balance after a prepayment;
+- payment intents supersede stale pending intents and confirmation is idempotent;
+- overpayment is blocked and closed bookings cannot receive new payments/extensions;
+- owner Analytics was regression-protected during the operational merge;
+- on mobile all ten owner sections are now visible in a fixed 5×2 navigation grid, so Analytics is never hidden behind horizontal scrolling;
+- merged Stage 11 + operational Stage 12 regression passed on desktop and mobile before production deployment.
+
+AI Owner itself remains current and is not marked complete until questions over business data and demonstration actions are implemented and verified.
 
 ### ⏳ Stage 13 — Final end-to-end scenario
 Client → QR payment → employee → handover → owner → analytics → return.
