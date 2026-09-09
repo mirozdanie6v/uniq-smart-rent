@@ -117,7 +117,11 @@ try:
         assert page.locator('a[href="https://t.me/RikRent1"]').count()==1
         assert page.locator('a[href="https://zalo.me/84372112370"]').count()==1
         assert page.locator('.map-panel iframe').count()==1
-        page.locator('[data-role="owner"]').click(); page.wait_for_timeout(80)
+        owner=page.locator('[data-role="owner"]')
+        owner_box=owner.bounding_box(); assert owner_box
+        owner_hit=page.evaluate("([x,y])=>document.elementFromPoint(x,y)?.closest('[data-role=\"owner\"]')?.dataset.role||null",[owner_box['x']+owner_box['width']/2,owner_box['y']+owner_box['height']/2])
+        assert owner_hit=='owner',owner_hit
+        owner.dispatch_event('click'); page.wait_for_timeout(80)
         assert page.locator('text=Пульс бизнеса').count()>=1
         assert page.locator('text=Последние клиенты').count()>=1
         assert page.locator('.topbar .header-language-switcher select').count()==1
