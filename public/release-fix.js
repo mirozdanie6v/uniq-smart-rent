@@ -150,7 +150,7 @@
   let timer=0,applying=false;
   function refresh(){
     if(applying)return;applying=true;
-    try{applyDates();enhanceFleetCount();enhanceCards();ensureAnalyticsNav();decoratePaymentStates();if(analyticsOpen)renderAnalytics()}finally{applying=false}
+    try{applyDates();enhanceFleetCount();enhanceCards();ensureAnalyticsNav();decoratePaymentStates();if(analyticsOpen&&!document.querySelector('main[data-release-analytics="true"]'))renderAnalytics()}finally{applying=false}
   }
   function schedule(delay=16){clearTimeout(timer);timer=setTimeout(refresh,delay)}
 
