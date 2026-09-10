@@ -54,9 +54,10 @@ try{
   await timeline.waitFor();
   if(!(await timeline.isVisible())) throw new Error('owner rental history timeline is not visible');
   const box=await timeline.boundingBox();
-  if(!box || box.y<0 || box.y>720) throw new Error('owner rental history is not in mobile viewport');
+  if(!box || box.y<0 || box.y>720) throw new Error('owner rental history is not in mobile viewport: '+JSON.stringify(box));
   await focused.locator('[data-back-customer-card]').click();
-  await mobile.locator('[data-owner-rental-history-panel].open:not(.history-focused)').waitFor();
+  await mobile.locator('.crm-detail.open').waitFor();
+  if(await mobile.locator('[data-owner-rental-history-panel]').count()) throw new Error('history overlay did not close');
   const overflow=await mobile.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+2);
   if(overflow) throw new Error('mobile horizontal overflow');
 
