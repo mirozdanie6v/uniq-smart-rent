@@ -1,0 +1,69 @@
+name: UX Request and Vehicle Detail QA
+
+on:
+  push:
+    branches:
+      - refactor/react-typescript-vite-demo
+    paths:
+      - '.github/workflows/ux-request-vehicle-qa.yml'
+      - 'scripts/ux_request_vehicle_patch.py'
+      - 'src/features/requests/**'
+      - 'src/features/fleet/VehicleModelDetails.tsx'
+      - 'src/features/fleet/vehicle-model-details.css'
+      - 'tests/ux_request_vehicle_e2e.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refactor/react-typescript-vite-demo
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Apply UX patch
+        run: python scripts/ux_request_vehicle_patch.py
+      - name: Full project check
+        run: |
+          npm install
+          npm run check
+      - name: Install Playwright
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Start preview
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 >/tmp/uniq-ux-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/uniq-ux-preview.log
+          exit 1
+      - name: Browser acceptance
+        run: node tests/ux_request_vehicle_e2e.mjs
+      - name: Source acceptance
+        run: |
+          ! grep -q "Связались" src/features/prototype/PrototypeApp.tsx
+          ! grep -q "Подробнее о модели ↗" src/features/prototype/PrototypeApp.tsx
+          grep -q "Техника для Нячанга — бронь за пару минут" src/features/prototype/PrototypeApp.tsx
+          grep -q "data-request-card" src/features/prototype/PrototypeApp.tsx
+          grep -q "data-request-client" src/features/prototype/PrototypeApp.tsx
+          grep -q "VehicleModelDetails" src/features/prototype/PrototypeApp.tsx
+      - name: Commit verified UX integration
+        run: |
+          if git diff --quiet; then
+            echo 'UX patch already committed'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/features/prototype/PrototypeApp.tsx
+          git commit -m 'UX: clickable requests clients and full vehicle details'
+          git push origin HEAD:refactor/react-typescript-vite-demo
