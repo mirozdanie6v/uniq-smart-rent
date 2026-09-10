@@ -150,8 +150,9 @@ function Hero({ label, title, text, aside }: { label: string; title: string; tex
   return <section className="hero"><div><span className="eyebrow">{label}</span><h1>{title}</h1><p>{text}</p></div>{aside}</section>;
 }
 
-function Metric({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
-  return <div className="metric"><span>{label}</span><b>{value}</b>{sub ? <small>{sub}</small> : null}</div>;
+function Metric({ label, value, sub, onClick, target }: { label: string; value: React.ReactNode; sub?: string; onClick?: () => void; target?: string }) {
+  const content = <><span>{label}</span><b>{value}</b>{sub ? <small>{sub}</small> : null}</>;
+  return onClick ? <button type="button" className="metric metric-link" data-metric-target={target} onClick={onClick}>{content}</button> : <div className="metric">{content}</div>;
 }
 
 function VehiclePhoto({ vehicle, index = 0 }: { vehicle: FleetVehicle; index?: number }) {
@@ -449,7 +450,7 @@ export function PrototypeApp() {
   function employeeDashboard() {
     const open = requests.filter((item) => !['completed','cancelled'].includes(item.status));
     const ready = Object.values(fleetStates).filter((item) => item === 'ready').length;
-    return <><Hero label="СОТРУДНИК" title="Рабочий стол сотрудника." text="Заявки, парк и выдачи в одном мобильном интерфейсе."/><section className="metrics"><Metric label="Открытые заявки" value={open.length}/><Metric label="Парк" value={operationalFleet.length}/><Metric label="Готовы к выдаче" value={ready}/></section><section className="section"><div className="section-head"><div><span className="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button className="text" data-go="requests" onClick={() => go('requests')}>Все →</button></div>{open.length ? <div className="request-list">{open.slice(-5).reverse().map(requestCard)}</div> : <div className="empty">Новых заявок нет</div>}</section></>;
+    return <><Hero label="СОТРУДНИК" title="Рабочий стол сотрудника." text="Заявки, парк и выдачи в одном мобильном интерфейсе."/><section className="metrics"><Metric label="Открытые заявки" value={open.length} target="employee-requests" onClick={() => go('requests')}/><Metric label="Парк" value={operationalFleet.length} target="employee-fleet" onClick={() => go('fleet')}/><Metric label="Готовы к выдаче" value={ready} target="employee-handover" onClick={() => go('handover')}/></section><section className="section"><div className="section-head"><div><span className="eyebrow">ОЧЕРЕДЬ</span><h2>Новые заявки</h2></div><button className="text" data-go="requests" onClick={() => go('requests')}>Все →</button></div>{open.length ? <div className="request-list">{open.slice(-5).reverse().map(requestCard)}</div> : <div className="empty">Новых заявок нет</div>}</section></>;
   }
 
   function employeeFleet() {
@@ -466,7 +467,7 @@ export function PrototypeApp() {
     const open = requests.filter((item) => !['completed','cancelled'].includes(item.status)).length;
     const estimate = requests.filter((item) => item.status !== 'cancelled').reduce((sum, item) => sum + (item.estimate || 0), 0);
     const statuses = ['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[];
-    return <><Hero label="ВЛАДЕЛЕЦ" title="Пульс бизнеса — со смартфона." text="Ключевые показатели по парку и заявкам в одном экране."/><section className="metrics owner-metrics"><Metric label="Парк" value={fleet.length} sub="единиц техники"/><Metric label="Открытые заявки" value={open}/><Metric label="Подтверждены" value={confirmed}/><Metric label="Потенциал заявок" value={money(estimate)} sub="по текущим тарифам"/></section><section className="panel"><span className="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2><div className="status-bars">{statuses.map((status) => { const count = requests.filter((item) => item.status === status).length; return <div key={status}><span>{statusText(status)}</span><b>{count}</b><i style={{ width: `${requests.length ? Math.max(4, count / requests.length * 100) : 4}%` }}></i></div>; })}</div></section></>;
+    return <><Hero label="ВЛАДЕЛЕЦ" title="Пульс бизнеса — со смартфона." text="Ключевые показатели по парку и заявкам в одном экране."/><section className="metrics owner-metrics"><Metric label="Парк" value={fleet.length} sub="единиц техники" target="owner-fleet" onClick={() => go('fleet')}/><Metric label="Открытые заявки" value={open} target="owner-requests" onClick={() => go('requests')}/><Metric label="Подтверждены" value={confirmed} target="owner-calendar" onClick={() => go('calendar')}/><Metric label="Потенциал заявок" value={money(estimate)} sub="по текущим тарифам" target="owner-analytics" onClick={() => go('analytics')}/></section><section className="panel"><span className="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2><div className="status-bars">{statuses.map((status) => { const count = requests.filter((item) => item.status === status).length; return <div key={status}><span>{statusText(status)}</span><b>{count}</b><i style={{ width: `${requests.length ? Math.max(4, count / requests.length * 100) : 4}%` }}></i></div>; })}</div></section></>;
   }
 
   function ownerFleet() {

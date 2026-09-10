@@ -215,6 +215,7 @@ export function OwnerCRM({ requests, fleet }: { requests: RequestLike[]; fleet: 
   const [segment, setSegment] = useState<'all' | CrmSegment>('all');
   const [language, setLanguage] = useState<'all' | Customer['language']>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [historyFocusId, setHistoryFocusId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, Partial<Customer>>>(() => loadOverrides());
 
   const customers = useMemo(() => {
@@ -254,6 +255,21 @@ export function OwnerCRM({ requests, fleet }: { requests: RequestLike[]; fleet: 
 
   const timeline = selected ? timelineForCustomer(selected, requests, fleet) : [];
 
+  function openCustomer(customerId: string) {
+    setHistoryFocusId(null);
+    setSelectedId(customerId);
+  }
+
+  function openRentalHistory(customerId: string) {
+    setSelectedId(customerId);
+    setHistoryFocusId(customerId);
+  }
+
+  function closeCustomer() {
+    setSelectedId(null);
+    setHistoryFocusId(null);
+  }
+
   return <div className="crm-page">
     <section className="crm-hero">
       <div><span className="eyebrow">CRM · КЛИЕНТЫ</span><h1>Клиентская база UNIQ.</h1><p>История обращений и аренд, сегменты и ценность клиента — в одном мобильном экране владельца.</p></div>
@@ -281,17 +297,17 @@ export function OwnerCRM({ requests, fleet }: { requests: RequestLike[]; fleet: 
 
     <section className="crm-layout">
       <div className="crm-list">
-        {filtered.map((customer) => <button className={`crm-row ${selectedId === customer.id ? 'selected' : ''}`} key={customer.id} onClick={() => setSelectedId(customer.id)}>
+        {filtered.map((customer) => <article role="button" tabIndex={0} className={`crm-row ${selectedId === customer.id ? 'selected' : ''}`} key={customer.id} onClick={() => openCustomer(customer.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openCustomer(customer.id); } }}>
           <div className="crm-avatar">{customer.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div>
           <div className="crm-main"><div><b>{customer.name}</b><span className={`crm-segment ${customer.segment}`}>{segmentTitle(customer.segment)}</span></div><small>{customer.country} · {customer.language} · {customer.source}</small><div className="crm-tags">{customer.tags.slice(0, 3).map((tag) => <i key={tag}>{tag}</i>)}</div></div>
-          <div className="crm-value"><b>{formatMoney(customer.lifetimeValueVnd)}</b><small>{customer.rentalCount} {customer.rentalCount === 1 ? 'аренда' : 'аренд'}</small></div>
+          <div className="crm-value"><b>{formatMoney(customer.lifetimeValueVnd)}</b><span role="button" tabIndex={0} className="crm-history-link" data-rental-history={customer.id} onClick={(event) => { event.stopPropagation(); openRentalHistory(customer.id); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); event.stopPropagation(); openRentalHistory(customer.id); } }}>{customer.rentalCount} {customer.rentalCount === 1 ? 'аренда' : 'аренд'} · история</span></div>
           <span className="crm-arrow">›</span>
-        </button>)}
+        </article>)}
       </div>
 
       <aside className={`crm-detail ${selected ? 'open' : ''}`}>
         {selected ? <>
-          <button className="crm-close" aria-label="Закрыть карточку клиента" onClick={() => setSelectedId(null)}>×</button>
+          <button className="crm-close" aria-label="Закрыть карточку клиента" onClick={closeCustomer}>×</button>
           <div className="crm-profile-head"><div className="crm-avatar large">{selected.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase()}</div><div><span className="eyebrow">КАРТОЧКА КЛИЕНТА</span><h2>{selected.name}</h2><p>{selected.country} · {selected.language}</p></div></div>
           <div className="crm-profile-stats"><article><span>Аренд</span><b>{selected.rentalCount}</b></article><article><span>Выручка</span><b>{formatMoney(selected.lifetimeValueVnd)}</b></article><article><span>Последняя</span><b>{formatDate(selected.lastRental)}</b></article></div>
           <div className="crm-contact-grid"><div><span>Телефон</span><b>{selected.phone}</b></div><div><span>Telegram</span><b>{selected.telegram ?? '—'}</b></div><div><span>Zalo</span><b>{selected.zalo ?? '—'}</b></div><div><span>Канал</span><b>{selected.preferredChannel}</b></div><div><span>Источник</span><b>{selected.source}</b></div><div><span>Интерес</span><b>{selected.preferredVehicle}</b></div></div>
@@ -301,6 +317,11 @@ export function OwnerCRM({ requests, fleet }: { requests: RequestLike[]; fleet: 
           <div className="crm-timeline">{timeline.map((item) => <article key={item.id} className={item.tone}><i></i><div><span>{formatDate(item.date)}</span><b>{item.title}</b><p>{item.text}</p>{item.amount ? <strong>{formatMoney(item.amount)}</strong> : null}</div></article>)}</div>
         </> : <div className="crm-detail-empty"><span>CRM</span><b>Выберите клиента</b><p>Откроется карточка с контактами, сегментом, выручкой и историей.</p></div>}
       </aside>
+      {selected && historyFocusId === selected.id ? <section className="crm-history-overlay history-focused" data-owner-rental-history-panel>
+        <header className="crm-history-overlay-head" data-rental-history-focus><div><span className="eyebrow">ИСТОРИЯ АРЕНД</span><h2>{selected.name}</h2><p>{selected.country} · {selected.language} · {selected.rentalCount} {selected.rentalCount === 1 ? 'аренда' : 'аренд'}</p></div><button type="button" className="crm-history-overlay-close" aria-label="Закрыть историю" onClick={closeCustomer}>×</button></header>
+        <button type="button" className="secondary crm-history-back" data-back-customer-card onClick={() => setHistoryFocusId(null)}>← Карточка клиента</button>
+        <div className="crm-timeline crm-history-overlay-timeline" data-owner-rental-history>{timeline.map((item) => <article key={item.id} className={item.tone}><i></i><div><span>{formatDate(item.date)}</span><b>{item.title}</b><p>{item.text}</p>{item.amount ? <strong>{formatMoney(item.amount)}</strong> : null}</div></article>)}</div>
+      </section> : null}
     </section>
   </div>;
 }

@@ -196,3 +196,17 @@ test('stage 12 operational expansion contracts are present',async()=>{
   assert.ok(app.includes("requestKey = 'uniq-demo-requests-v4-stage12'"));
   assert.ok(worker.includes('schemaVersion: env.DB ? 12 : null'));
 });
+
+
+test('final client hero and clickable dashboard cards contracts',async()=>{
+  const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
+  const crm=await readFile(new URL('../src/features/crm/OwnerCRM.tsx',import.meta.url),'utf8');
+  assert.ok(app.includes('Весь парк UNIQ — прямо в Telegram.'));
+  assert.ok(app.includes('Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.'));
+  assert.ok(app.includes('data-metric-target'));
+  assert.ok(app.includes('employee-handover'));
+  assert.ok(app.includes('owner-analytics'));
+  assert.ok(crm.includes('data-rental-history'));
+  assert.ok(crm.includes('data-owner-rental-history'));
+  assert.ok(crm.includes('crm-history-overlay'));
+});
