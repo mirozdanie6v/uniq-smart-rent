@@ -13,9 +13,12 @@ import './features/analytics/owner-analytics.css';
 import './features/analytics/owner-nav-visibility.css';
 import './review-polish.css';
 import { App } from './app/App';
+import { installTelegramContactAutofill } from './integrations/telegram/contactAutofill';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('React root not found');
+
+installTelegramContactAutofill();
 
 createRoot(rootElement).render(
   <React.StrictMode>
