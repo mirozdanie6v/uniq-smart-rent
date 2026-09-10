@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 
 p = Path('src/features/prototype/PrototypeApp.tsx')
 text = p.read_text(encoding='utf-8')
@@ -13,9 +14,10 @@ def once(old: str, new: str, label: str):
 
 once("import { OwnerAnalytics } from '../analytics/OwnerAnalytics';", "import { OwnerAnalytics } from '../analytics/OwnerAnalytics';\nimport { RequestDetailModal } from '../requests/RequestDetailModal';\nimport { VehicleModelDetails } from '../fleet/VehicleModelDetails';", 'imports')
 
+# Keep the legacy internal union readable for old session data, but remove the status from all current data and controls.
 text = text.replace("status:'contacted'", "status:'new'")
 text = text.replace("contacted:'Связались'", "contacted:'Новая'")
-text = text.replace("['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled']", "['new','confirmed','issued','active','return_due','returned','completed','cancelled']")
+text = re.sub(r",\s*'contacted'", "", text)
 
 once("  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);", "  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');\n  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);\n  const [requestDetailFocus, setRequestDetailFocus] = useState<'request' | 'client'>('request');\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);", 'detail state')
 
@@ -35,9 +37,8 @@ once("    {extendingRequest && extendingVehicle ? <ExtensionModal request={exten
 
 p.write_text(text, encoding='utf-8')
 
-# Guard: the removed visible status must not exist in the current UI source.
 if 'Связались' in text:
     raise SystemExit('visible Связались status still present')
-if "['new','contacted','confirmed'" in text:
+if re.search(r"\[[^\]]*'contacted'", text):
     raise SystemExit('contacted still selectable')
 print('UX request/vehicle patch applied')
