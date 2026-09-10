@@ -43,14 +43,9 @@ try{
   await mobile.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await mobile.locator('[data-role="owner"]').click();
   await mobile.locator('[data-go="customers"]').last().click();
-  const row=mobile.locator('.crm-row').first();
-  await row.waitFor();
-  await row.click();
-  const panel=mobile.locator('[data-owner-rental-history-panel].open');
-  await panel.waitFor();
-  const historyButton=panel.locator('[data-open-rental-history]');
-  await historyButton.waitFor();
-  await historyButton.click();
+  const historyAction=mobile.locator('[data-rental-history]').first();
+  await historyAction.waitFor();
+  await historyAction.click();
   const focused=mobile.locator('[data-owner-rental-history-panel].history-focused');
   await focused.waitFor();
   const focusHead=focused.locator('[data-rental-history-focus]');
@@ -66,7 +61,7 @@ try{
   if(overflow) throw new Error('mobile horizontal overflow');
 
   await browser.close();
-  console.log('Final client hero + clickable cards + dedicated owner rental history acceptance passed');
+  console.log('Final client hero + clickable cards + direct owner rental history acceptance passed');
 } finally {
   preview.kill('SIGTERM');
 }
