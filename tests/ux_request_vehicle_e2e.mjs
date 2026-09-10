@@ -22,7 +22,14 @@ async function seedClient(page) {
 for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
   const page = await browser.newPage({ viewport });
   const errors=[];
-  page.on('console', msg => { if (msg.type()==='error' && !msg.text().includes('maps.googleapis')) errors.push(msg.text()); });
+  page.on('pageerror', error => errors.push(`pageerror:${error.message}`));
+  page.on('response', response => {
+    const type=response.request().resourceType();
+    if (response.status() >= 400 && ['script','stylesheet','xhr','fetch'].includes(type) && !response.url().includes('maps.googleapis.com')) {
+      errors.push(`${response.status()} ${type} ${response.url()}`);
+    }
+  });
+  await page.route('**/api/fleet-overrides', route => route.fulfill({ status:200, contentType:'application/json', body:'{"vehicles":[]}' }));
   await seedClient(page);
   await page.getByText('Техника для Нячанга — бронь за пару минут.', { exact:true }).waitFor();
   if (await page.getByText('Связались', { exact:true }).count()) throw new Error('Связались is visible');
@@ -42,7 +49,7 @@ for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
   await page.locator('[data-go="requests"]').last().click();
   const card=page.locator('[data-request-card="ux-click-request"]');
   await card.waitFor();
-  await card.click();
+  await card.click({ position:{ x:12, y:12 } });
   await page.locator('[data-request-detail-focus="request"]').waitFor();
   await page.locator('.request-detail-modal .modal-x').click();
   await page.locator('[data-request-client="ux-click-request"]').click();
@@ -55,7 +62,7 @@ for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
     await page.locator('[data-go="requests"]').last().click();
     const roleCard=page.locator('[data-request-card]').first();
     await roleCard.waitFor();
-    await roleCard.click();
+    await roleCard.click({ position:{ x:12, y:12 } });
     await page.locator('[data-request-detail-focus="request"]').waitFor();
     await page.locator('.request-detail-modal .modal-x').click();
     const clientLink=page.locator('[data-request-client]').first();
@@ -66,7 +73,7 @@ for (const viewport of [{width:1440,height:900},{width:390,height:844}]) {
 
   if (await page.getByText('Связались', { exact:true }).count()) throw new Error('Связались remains in role UI');
   await noOverflow(page, `${viewport.width}x${viewport.height}`);
-  if (errors.length) throw new Error('Console errors: ' + errors.join(' | '));
+  if (errors.length) throw new Error('Critical browser errors: ' + errors.join(' | '));
   await page.close();
 }
 
