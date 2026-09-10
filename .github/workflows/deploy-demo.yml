@@ -1,4 +1,4 @@
-name: Deploy UNIQ demo
+name: Validate UNIQ demo package
 on:
   workflow_dispatch:
   push:
@@ -6,11 +6,8 @@ on:
       - refactor/react-typescript-vite-demo
 permissions:
   contents: read
-concurrency:
-  group: uniq-smart-rent-demo
-  cancel-in-progress: true
 jobs:
-  deploy:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,8 +19,7 @@ jobs:
         run: npm run check
       - name: Validate demo Worker bundle
         run: npx wrangler deploy --dry-run --config wrangler.demo.jsonc --outdir .wrangler-demo-dry-run
-      - name: Deploy demo Worker and custom domain
-        run: npx wrangler deploy --config wrangler.demo.jsonc
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deployment routing note
+        run: |
+          echo 'Demo package validated.'
+          echo 'uniq-smart-rent-demo.viiversion.com is deployed by the authorized VIIVERSION runner in mirozdanie6v/rusinfocenter.'
