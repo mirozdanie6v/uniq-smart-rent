@@ -43,22 +43,30 @@ try{
   await mobile.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await mobile.locator('[data-role="owner"]').click();
   await mobile.locator('[data-go="customers"]').last().click();
-  const historyShortcut=mobile.locator('[data-rental-history]').first();
-  await historyShortcut.waitFor();
-  await historyShortcut.click();
+  const row=mobile.locator('.crm-row').first();
+  await row.waitFor();
+  await row.click();
   const panel=mobile.locator('[data-owner-rental-history-panel].open');
   await panel.waitFor();
-  await wait(250);
-  const timeline=panel.locator('[data-owner-rental-history]');
+  const historyButton=panel.locator('[data-open-rental-history]');
+  await historyButton.waitFor();
+  await historyButton.click();
+  const focused=mobile.locator('[data-owner-rental-history-panel].history-focused');
+  await focused.waitFor();
+  const focusHead=focused.locator('[data-rental-history-focus]');
+  const timeline=focused.locator('[data-owner-rental-history]');
+  await focusHead.waitFor();
   await timeline.waitFor();
   if(!(await timeline.isVisible())) throw new Error('owner rental history timeline is not visible');
-  const scrollTop=await panel.evaluate((el)=>el.scrollTop);
-  if(scrollTop<=0) throw new Error('owner rental history shortcut did not scroll timeline into view');
+  const box=await timeline.boundingBox();
+  if(!box || box.y<0 || box.y>720) throw new Error('owner rental history is not in mobile viewport');
+  await focused.locator('[data-back-customer-card]').click();
+  await mobile.locator('[data-owner-rental-history-panel].open:not(.history-focused)').waitFor();
   const overflow=await mobile.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+2);
   if(overflow) throw new Error('mobile horizontal overflow');
 
   await browser.close();
-  console.log('Final client hero + clickable cards + owner rental history acceptance passed');
+  console.log('Final client hero + clickable cards + dedicated owner rental history acceptance passed');
 } finally {
   preview.kill('SIGTERM');
 }
