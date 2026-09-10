@@ -8,6 +8,8 @@ import { OwnerFinance } from '../finance/OwnerFinance';
 import { OwnerService } from '../service/OwnerService';
 import { OwnerMarketing } from '../marketing/OwnerMarketing';
 import { OwnerAnalytics } from '../analytics/OwnerAnalytics';
+import { RequestDetailModal } from '../requests/RequestDetailModal';
+import { VehicleModelDetails } from '../fleet/VehicleModelDetails';
 import { fetchFleetOverrides } from '../../api/ownerFleet';
 import { createPersistedBooking, extendPersistedBooking, PaymentProvider, PaymentPurpose, updatePersistedBookingStatus } from '../../api/payments';
 import { activeOperationalFleet, FleetState, ManagedFleetVehicle as FleetVehicle, mergeFleetOverrides, normalizeBaseVehicle, publicFleet as selectPublicFleet, VehicleType } from '../fleet/fleetManagement';
@@ -98,8 +100,8 @@ function buildDemoBusinessRequests(): RentalRequest[] {
   const rows: DemoRow[] = [
     { id:'demo-ui-01',vehicleId:'hyundai-elantra-2025-74404',from:1,to:3,client:'Анна Крылова',contact:'@anna_demo',status:'new',estimate:4050000,createdHoursAgo:1,paymentStatus:'unpaid',branchId:'branch-center',sourceChannel:'telegram_mini_app' },
     { id:'demo-ui-02',vehicleId:'kia-sorento-2023-74401',from:2,to:5,client:'Nguyễn Minh Anh',contact:'Zalo · demo02',status:'new',estimate:7800000,createdHoursAgo:3,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
-    { id:'demo-ui-03',vehicleId:'mazda-cx-5-2022-74405',from:1,to:3,client:'Алексей Морозов',contact:'@alex_demo',status:'contacted',estimate:4350000,createdHoursAgo:5,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'google' },
-    { id:'demo-ui-04',vehicleId:'toyota-yaris-cross-2025-74402',from:3,to:4,client:'Kim Min-ji',contact:'@minji_demo',status:'contacted',estimate:2800000,createdHoursAgo:7,paymentStatus:'pending',branchId:'branch-north',sourceChannel:'instagram' },
+    { id:'demo-ui-03',vehicleId:'mazda-cx-5-2022-74405',from:1,to:3,client:'Алексей Морозов',contact:'@alex_demo',status:'new',estimate:4350000,createdHoursAgo:5,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'google' },
+    { id:'demo-ui-04',vehicleId:'toyota-yaris-cross-2025-74402',from:3,to:4,client:'Kim Min-ji',contact:'@minji_demo',status:'new',estimate:2800000,createdHoursAgo:7,paymentStatus:'pending',branchId:'branch-north',sourceChannel:'instagram' },
     { id:'demo-ui-05',vehicleId:'yamaha-x-max-2024-76826',from:1,to:4,client:'Chen Wei',contact:'WeChat · demo05',status:'confirmed',estimate:7200000,createdHoursAgo:10,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
     { id:'demo-ui-06',vehicleId:'honda-pcx-150cc-2022-73073',from:2,to:5,client:'Мария Лебедева',contact:'@maria_demo',status:'confirmed',estimate:2200000,createdHoursAgo:24,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'qr',provider:'momo' },
     { id:'demo-ui-07',vehicleId:'honda-cb500x-2023-73325',from:0,to:2,client:'Sergey Volkov',contact:'@sergey_demo',status:'issued',estimate:7500000,createdHoursAgo:28,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'office' },
@@ -112,7 +114,7 @@ function buildDemoBusinessRequests(): RentalRequest[] {
     { id:'demo-ui-14',vehicleId:'kia-sorento-2023-74401',from:-14,to:-11,client:'Lê Quốc Bảo',contact:'Zalo · demo14',status:'completed',estimate:7800000,createdHoursAgo:288,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'google',provider:'tbank' },
     { id:'demo-ui-15',vehicleId:'toyota-yaris-cross-2025-74402',from:1,to:2,client:'Максим Беляев',contact:'@max_demo',status:'cancelled',estimate:2800000,createdHoursAgo:51,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'website' },
     { id:'demo-ui-16',vehicleId:'honda-cb500x-2023-73325',from:5,to:9,client:'Sofia Ivanova',contact:'@sofia_demo',status:'new',estimate:12500000,createdHoursAgo:54,paymentStatus:'unpaid',branchId:'branch-north',sourceChannel:'partner' },
-    { id:'demo-ui-17',vehicleId:'honda-pcx-150cc-2022-73073',from:3,to:5,client:'Lee Soo-jin',contact:'@soojin_demo',status:'contacted',estimate:1650000,createdHoursAgo:74,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'qr' },
+    { id:'demo-ui-17',vehicleId:'honda-pcx-150cc-2022-73073',from:3,to:5,client:'Lee Soo-jin',contact:'@soojin_demo',status:'new',estimate:1650000,createdHoursAgo:74,paymentStatus:'pending',branchId:'branch-center',sourceChannel:'qr' },
     { id:'demo-ui-18',vehicleId:'yamaha-x-max-2024-76826',from:2,to:5,client:'Pavel Smirnov',contact:'@pavel_demo',status:'confirmed',estimate:7200000,createdHoursAgo:96,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'telegram_mini_app',provider:'vietqr' },
     { id:'demo-ui-19',vehicleId:'toyota-yaris-cross-2025-74402',from:-3,to:2,client:'Vũ Hoàng Nam',contact:'Zalo · demo19',status:'active',estimate:8400000,createdHoursAgo:144,paymentStatus:'paid',branchId:'branch-north',sourceChannel:'website',provider:'vnpay' },
     { id:'demo-ui-20',vehicleId:'hyundai-elantra-2025-74404',from:-22,to:-18,client:'Елена Кузнецова',contact:'@elena_demo',status:'completed',estimate:6750000,createdHoursAgo:480,paymentStatus:'paid',branchId:'branch-center',sourceChannel:'office' },
@@ -142,7 +144,7 @@ function publishedEstimate(vehicle: FleetVehicle, from: string, to: string): num
 
 const typeLabel = (type: VehicleType) => type === 'car' ? 'Авто' : type === 'scooter' ? 'Скутер' : 'Мотоцикл';
 const stateLabel = (state: FleetState) => ({ manager:'Подтверждает менеджер', ready:'Готов к выдаче', service:'В сервисе', hold:'Резерв' })[state];
-const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Связались', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', return_due:'Возврат сегодня', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
+const statusText = (status: RequestStatus) => ({ new:'Новая', contacted:'Новая', confirmed:'Подтверждена', issued:'Выдана', active:'В аренде', return_due:'Возврат сегодня', returned:'Возвращена', completed:'Завершена', cancelled:'Отменена' })[status];
 const paymentStatusText = (status?: RentalRequest['paymentStatus']) => ({ unpaid:'Ожидает оплаты', pending:'Платёж создан', partially_paid:'Предоплата внесена', paid:'Оплачено' } as const)[status ?? 'unpaid'];
 const icon = (route: Route) => ({home:'⌂',catalog:'▦',requests:'◫',contacts:'◎',dashboard:'⌘',fleet:'◆',handover:'↔',overview:'◉',calendar:'▥',customers:'♙',team:'♟',finance:'₫',service:'⚙',marketing:'✦',analytics:'▥'} as Partial<Record<Route,string>>)[route] ?? '•';
 
@@ -278,6 +280,8 @@ export function PrototypeApp() {
   const [extendingRequestId, setExtendingRequestId] = useState<string | null>(null);
   const [paymentRequestId, setPaymentRequestId] = useState<string | null>(null);
   const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [requestDetailFocus, setRequestDetailFocus] = useState<'request' | 'client'>('request');
   const [mainPhotoIndex, setMainPhotoIndex] = useState(0);
 
   useEffect(() => { window.Telegram?.WebApp?.ready?.(); window.Telegram?.WebApp?.expand?.(); }, []);
@@ -315,6 +319,8 @@ export function PrototypeApp() {
   const extendingVehicle = extendingRequest ? fleet.find((item) => item.id === extendingRequest.vehicleId) : undefined;
   const paymentRequest = paymentRequestId ? requests.find((item) => item.id === paymentRequestId) : undefined;
   const paymentVehicle = paymentRequest ? fleet.find((item) => item.id === paymentRequest.vehicleId) : undefined;
+  const selectedDetailRequest = selectedRequestId ? requests.find((item) => item.id === selectedRequestId) : undefined;
+  const selectedDetailVehicle = selectedDetailRequest ? fleet.find((item) => item.id === selectedDetailRequest.vehicleId) : undefined;
 
   async function ensurePersistedRequest(request: RentalRequest): Promise<RentalRequest> {
     if (request.backendBookingId) return request;
@@ -376,10 +382,10 @@ export function PrototypeApp() {
 
   function requestCard(request: RentalRequest) {
     const vehicle = fleet.find((item) => item.id === request.vehicleId);
-    return <article className="request" key={request.id}>
+    return <article className="request request-clickable" key={request.id} data-request-card={request.id} tabIndex={0} onClick={(event) => { if ((event.target as HTMLElement).closest('button,a,input,select,textarea,label')) return; setSelectedRequestId(request.id); setRequestDetailFocus('request'); }} onKeyDown={(event) => { if (event.target !== event.currentTarget) return; if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedRequestId(request.id); setRequestDetailFocus('request'); } }}>
       <div><span className="status">{statusText(request.status)}</span><small>{new Date(request.createdAt).toLocaleString('ru-RU')}</small></div>
       <h3>{vehicle?.title ?? request.vehicleId}</h3>
-      <p>{request.from} → {request.to} · {request.client || 'Клиент'}</p>
+      <p>{request.from} → {request.to} · <button type="button" className="request-client-link" data-request-client={request.id} onClick={(event) => { event.stopPropagation(); setSelectedRequestId(request.id); setRequestDetailFocus('client'); }}>{request.client || 'Клиент'}</button></p><small className="request-open-hint">Открыть заявку →</small>
       {role !== 'client' && request.demoBusiness ? <small className="request-business-meta">{request.branchId === 'branch-north' ? 'Северный филиал' : 'Центр города'} · {({telegram_mini_app:'Telegram Mini App',website:'Сайт',office:'Офис',google:'Google',instagram:'Instagram',partner:'Партнёр',qr:'QR-код'} as Record<string,string>)[request.sourceChannel ?? ''] ?? 'Источник'} · DEMO</small> : null}
       <b>{money(request.estimate)}</b>
       <div className={`request-payment ${request.paymentStatus ?? 'unpaid'}`}><span>Оплата</span><b>{paymentStatusText(request.paymentStatus)}</b>{request.paymentProvider ? <small>{request.paymentProvider}</small> : null}</div>
@@ -387,7 +393,7 @@ export function PrototypeApp() {
       {role === 'client' && request.backendBookingId && request.paymentStatus !== 'paid' ? <button className="secondary" data-pay-booking={request.id} onClick={() => { setPaymentPurpose(request.paymentStatus === 'partially_paid' ? 'balance' : 'booking'); setPaymentRequestId(request.id); }}>{request.paymentStatus === 'partially_paid' ? 'Доплатить остаток' : 'Оплатить'}</button> : null}
       {role === 'client' && request.backendBookingId && ['confirmed','issued','active','return_due'].includes(request.status) ? <button className="secondary" data-client-extend={request.id} onClick={() => setExtendingRequestId(request.id)}>Продлить аренду</button> : null}
       {role === 'employee' ? <select data-status={request.id} value={request.status} onChange={(event) => { void setLifecycleStatus(request, event.target.value as RequestStatus); }}>
-        {(['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
+        {(['new','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[]).map((status) => <option key={status} value={status}>{statusText(status)}</option>)}
       </select> : null}
       {role !== 'client' ? <div className="request-actions">
         {request.status === 'confirmed' ? <button className="primary" data-issue={request.id} onClick={() => { void setLifecycleStatus(request,'active'); }}>Выдать технику</button> : null}
@@ -402,7 +408,7 @@ export function PrototypeApp() {
   function clientHome() {
     const featured = clientFleet.filter((vehicle) => (vehicle.photos?.length ?? 0) > 0).slice(0, 6);
     return <>
-      <Hero label="UNIQ SMART RENT · NHA TRANG" title="Весь парк UNIQ — прямо в Telegram." text="Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App." aside={
+      <Hero label="UNIQ SMART RENT · NHA TRANG" title="Техника для Нячанга — бронь за пару минут." text="Выберите модель и даты, оплатите бронь, продлевайте аренду и управляйте поездкой прямо в Telegram." aside={
         <div className="hero-card"><b>{clientFleet.length}</b><span>единиц техники</span><div className="hero-office-maps">
           <a className="hero-office-map" href="https://maps.app.goo.gl/qr3FNiVVxAdThVBV6" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 312 Đ. 2/4 — открыть в Google Maps"><iframe title="UNIQ Moto — 312 Đ. 2/4" src="https://www.google.com/maps?q=UNIQ%20Moto%20312%20%C4%90.%202%2F4%20Nha%20Trang&output=embed" loading="lazy" tabIndex={-1}></iframe><span><b>312 Đ. 2/4</b><small>Северный филиал · Google Maps ↗</small></span></a>
           <a className="hero-office-map" href="https://maps.app.goo.gl/sJdMndLRPz9b228J7" target="_blank" rel="noreferrer" aria-label="UNIQ Moto, 254 Nguyễn Thị Minh Khai — открыть в Google Maps"><iframe title="UNIQ Moto — 254 Nguyễn Thị Minh Khai" src="https://www.google.com/maps?q=UNIQ%20Moto%20254%20Nguyen%20Thi%20Minh%20Khai%20Nha%20Trang&output=embed" loading="lazy" tabIndex={-1}></iframe><span><b>254 Nguyễn Thị Minh Khai</b><small>Центр города · Google Maps ↗</small></span></a>
@@ -425,7 +431,7 @@ export function PrototypeApp() {
     return <>
       <button className="back" data-go="catalog" onClick={() => go('catalog')}>← Каталог</button>
       <section className="detail"><div className="gallery"><div className="main-photo"><VehiclePhoto vehicle={vehicle} index={mainPhotoIndex}/></div>{(vehicle.photos?.length ?? 0) > 1 ? <div className="thumbs">{vehicle.photos!.slice(0,8).map((_, index) => <button key={index} data-photo={index} onClick={() => setMainPhotoIndex(index)}><VehiclePhoto vehicle={vehicle} index={index}/></button>)}</div> : null}</div>
-        <div className="detail-copy"><span className="pill">{typeLabel(vehicle.type)}</span><h1>{vehicle.title}</h1><p>{vehicle.year ?? ''} · {vehicle.engine ?? ''} · {vehicle.weight ?? ''} · {vehicle.cruiseSpeed ?? ''}</p><div className="rate-grid"><Metric label="День" value={money(vehicle.dailyVnd)}/><Metric label="Неделя" value={money(vehicle.weeklyVnd)}/><Metric label="Месяц" value={money(vehicle.monthlyVnd)}/><Metric label="Депозит" value={money(vehicle.depositVnd)}/></div><div className="notice"><b>{stateLabel(effectiveFleetState(vehicle.id))}</b><span>Наличие техники и выбранные даты подтверждает менеджер UNIQ.</span></div><button className="primary wide" data-book={vehicle.id} onClick={() => setBookingVehicleId(vehicle.id)}>Запросить бронь</button>{vehicle.sourceUrl ? <a className="source-link" href={vehicle.sourceUrl} target="_blank" rel="noreferrer">Подробнее о модели ↗</a> : null}</div>
+        <div className="detail-copy"><span className="pill">{typeLabel(vehicle.type)}</span><h1>{vehicle.title}</h1><p>{vehicle.year ?? ''} · {vehicle.engine ?? ''} · {vehicle.weight ?? ''} · {vehicle.cruiseSpeed ?? ''}</p><div className="rate-grid"><Metric label="День" value={money(vehicle.dailyVnd)}/><Metric label="Неделя" value={money(vehicle.weeklyVnd)}/><Metric label="Месяц" value={money(vehicle.monthlyVnd)}/><Metric label="Депозит" value={money(vehicle.depositVnd)}/></div><div className="notice"><b>{stateLabel(effectiveFleetState(vehicle.id))}</b><span>Наличие техники и выбранные даты подтверждает менеджер UNIQ.</span></div><button className="primary wide" data-book={vehicle.id} onClick={() => setBookingVehicleId(vehicle.id)}>Запросить бронь</button><VehicleModelDetails vehicle={vehicle} fleetState={effectiveFleetState(vehicle.id)}/></div>
       </section>
     </>;
   }
@@ -466,7 +472,7 @@ export function PrototypeApp() {
     const confirmed = requests.filter((item) => ['confirmed','issued','active','returned','completed'].includes(item.status)).length;
     const open = requests.filter((item) => !['completed','cancelled'].includes(item.status)).length;
     const estimate = requests.filter((item) => item.status !== 'cancelled').reduce((sum, item) => sum + (item.estimate || 0), 0);
-    const statuses = ['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[];
+    const statuses = ['new','confirmed','issued','active','return_due','returned','completed','cancelled'] as RequestStatus[];
     return <><Hero label="ВЛАДЕЛЕЦ" title="Пульс бизнеса — со смартфона." text="Ключевые показатели по парку и заявкам в одном экране."/><section className="metrics owner-metrics"><Metric label="Парк" value={fleet.length} sub="единиц техники" target="owner-fleet" onClick={() => go('fleet')}/><Metric label="Открытые заявки" value={open} target="owner-requests" onClick={() => go('requests')}/><Metric label="Подтверждены" value={confirmed} target="owner-calendar" onClick={() => go('calendar')}/><Metric label="Потенциал заявок" value={money(estimate)} sub="по текущим тарифам" target="owner-analytics" onClick={() => go('analytics')}/></section><section className="panel"><span className="eyebrow">ЗАЯВКИ</span><h2>Статусы заявок</h2><div className="status-bars">{statuses.map((status) => { const count = requests.filter((item) => item.status === status).length; return <div key={status}><span>{statusText(status)}</span><b>{count}</b><i style={{ width: `${requests.length ? Math.max(4, count / requests.length * 100) : 4}%` }}></i></div>; })}</div></section></>;
   }
 
@@ -524,6 +530,7 @@ export function PrototypeApp() {
     {bookingVehicle ? <BookingModal vehicle={bookingVehicle} onClose={() => setBookingVehicleId(null)} onSubmit={submitClientBooking}/>: null}
     {paymentRequest && paymentVehicle && paymentRequest.backendBookingId ? <PaymentCheckout bookingId={paymentRequest.backendBookingId} vehicleTitle={paymentVehicle.title} totalVnd={paymentRequest.estimate} paidVnd={paymentRequest.paidVnd ?? 0} purpose={paymentPurpose} onClose={() => { setPaymentRequestId(null); setPaymentPurpose('booking'); setRoute('requests'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} onPaid={(result) => { setRequests((current) => current.map((item) => item.id === paymentRequest.id ? { ...item, paymentStatus: result.bookingPaymentStatus === 'paid' ? 'paid' : 'partially_paid', paymentId: result.paymentId, paymentProvider: result.provider, paidVnd:result.bookingPaidVnd, estimate:result.bookingTotalVnd || item.estimate } : item)); }}/>: null}
     {extendingRequest && extendingVehicle ? <ExtensionModal request={extendingRequest} vehicle={extendingVehicle} clientMode={role === 'client'} onClose={() => setExtendingRequestId(null)} onSubmit={(newTo, additional) => extendRentalRequest(extendingRequest,newTo,additional)}/>: null}
+    {selectedDetailRequest ? <RequestDetailModal request={selectedDetailRequest} vehicleTitle={selectedDetailVehicle?.title ?? selectedDetailRequest.vehicleId} statusLabel={statusText(selectedDetailRequest.status)} paymentLabel={paymentStatusText(selectedDetailRequest.paymentStatus)} relatedRequests={requests.filter((item) => (item.client && item.client === selectedDetailRequest.client) || (item.contact && item.contact === selectedDetailRequest.contact))} focus={requestDetailFocus} onClose={() => setSelectedRequestId(null)}/>: null}
     <ScrollTop/>
   </>;
 }

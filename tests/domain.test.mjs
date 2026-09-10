@@ -201,8 +201,13 @@ test('stage 12 operational expansion contracts are present',async()=>{
 test('final client hero and clickable dashboard cards contracts',async()=>{
   const app=await readFile(new URL('../src/features/prototype/PrototypeApp.tsx',import.meta.url),'utf8');
   const crm=await readFile(new URL('../src/features/crm/OwnerCRM.tsx',import.meta.url),'utf8');
-  assert.ok(app.includes('Весь парк UNIQ — прямо в Telegram.'));
-  assert.ok(app.includes('Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.'));
+  assert.ok(app.includes('Техника для Нячанга — бронь за пару минут.'));
+  assert.ok(app.includes('Выберите модель и даты, оплатите бронь, продлевайте аренду и управляйте поездкой прямо в Telegram.'));
+  assert.ok(app.includes('data-request-card'));
+  assert.ok(app.includes('data-request-client'));
+  assert.ok(app.includes('VehicleModelDetails'));
+  assert.ok(!app.includes('Связались'));
+  assert.ok(!app.includes('Подробнее о модели ↗'));
   assert.ok(app.includes('data-metric-target'));
   assert.ok(app.includes('employee-handover'));
   assert.ok(app.includes('owner-analytics'));
