@@ -15,6 +15,15 @@ const fallbackProviders: PaymentProviderInfo[] = [
 
 const money = (value: number) => `${new Intl.NumberFormat('ru-RU').format(Math.max(0,value))} ₫`;
 
+type PaidResult = {
+  paymentId: string;
+  provider: PaymentProvider;
+  bookingPaymentStatus: string;
+  bookingPaidVnd: number;
+  bookingTotalVnd: number;
+  amountVnd: number;
+};
+
 export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0, purpose = 'booking', onClose, onPaid }: {
   bookingId: string;
   vehicleTitle: string;
@@ -22,13 +31,14 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
   paidVnd?: number;
   purpose?: PaymentPurpose;
   onClose: () => void;
-  onPaid: (result: { paymentId: string; provider: PaymentProvider; bookingPaymentStatus: string; bookingPaidVnd: number; bookingTotalVnd: number; amountVnd: number }) => void;
+  onPaid: (result: PaidResult) => void;
 }) {
   const [providers, setProviders] = useState<PaymentProviderInfo[]>(fallbackProviders);
   const [provider, setProvider] = useState<PaymentProvider>('vietqr');
   const settlementMode = purpose !== 'booking' || paidVnd > 0;
   const [percent, setPercent] = useState<30 | 100>(settlementMode ? 100 : 30);
   const [intent, setIntent] = useState<PaymentIntent | null>(null);
+  const [paidResult, setPaidResult] = useState<PaidResult | null>(null);
   const [qr, setQr] = useState('');
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
@@ -36,6 +46,7 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
   useEffect(() => { fetchPaymentProviders().then(setProviders).catch(() => setProviders(fallbackProviders)); }, []);
   useEffect(() => {
     setIntent(null);
+    setPaidResult(null);
     setNotice('');
     setPercent(purpose !== 'booking' || paidVnd > 0 ? 100 : 30);
     // Do not reset on paidVnd changes: parent updates paidVnd immediately after a
@@ -58,7 +69,7 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
 
   async function createIntent() {
     if (!estimated) { setNotice('По этой брони уже всё оплачено.'); return; }
-    setBusy(true); setNotice('');
+    setBusy(true); setNotice(''); setPaidResult(null);
     try { setIntent(await createPaymentIntent({ bookingId, provider, prepaymentPercent: percent, purpose })); }
     catch (error) { setNotice(error instanceof Error ? error.message : 'Не удалось создать платёж.'); }
     finally { setBusy(false); }
@@ -69,11 +80,27 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
     setBusy(true); setNotice('');
     try {
       const result = await confirmDemoPayment(intent.id);
+      const nextResult: PaidResult = {
+        paymentId:intent.id,
+        provider:intent.provider,
+        bookingPaymentStatus:result.bookingPaymentStatus,
+        bookingPaidVnd:result.bookingPaidVnd,
+        bookingTotalVnd:result.bookingTotalVnd,
+        amountVnd:result.amountVnd,
+      };
       setIntent({ ...intent, status: 'paid' });
+      setPaidResult(nextResult);
       setNotice(result.bookingPaymentStatus === 'paid' ? 'Аренда оплачена полностью.' : 'Предоплата успешно зачислена.');
-      onPaid({ paymentId:intent.id, provider:intent.provider, bookingPaymentStatus:result.bookingPaymentStatus, bookingPaidVnd:result.bookingPaidVnd, bookingTotalVnd:result.bookingTotalVnd, amountVnd:result.amountVnd });
+      onPaid(nextResult);
     } catch (error) { setNotice(error instanceof Error ? error.message : 'Не удалось подтвердить платёж.'); }
     finally { setBusy(false); }
+  }
+
+  function continueToBalance() {
+    setIntent(null);
+    setPaidResult(null);
+    setNotice('');
+    setPercent(100);
   }
 
   return <div className="modal-bg payment-checkout-bg" onMouseDown={(event) => { if (event.currentTarget === event.target && !busy) onClose(); }}>
@@ -82,17 +109,22 @@ export function PaymentCheckout({ bookingId, vehicleTitle, totalVnd, paidVnd = 0
       <span className="eyebrow">{title}</span><h2>{vehicleTitle}</h2>
       <div className="payment-balance-summary" data-payment-balance-summary>
         <span><small>Стоимость</small><b>{money(totalVnd)}</b></span>
-        <span><small>Внесено</small><b>{money(paidVnd)}</b></span>
-        <span><small>Остаток</small><b>{money(remainingVnd)}</b></span>
+        <span><small>Внесено</small><b>{money(paidResult?.bookingPaidVnd ?? paidVnd)}</b></span>
+        <span><small>Остаток</small><b>{money(Math.max(0,(paidResult?.bookingTotalVnd ?? totalVnd) - (paidResult?.bookingPaidVnd ?? paidVnd)))}</b></span>
       </div>
       {!intent ? <>
         {!settlementMode ? <div className="payment-section"><h3>1. Выберите сумму</h3><div className="payment-percent-grid"><button type="button" data-payment-percent="30" className={percent === 30 ? 'active' : ''} onClick={() => setPercent(30)}><b>30%</b><span>Предоплата</span><small>{money(Math.ceil(totalVnd * .3))}</small></button><button type="button" data-payment-percent="100" className={percent === 100 ? 'active' : ''} onClick={() => setPercent(100)}><b>100%</b><span>Полная оплата</span><small>{money(totalVnd)}</small></button></div></div> : <div className="payment-settlement-callout" data-balance-settlement><b>{purpose === 'extension' ? 'Продление подтверждается после доплаты' : 'Закройте остаток одним платежом'}</b><span>К оплате осталось {money(remainingVnd)}. Система не даст зачислить сумму сверх остатка.</span></div>}
-        <div className="payment-section"><h3>{settlementMode ? '1' : '2'}. Способ оплаты</h3><div className="payment-provider-grid">{providers.map((item) => <button type="button" key={item.id} data-payment-provider={item.id} className={provider === item.id ? 'active' : ''} onClick={() => setProvider(item.id)}><ProviderLogo provider={item.id}/><div className="provider-copy"><b>{item.label}</b><span>{item.market}</span><small>{item.checkoutMode === 'demo' ? 'Демо' : 'Подключено'}</small></div></button>)}</div></div>
+        <div className="payment-section"><h3>{settlementMode ? '1' : '2'}. Способ оплаты</h3><div className="payment-provider-grid">{providers.map((item) => <button type="button" key={item.id} data-payment-provider={item.id} className={provider === item.id ? 'active' : ''} onClick={() => setProvider(item.id)}><ProviderLogo provider={item.id}/><div className="provider-copy"><b>{item.label}</b><span>{item.market}</span><small>{item.checkoutMode === 'demo' ? 'Тест' : 'Подключено'}</small></div></button>)}</div></div>
         <div className="payment-summary"><span>К оплате</span><b>{money(estimated)}</b></div><button type="button" className="primary wide" data-create-payment disabled={busy || estimated <= 0} onClick={createIntent}>{busy ? 'Создаём…' : 'Получить QR / ссылку'}</button>
       </> : <>
-        <div className="payment-ready" data-payment-ready><div className="payment-qr">{qr ? <img src={qr} alt={`QR для оплаты ${intent.paymentReference}`} /> : <div className="qr-loading">QR</div>}</div><div className="payment-ready-copy"><ProviderLogo provider={intent.provider}/><span>{intent.providerLabel}</span><h3>{money(intent.amountVnd)}</h3><p>Назначение: <b>{intent.paymentReference}</b></p><small>{intent.mode === 'demo' ? 'Демонстрационный платёжный intent. Боевой режим включается merchant-ключами провайдера.' : 'Провайдер настроен для боевого подключения.'}</small><a className="secondary payment-open-link" href={intent.paymentUrl} target="_blank" rel="noreferrer">Открыть ссылку оплаты ↗</a></div></div>
-        {intent.mode === 'demo' && intent.status !== 'paid' ? <button type="button" className="primary wide" data-demo-confirm-payment disabled={busy} onClick={confirmDemo}>{busy ? 'Проверяем…' : 'Демо: подтвердить оплату'}</button> : null}
-        {intent.status === 'paid' ? <div className="payment-success" data-payment-success><b>Оплата зачислена</b><span>{notice}</span></div> : null}
+        <div className="payment-ready" data-payment-ready><div className="payment-qr">{qr ? <img src={qr} alt={`QR для оплаты ${intent.paymentReference}`} /> : <div className="qr-loading">QR</div>}</div><div className="payment-ready-copy"><ProviderLogo provider={intent.provider}/><span>{intent.providerLabel}</span><h3>{money(intent.amountVnd)}</h3><p>Назначение: <b>{intent.paymentReference}</b></p><small>{intent.mode === 'demo' ? 'Тестовый платёж. После подтверждения сумма будет зачислена в заявку так же, как после ответа платёжного провайдера.' : 'Провайдер настроен для боевого подключения.'}</small>{intent.status !== 'paid' ? <a className="secondary payment-open-link" href={intent.paymentUrl} target="_blank" rel="noreferrer">Открыть ссылку оплаты ↗</a> : null}</div></div>
+        {intent.mode === 'demo' && intent.status !== 'paid' ? <button type="button" className="primary wide" data-demo-confirm-payment disabled={busy} onClick={confirmDemo}>{busy ? 'Проверяем…' : 'Тестовая оплата: подтвердить'}</button> : null}
+        {intent.status === 'paid' && paidResult ? <div className="payment-success" data-payment-success>
+          <b>{paidResult.bookingPaymentStatus === 'paid' ? 'Оплата завершена' : 'Предоплата зачислена'}</b>
+          <span>{notice}</span>
+          <small>Зачислено {money(paidResult.amountVnd)} · всего внесено {money(paidResult.bookingPaidVnd)}</small>
+          {paidResult.bookingPaymentStatus === 'paid' ? <button type="button" className="primary wide" data-payment-done onClick={onClose}>Готово</button> : <button type="button" className="primary wide" data-pay-balance-after-demo onClick={continueToBalance}>Оплатить остаток</button>}
+        </div> : null}
       </>}
       {notice && intent?.status !== 'paid' ? <div className="owner-notice">{notice}</div> : null}
     </section>
