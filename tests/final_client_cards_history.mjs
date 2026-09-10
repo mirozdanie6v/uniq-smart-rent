@@ -23,7 +23,6 @@ try{
   if(heroTitle!=='Весь парк UNIQ — прямо в Telegram.') throw new Error('final client hero title mismatch: '+heroTitle);
   if(heroText!=='Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.') throw new Error('final client hero text mismatch: '+heroText);
 
-  await desktop.locator('[data-role="employee"]').click();
   for(const [target,heading] of [['employee-requests','Заявки клиентов'],['employee-fleet','Парк техники.'],['employee-handover','Выдачи и возвраты.']]){
     await desktop.locator('[data-role="employee"]').click();
     const card=desktop.locator(`[data-metric-target="${target}"]`);
@@ -44,21 +43,17 @@ try{
   await mobile.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await mobile.locator('[data-role="owner"]').click();
   await mobile.locator('[data-go="customers"]').last().click();
-  const row=mobile.locator('.crm-row').first();
-  await row.waitFor();
-  await row.click();
+  const historyShortcut=mobile.locator('[data-rental-history]').first();
+  await historyShortcut.waitFor();
+  await historyShortcut.click();
   const panel=mobile.locator('[data-owner-rental-history-panel].open');
   await panel.waitFor();
-  const historyButton=panel.locator('[data-open-rental-history]');
-  await historyButton.waitFor();
-  await historyButton.click();
-  await wait(200);
+  await wait(250);
   const timeline=panel.locator('[data-owner-rental-history]');
   await timeline.waitFor();
-  const visible=await timeline.isVisible();
-  if(!visible) throw new Error('owner rental history timeline is not visible');
+  if(!(await timeline.isVisible())) throw new Error('owner rental history timeline is not visible');
   const scrollTop=await panel.evaluate((el)=>el.scrollTop);
-  if(scrollTop<=0) throw new Error('owner rental history did not scroll into view');
+  if(scrollTop<=0) throw new Error('owner rental history shortcut did not scroll timeline into view');
   const overflow=await mobile.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+2);
   if(overflow) throw new Error('mobile horizontal overflow');
 
