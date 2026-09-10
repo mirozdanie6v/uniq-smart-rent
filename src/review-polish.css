@@ -1,0 +1,85 @@
+/* Review-only visual polish for the demo candidate.
+   Keep the two largest heading tiers unchanged; improve everything below them. */
+:root{
+  --review-line:rgba(255,255,255,.19);
+  --review-line-soft:rgba(255,255,255,.16);
+  --review-line-accent:rgba(131,255,189,.34);
+}
+
+/* Base / client typography: +10–20% on small and medium tiers. */
+body{font-size:17px}
+.brand>span{font-size:10px}
+.role-switch button{font-size:11.5px}
+.eyebrow{font-size:12px}
+.hero p,.detail-copy>p{font-size:16px}
+.hero-card>span{font-size:13px}
+.metric span{font-size:12px}
+.metric small{font-size:11px}
+label{font-size:12px}
+input,select,textarea{font-size:14px}
+.primary,.secondary,.text,.back{font-size:14px}
+.vehicle-top small{font-size:12px}
+.vehicle-top h3{font-size:22px}
+.vehicle-top>b{font-size:18px}
+.spec-row span{font-size:11px}
+.proof{font-size:12px}
+.filters span{font-size:12px}
+.media>span{font-size:10.5px}
+.pill,.status{font-size:10.5px}
+.notice span{font-size:12px}
+.source-link{font-size:12px}
+.request small,.request p{font-size:12px}
+.request h3{font-size:21px}
+.request>b{font-size:22px}
+.contact-grid span,.system-grid span{font-size:12px}
+.contact-grid a:not(.primary),.contact-grid b{font-size:20px}
+.fleet-table small{font-size:12px}
+.data-lines span{font-size:13px}
+.status-bars span{font-size:12px}
+.status-bars b{font-size:13px}
+.modal p,.modal>small{font-size:12px}
+.modal-x{font-size:28px}
+
+/* Owner modules share many independently styled controls; normalize their readable tiers. */
+:where([class^="owner-"],[class*=" owner-"]) small{font-size:12px}
+:where([class^="owner-"],[class*=" owner-"]) label{font-size:14px}
+:where([class^="owner-"],[class*=" owner-"]) input,
+:where([class^="owner-"],[class*=" owner-"]) select,
+:where([class^="owner-"],[class*=" owner-"]) textarea{font-size:14px}
+:where([class^="owner-"],[class*=" owner-"]) button{font-size:14px}
+:where([class^="owner-"],[class*=" owner-"]) p{font-size:14px;line-height:1.5}
+:where([class^="owner-"],[class*=" owner-"]) h3{font-size:18px}
+.owner-fleet-toolbar>span{font-size:15px}
+.owner-fleet-copy>b{font-size:17px}
+.owner-form-section h3{font-size:18px}
+.owner-form-section label{font-size:14px}
+.owner-publish-row label{font-size:16px}
+.owner-publish-row span{font-size:14px}
+
+/* Navigation icons and labels. */
+.bottom-nav span{font-size:20px}
+.bottom-nav b{font-size:10.5px;line-height:1.12}
+button svg,[class*="icon"] svg{transform:scale(1.14);transform-origin:center}
+
+/* Brighter tile/card boundaries without changing layout. */
+.hero-card,.metric,.quick,.vehicle-card,.proof,.filters,.main-photo,.thumbs button,
+.request,.contact-grid article,.system-grid article,.panel,.fleet-table article,.data-lines,.modal,
+.owner-fleet-row,.owner-form-section,
+:where([class*="-card"],[class*="-tile"],[class*="-panel"],[class*="-metric"],[class*="-summary"],[class*="-row"]){
+  border-color:var(--review-line);
+}
+.vehicle-card:hover{border-color:rgba(131,255,189,.44)}
+.notice,.pill,.status,.owner-save-notice{border-color:var(--review-line-accent)}
+input,select,textarea{border-color:rgba(255,255,255,.20)}
+.bottom-nav,.role-switch{border-color:rgba(255,255,255,.18)}
+
+@media(max-width:760px){
+  .bottom-nav[data-nav-count="10"] button{min-height:57px}
+  .bottom-nav[data-nav-count="10"] b{font-size:10.5px;line-height:1.1}
+  .bottom-nav[data-nav-count="10"] span{font-size:16px}
+}
+
+@media(max-width:430px){
+  .role-switch button{font-size:10.5px}
+  .bottom-nav b{font-size:10px}
+}
