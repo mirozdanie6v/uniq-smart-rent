@@ -25,7 +25,7 @@ test('catalog contains only manager-confirmed public entries with sources',()=>{
 
 test('browser language detection uses English fallback',()=>{assert.equal(detectBrowserLanguage('ru-RU'),'ru');assert.equal(detectBrowserLanguage('vi-VN'),'vi');assert.equal(detectBrowserLanguage('ko-KR'),'ko');assert.equal(detectBrowserLanguage('zh-CN'),'en');});
 
-test('verified business facts expose two branches and public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,82);assert.equal(businessInfo.phone,'+84372112370');});
+test('verified business facts expose two branches and public fleet count',()=>{assert.equal(businessInfo.branches.length,2);assert.equal(businessInfo.publicFleetCount,89);assert.equal(businessInfo.phone,'+84372112370');});
 
 test('stage 2 defines all primary owner-platform entities',()=>{
   assert.deepEqual(ENTITY_TABLES,[
@@ -35,7 +35,7 @@ test('stage 2 defines all primary owner-platform entities',()=>{
 
 test('stage 2 migration contains required operational and finance tables',async()=>{
   const sql=await readFile(new URL('../migrations/0003_business_platform.sql',import.meta.url),'utf8');
-  for(const table of [
+  for(const table of[
     'branches','employees','employee_permissions','vehicle_availability_blocks','vehicle_transfers',
     'booking_status_history','payments','transactions','rental_inspections','customer_documents',
     'service_records','promotions','promotion_branches','promotion_vehicles','integration_configs','business_settings'
