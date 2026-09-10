@@ -73,10 +73,59 @@ button svg,[class*="icon"] svg{transform:scale(1.14);transform-origin:center}
 input,select,textarea{border-color:rgba(255,255,255,.20)}
 .bottom-nav,.role-switch{border-color:rgba(255,255,255,.18)}
 
+/* Rental history stays inside a bounded window; only its timeline scrolls. */
+.crm-history-overlay.history-focused{
+  position:fixed!important;
+  z-index:180!important;
+  inset:auto!important;
+  left:50%!important;
+  top:50%!important;
+  width:min(620px,calc(100vw - 24px))!important;
+  max-height:min(72dvh,680px)!important;
+  padding:20px!important;
+  transform:translate(-50%,-50%)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  overflow:hidden!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  border-radius:24px!important;
+  background:linear-gradient(180deg,#10211e,#08100f)!important;
+  box-shadow:0 28px 90px rgba(0,0,0,.58)!important;
+}
+.crm-history-overlay.history-focused .crm-history-overlay-head{
+  width:100%;
+  max-width:none;
+  margin:0;
+  flex:0 0 auto;
+}
+.crm-history-overlay.history-focused .crm-history-back{
+  flex:0 0 auto;
+  margin:14px 0 8px;
+}
+.crm-history-overlay.history-focused .crm-history-overlay-timeline{
+  width:100%;
+  max-width:none;
+  min-height:0;
+  max-height:52dvh;
+  margin:0!important;
+  padding:4px 8px 12px 0!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+
 @media(max-width:760px){
   .bottom-nav[data-nav-count="10"] button{min-height:57px}
   .bottom-nav[data-nav-count="10"] b{font-size:10.5px;line-height:1.1}
   .bottom-nav[data-nav-count="10"] span{font-size:16px}
+  .crm-history-overlay.history-focused{
+    width:calc(100vw - 20px)!important;
+    max-height:68dvh!important;
+    padding:16px!important;
+    border-radius:20px!important;
+  }
+  .crm-history-overlay.history-focused .crm-history-overlay-head h2{font-size:26px}
+  .crm-history-overlay.history-focused .crm-history-overlay-timeline{max-height:48dvh}
 }
 
 @media(max-width:430px){
