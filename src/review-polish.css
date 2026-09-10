@@ -84,13 +84,62 @@ input,select,textarea{border-color:rgba(255,255,255,.20)}
   display:none!important;
 }
 
+/* Owner CRM mobile profile: keep it as a bounded sheet, never a full-screen page.
+   The close control stays visible while the profile itself scrolls. */
+@media(max-width:1100px){
+  .crm-detail{
+    position:fixed!important;
+    z-index:130!important;
+    inset:auto 10px calc(12px + env(safe-area-inset-bottom,0px)) 10px!important;
+    top:auto!important;
+    width:auto!important;
+    min-height:0!important;
+    max-height:min(78dvh,720px)!important;
+    overflow-y:auto!important;
+    overscroll-behavior:contain;
+    padding:14px 18px 22px!important;
+    border:1px solid rgba(255,255,255,.18)!important;
+    border-radius:24px!important;
+    background:linear-gradient(180deg,rgba(17,34,31,.995),rgba(9,18,17,.995))!important;
+    box-shadow:0 28px 90px rgba(0,0,0,.62)!important;
+    transform:translateY(calc(100% + 40px))!important;
+    transition:transform .2s ease!important;
+  }
+  .crm-detail.open{
+    transform:translateY(0)!important;
+  }
+  .crm-detail .crm-close{
+    position:sticky!important;
+    top:0!important;
+    right:auto!important;
+    z-index:30!important;
+    display:grid!important;
+    place-items:center;
+    width:40px!important;
+    height:40px!important;
+    margin:0 0 6px auto!important;
+    border:1px solid rgba(255,255,255,.2)!important;
+    background:#1b2924!important;
+    box-shadow:0 8px 22px rgba(0,0,0,.35)!important;
+  }
+  .crm-detail .crm-profile-head{
+    padding-right:0!important;
+  }
+}
+
 @media(max-width:760px){
   .bottom-nav[data-nav-count="10"] button{min-height:57px}
   .bottom-nav[data-nav-count="10"] b{font-size:10.5px;line-height:1.1}
   .bottom-nav[data-nav-count="10"] span{font-size:16px}
+  .crm-detail{
+    max-height:74dvh!important;
+    padding:12px 14px 20px!important;
+    border-radius:20px!important;
+  }
 }
 
 @media(max-width:430px){
   .role-switch button{font-size:10.5px}
   .bottom-nav b{font-size:10px}
+  .crm-detail{max-height:72dvh!important}
 }
