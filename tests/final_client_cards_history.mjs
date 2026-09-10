@@ -18,8 +18,8 @@ try{
 
   const desktop=await browser.newPage({viewport:{width:1440,height:900}});
   await desktop.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
-  const heroTitle=(await desktop.locator('.hero h1').first.textContent())?.trim();
-  const heroText=(await desktop.locator('.hero p').first.textContent())?.trim();
+  const heroTitle=(await desktop.locator('.hero h1').first().textContent())?.trim();
+  const heroText=(await desktop.locator('.hero p').first().textContent())?.trim();
   if(heroTitle!=='Весь парк UNIQ — прямо в Telegram.') throw new Error('final client hero title mismatch: '+heroTitle);
   if(heroText!=='Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.') throw new Error('final client hero text mismatch: '+heroText);
 
@@ -37,13 +37,13 @@ try{
     const card=desktop.locator(`[data-metric-target="${target}"]`);
     await card.waitFor();
     await card.click();
-    await desktop.getByText(needle,{exact:false}).first.waitFor();
+    await desktop.getByText(needle,{exact:false}).first().waitFor();
   }
 
   const mobile=await browser.newPage({viewport:{width:390,height:844}});
   await mobile.goto('http://127.0.0.1:4173/',{waitUntil:'networkidle'});
   await mobile.locator('[data-role="owner"]').click();
-  await mobile.locator('[data-go="customers"]').last.click();
+  await mobile.locator('[data-go="customers"]').last().click();
   const row=mobile.locator('.crm-row').first();
   await row.waitFor();
   await row.click();
