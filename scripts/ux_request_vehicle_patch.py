@@ -46,4 +46,12 @@ if 'Связались' in text:
     raise SystemExit('visible Связались status still present')
 if long_statuses_compact in text or long_statuses_spaced in text:
     raise SystemExit('contacted still present in user-facing status selector')
+
+# Keep the unit contract aligned with the approved current UX instead of the retired hero copy.
+tests = Path('tests/domain.test.mjs')
+test_text = tests.read_text(encoding='utf-8')
+test_text = test_text.replace("assert.ok(app.includes('Весь парк UNIQ — прямо в Telegram.'));", "assert.ok(app.includes('Техника для Нячанга — бронь за пару минут.'));")
+test_text = test_text.replace("assert.ok(app.includes('Выбор техники, реальные фотографии, опубликованные цены и заявка менеджеру в одном Mini App.'));", "assert.ok(app.includes('Выберите модель и даты, оплатите бронь, продлевайте аренду и управляйте поездкой прямо в Telegram.'));\n  assert.ok(app.includes('data-request-card'));\n  assert.ok(app.includes('data-request-client'));\n  assert.ok(app.includes('VehicleModelDetails'));\n  assert.ok(!app.includes('Связались'));\n  assert.ok(!app.includes('Подробнее о модели ↗'));")
+tests.write_text(test_text, encoding='utf-8')
+
 print('UX request/vehicle patch applied')
