@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 p = Path('src/features/prototype/PrototypeApp.tsx')
 text = p.read_text(encoding='utf-8')
@@ -14,10 +13,16 @@ def once(old: str, new: str, label: str):
 
 once("import { OwnerAnalytics } from '../analytics/OwnerAnalytics';", "import { OwnerAnalytics } from '../analytics/OwnerAnalytics';\nimport { RequestDetailModal } from '../requests/RequestDetailModal';\nimport { VehicleModelDetails } from '../fleet/VehicleModelDetails';", 'imports')
 
-# Keep the legacy internal union readable for old session data, but remove the status from all current data and controls.
+# Remove the user-facing Contacted state from current demo data and controls.
+# Keep the legacy backend enum/map readable so old session records can still be normalized safely.
 text = text.replace("status:'contacted'", "status:'new'")
 text = text.replace("contacted:'Связались'", "contacted:'Новая'")
-text = re.sub(r",\s*'contacted'", "", text)
+long_statuses_compact = "['new','contacted','confirmed','issued','active','return_due','returned','completed','cancelled']"
+long_statuses_compact_new = "['new','confirmed','issued','active','return_due','returned','completed','cancelled']"
+long_statuses_spaced = "['new', 'contacted', 'confirmed', 'issued', 'active', 'return_due', 'returned', 'completed', 'cancelled']"
+long_statuses_spaced_new = "['new', 'confirmed', 'issued', 'active', 'return_due', 'returned', 'completed', 'cancelled']"
+text = text.replace(long_statuses_compact, long_statuses_compact_new)
+text = text.replace(long_statuses_spaced, long_statuses_spaced_new)
 
 once("  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);", "  const [paymentPurpose, setPaymentPurpose] = useState<PaymentPurpose>('booking');\n  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);\n  const [requestDetailFocus, setRequestDetailFocus] = useState<'request' | 'client'>('request');\n  const [mainPhotoIndex, setMainPhotoIndex] = useState(0);", 'detail state')
 
@@ -39,6 +44,6 @@ p.write_text(text, encoding='utf-8')
 
 if 'Связались' in text:
     raise SystemExit('visible Связались status still present')
-if re.search(r"\[[^\]]*'contacted'", text):
-    raise SystemExit('contacted still selectable')
+if long_statuses_compact in text or long_statuses_spaced in text:
+    raise SystemExit('contacted still present in user-facing status selector')
 print('UX request/vehicle patch applied')
