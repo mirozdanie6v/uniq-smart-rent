@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+
+const app=await readFile(new URL('../public/auto-sale-app.mjs',import.meta.url),'utf8');
+const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
+const css=await readFile(new URL('../public/auto-sale-admin.css',import.meta.url),'utf8');
+
+test('entry page loads the modular AUTO SALE application',()=>{
+  assert.match(html,/auto-sale-admin\.css/);
+  assert.match(html,/auto-sale-app\.mjs/);
+});
+
+test('all three roles and every operational route are rendered',()=>{
+  for(const token of ['client','manager','owner','work','leads','quotes','shipping','overview','pipeline','finance','ordersAdmin']) assert.ok(app.includes(token),token);
+});
+
+test('manager scenarios include lead edit quote create conversion and logistics update',()=>{
+  for(const token of ['leadEditForm','quoteForm','data-convert-order','orderForm','data-order-next','submitLead','submitQuote','submitOrder']) assert.ok(app.includes(token),token);
+});
+
+test('director panels include funnel finance team sources and risk controls',()=>{
+  for(const token of ['ownerOverview','ownerPipeline','ownerFinance','ownerOrders','managerStats','sourceStats','financeStats','risk']) assert.ok(app.includes(token),token);
+});
+
+test('client request and order-tracking scenarios remain available',()=>{
+  for(const token of ['requestForm','clientOrders','data-request-car','data-open-request','timeline']) assert.ok(app.includes(token),token);
+});
+
+test('admin stylesheet includes responsive table and modal layouts',()=>{
+  for(const token of ['auto-admin-filters','auto-data-table','auto-modal-grid','auto-timeline-full','@media(max-width:620px)']) assert.ok(css.includes(token),token);
+});
