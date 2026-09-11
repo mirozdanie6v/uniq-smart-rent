@@ -6,45 +6,22 @@ let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
 let timer=null;
 let syncing=false;
 let pending=false;
+let reloadPending=false;
 
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
-function applyServerState(state){
-  if(!state||!state.initialized)return;
-  writeCache(DATA_KEYS.leads,state.leads||[]);
-  writeCache(DATA_KEYS.quotes,state.quotes||[]);
-  writeCache(DATA_KEYS.orders,state.orders||[]);
-  writeCache(DATA_KEYS.notes,state.notes||{});
-}
+function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{})}
 function payload(){return{baseRevision:revision,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{})}}
-async function pushState(){
-  if(syncing){pending=true;return}
-  syncing=true;
-  try{
-    const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
-    const data=await response.json().catch(()=>({}));
-    if(response.status===409&&data.state){
-      revision=Number(data.currentRevision||data.state.revision||revision);
-      sessionStorage.setItem(REVISION_KEY,String(revision));
-      applyServerState(data.state);
-      window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision}}));
-      return;
-    }
-    if(response.ok){revision=Number(data.revision||revision);sessionStorage.setItem(REVISION_KEY,String(revision));window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));}
-  }catch(error){console.warn('AUTO SALE server sync deferred',error)}finally{syncing=false;if(pending){pending=false;scheduleSync(40)}}
-}
+function refreshUiWhenSafe(){if(new URLSearchParams(location.search).has('layoutAudit'))return;if(document.querySelector('.auto-modal')){reloadPending=true;return}location.reload()}
+async function pullLatest(force=false){try{const response=await fetch('/api/auto-sale/state',{headers:{accept:'application/json'},cache:'no-store'});if(!response.ok)return;const state=await response.json(),serverRevision=Number(state.revision||0);if(force||serverRevision>revision){revision=serverRevision;sessionStorage.setItem(REVISION_KEY,String(revision));applyServerState(state);window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};if(!force)refreshUiWhenSafe()}}catch(error){console.warn('AUTO SALE using offline cache',error);window.__AUTO_SALE_SERVER__={online:false,revision}}}
+async function pushState(){if(syncing){pending=true;return}syncing=true;try{const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});const data=await response.json().catch(()=>({}));if(response.status===409&&data.state){revision=Number(data.currentRevision||data.state.revision||revision);sessionStorage.setItem(REVISION_KEY,String(revision));applyServerState(data.state);window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision}}));refreshUiWhenSafe();return}if(response.ok){revision=Number(data.revision||revision);sessionStorage.setItem(REVISION_KEY,String(revision));window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}))}}catch(error){console.warn('AUTO SALE server sync deferred',error);window.__AUTO_SALE_SERVER__={online:false,revision}}finally{syncing=false;if(pending){pending=false;scheduleSync(40)}}}
 function scheduleSync(delay=180){clearTimeout(timer);timer=setTimeout(pushState,delay)}
 
-try{
-  const response=await fetch('/api/auto-sale/state',{headers:{'accept':'application/json'}});
-  if(response.ok){const state=await response.json();revision=Number(state.revision||0);sessionStorage.setItem(REVISION_KEY,String(revision));applyServerState(state);window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)}}
-  else window.__AUTO_SALE_SERVER__={online:false,revision};
-}catch(error){console.warn('AUTO SALE using offline cache',error);window.__AUTO_SALE_SERVER__={online:false,revision}}
-
-Storage.prototype.setItem=function(key,value){
-  originalSet.call(this,key,value);
-  if(this===localStorage&&!suppress&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync();
-};
-
+await pullLatest(true);
+Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-app-v3.mjs');
 scheduleSync(250);
+window.addEventListener('focus',()=>pullLatest(false));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pullLatest(false)});
+window.addEventListener('click',()=>{if(reloadPending&&!document.querySelector('.auto-modal')){reloadPending=false;refreshUiWhenSafe()}},{capture:true});
+setInterval(()=>{if(document.visibilityState==='visible')pullLatest(false)},30000);
