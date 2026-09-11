@@ -1,0 +1,50 @@
+const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2'};
+const REVISION_KEY='auto-sale-server-revision-v1';
+const originalSet=Storage.prototype.setItem;
+let suppress=false;
+let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
+let timer=null;
+let syncing=false;
+let pending=false;
+
+function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
+function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
+function applyServerState(state){
+  if(!state||!state.initialized)return;
+  writeCache(DATA_KEYS.leads,state.leads||[]);
+  writeCache(DATA_KEYS.quotes,state.quotes||[]);
+  writeCache(DATA_KEYS.orders,state.orders||[]);
+  writeCache(DATA_KEYS.notes,state.notes||{});
+}
+function payload(){return{baseRevision:revision,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{})}}
+async function pushState(){
+  if(syncing){pending=true;return}
+  syncing=true;
+  try{
+    const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
+    const data=await response.json().catch(()=>({}));
+    if(response.status===409&&data.state){
+      revision=Number(data.currentRevision||data.state.revision||revision);
+      sessionStorage.setItem(REVISION_KEY,String(revision));
+      applyServerState(data.state);
+      window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision}}));
+      return;
+    }
+    if(response.ok){revision=Number(data.revision||revision);sessionStorage.setItem(REVISION_KEY,String(revision));window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));}
+  }catch(error){console.warn('AUTO SALE server sync deferred',error)}finally{syncing=false;if(pending){pending=false;scheduleSync(40)}}
+}
+function scheduleSync(delay=180){clearTimeout(timer);timer=setTimeout(pushState,delay)}
+
+try{
+  const response=await fetch('/api/auto-sale/state',{headers:{'accept':'application/json'}});
+  if(response.ok){const state=await response.json();revision=Number(state.revision||0);sessionStorage.setItem(REVISION_KEY,String(revision));applyServerState(state);window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)}}
+  else window.__AUTO_SALE_SERVER__={online:false,revision};
+}catch(error){console.warn('AUTO SALE using offline cache',error);window.__AUTO_SALE_SERVER__={online:false,revision}}
+
+Storage.prototype.setItem=function(key,value){
+  originalSet.call(this,key,value);
+  if(this===localStorage&&!suppress&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync();
+};
+
+await import('./auto-sale-app-v3.mjs');
+scheduleSync(250);
