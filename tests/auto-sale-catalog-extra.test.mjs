@@ -19,6 +19,10 @@ test('extra cars participate in search brand budget details and request flow',()
   for(const token of ['brandFilter','budgetFilter','autoSearch','data-extra-detail','data-extra-model','data-open-request']) assert.ok(source.includes(token),token);
 });
 
+test('catalog extension prevents self-triggered render loops',()=>{
+  for(const token of ['extraCatalogSignature','let scheduled=false','if(scheduled)return']) assert.ok(source.includes(token),token);
+});
+
 test('bootstrap loads expanded catalog after main AUTO SALE application',()=>{
   const app=bootstrap.indexOf("await import('./auto-sale-app-v3.mjs')");
   const extra=bootstrap.indexOf("await import('./auto-sale-catalog-extra.mjs')");
