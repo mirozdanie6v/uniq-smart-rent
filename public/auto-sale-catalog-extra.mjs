@@ -13,7 +13,7 @@ const extraCars=[
 window.__AUTO_SALE_EXTRA_CARS__=extraCars;
 
 const money=value=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(value)||0);
-const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[char]));
 const matchesBudget=(car,value)=>value==='all'||value==='35'&&car.price<=35000||value==='45'&&car.price>35000&&car.price<=45000||value==='46'&&car.price>45000;
 
 function card(car){return `<article class="auto-car auto-extra-car" data-extra-car="${car.id}"><div class="auto-car-media"><img src="${car.image}" alt="${esc(car.brand+' '+car.model)}"><span class="auto-chip">${esc(car.tag)}</span></div><div class="auto-car-body"><div class="auto-car-top"><div><small>${car.year} · ${esc(car.auction)}</small><h3>${esc(car.brand+' '+car.model)}</h3></div><div class="auto-price"><b>от ${money(car.price)}</b><span>ориентир под ключ</span></div></div><div class="auto-specs"><span>${esc(car.mileage)}</span><span>${esc(car.engine)}</span><span>${esc(car.drive)}</span></div><div class="auto-card-actions"><button class="auto-btn primary" data-open-request data-extra-model="${esc(car.brand+' '+car.model)}">Рассчитать</button><button class="auto-btn ghost" data-extra-detail="${car.id}">Подробнее</button></div></div></article>`}
@@ -26,12 +26,16 @@ function renderExtraCars(){
   const grid=brandFilter.closest('.auto-section')?.querySelector('.auto-grid');
   if(!grid)return;
 
+  const query=search.value.trim().toLowerCase();
+  const rows=extraCars.filter(car=>(brandFilter.value==='all'||car.brand===brandFilter.value)&&matchesBudget(car,budgetFilter.value)&&(!query||`${car.brand} ${car.model} ${car.year} ${car.engine}`.toLowerCase().includes(query)));
+  const signature=[brandFilter.value,budgetFilter.value,query,rows.map(car=>car.id).join(',')].join('|');
+  if(grid.dataset.extraCatalogSignature===signature&&grid.querySelectorAll('.auto-extra-car').length===rows.length)return;
+  grid.dataset.extraCatalogSignature=signature;
+
   const known=new Set([...brandFilter.options].map(option=>option.value));
   for(const brand of [...new Set(extraCars.map(car=>car.brand))].sort())if(!known.has(brand))brandFilter.insertAdjacentHTML('beforeend',`<option value="${esc(brand)}">${esc(brand)}</option>`);
 
   grid.querySelectorAll('.auto-extra-car').forEach(node=>node.remove());
-  const query=search.value.trim().toLowerCase();
-  const rows=extraCars.filter(car=>(brandFilter.value==='all'||car.brand===brandFilter.value)&&matchesBudget(car,budgetFilter.value)&&(!query||`${car.brand} ${car.model} ${car.year} ${car.engine}`.toLowerCase().includes(query)));
   if(rows.length){grid.querySelector('.auto-empty')?.remove();grid.insertAdjacentHTML('beforeend',rows.map(card).join(''))}
 }
 
@@ -49,6 +53,8 @@ document.addEventListener('click',event=>{
   if(event.target.closest('[data-extra-close]')||event.target.matches('[data-extra-modal-bg]'))event.target.closest('[data-extra-modal-bg]')?.remove();
 });
 
-const observer=new MutationObserver(()=>queueMicrotask(renderExtraCars));
+let scheduled=false;
+const scheduleRender=()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;renderExtraCars()})};
+const observer=new MutationObserver(scheduleRender);
 observer.observe(document.getElementById('app'),{childList:true,subtree:true});
 window.addEventListener('load',renderExtraCars);
