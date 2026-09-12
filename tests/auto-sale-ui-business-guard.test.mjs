@@ -25,11 +25,18 @@ test('existing quote keeps its original lead locked in UI',async()=>{
   dom.window.close();
 });
 
-test('new quote excludes deal and refused leads',async()=>{
+test('new quote excludes new deal and refused leads',async()=>{
   const {dom,root}=await setup('quote-new');
   root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="quotes"]').click();root.querySelector('[data-new-quote]').click();await tick();
   const ids=[...root.querySelector('#quoteForm select[name="leadId"]').options].map(x=>x.value);
-  assert.equal(ids.includes('L-104'),false);assert.equal(ids.includes('L-107'),false);assert.ok(ids.includes('L-101'));
+  assert.equal(ids.includes('L-106'),false);assert.equal(ids.includes('L-104'),false);assert.equal(ids.includes('L-107'),false);assert.ok(ids.includes('L-101'));
+  dom.window.close();
+});
+
+test('new lead must be moved to work before quote creation',async()=>{
+  const {dom,root}=await setup('new-lead-quote');
+  root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-106"]').click();await tick();
+  const button=root.querySelector('[data-create-quote="L-106"]');assert.equal(button.disabled,true);assert.match(root.querySelector('[data-quote-guard-for="L-106"]').textContent,/В работе/);
   dom.window.close();
 });
 
