@@ -17,13 +17,21 @@ async function setup(tag,{custom=false,clientStatus='',orderDelivery=false}={}){
   if(orderDelivery){const o=seedOrders().map(x=>x.id==='O-2303'?{...x,stage:'Доставка',paid:40000,payments:[{id:'PAY-1',amount:40000,date:'2026-09-10',method:'Банк',note:'Оплачено'}],risk:'Нет',riskType:'Нет',riskNote:''}:x);ls.setItem('auto-sale-orders-v2',JSON.stringify(o))}
   await import(`../public/auto-sale-app-v3.mjs?guard-app=${tag}-${Date.now()}-${Math.random()}`);
   if(clientStatus)await import(`../public/auto-sale-telegram.mjs?guard-tg=${tag}-${Date.now()}-${Math.random()}`);
-  await import(`../public/auto-sale-ui-business-guard.mjs?guard=${tag}-${Date.now()}-${Math.random()}`);await tick();
+  await import(`../public/auto-sale-ui-business-guard.mjs?guard=${tag}-${Date.now()}-${Math.random()}`);
+  await import(`../public/auto-sale-quote-save-fix.mjs?quote-save=${tag}-${Date.now()}-${Math.random()}`);
+  await tick();
   return{dom,root:document.querySelector('#app')};
 }
 
-test('existing quote keeps its original lead locked and explains why',async()=>{
+test('existing quote keeps its original lead locked and included in form data',async()=>{
   const {dom,root}=await setup('quote-lock');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="quotes"]').click();root.querySelector('[data-quote="Q-501"]').click();await tick();
-  const form=root.querySelector('#quoteForm'),select=form.querySelector('select[name="leadId"]'),hidden=form.querySelector('input[type="hidden"][name="leadId"]');assert.equal(select.disabled,true);assert.equal(hidden.value,'L-101');assert.match(form.textContent,/зафиксирован для этой версии расчёта/i);assert.match(form.textContent,/Что дальше/i);dom.window.close();
+  const form=root.querySelector('#quoteForm'),select=form.querySelector('select[name="leadId"]'),hidden=form.querySelector('input[type="hidden"][name="leadId"]');assert.equal(select.disabled,false);assert.equal(select.dataset.lockedValue,'L-101');assert.equal(hidden,null);assert.equal(Object.fromEntries(new dom.window.FormData(form).entries()).leadId,'L-101');assert.match(form.textContent,/зафиксирован для этой версии расчёта/i);assert.match(form.textContent,/Что дальше/i);dom.window.close();
+});
+
+test('save quote button persists an edited existing quote',async()=>{
+  const {dom,root}=await setup('quote-save-button');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="quotes"]').click();root.querySelector('[data-quote="Q-501"]').click();await tick();
+  const form=root.querySelector('#quoteForm');assert.ok(form);form.elements.model.value='BMW X5 xDrive40i 2022 TEST';const button=form.querySelector('button[type="submit"]');assert.ok(button);button.click();await tick();
+  const quote=JSON.parse(localStorage.getItem('auto-sale-quotes-v2')).find(x=>x.id==='Q-501');assert.equal(quote.model,'BMW X5 xDrive40i 2022 TEST');assert.equal(root.querySelector('#quoteForm'),null);assert.match(root.textContent,/Расчёты/i);dom.window.close();
 });
 
 test('new quote excludes new deal and refused leads',async()=>{
