@@ -1,5 +1,6 @@
 const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',team:'auto-sale-team-v1'};
 const REVISION_KEY='auto-sale-server-revision-v1';
+const QUOTE_AUDIT_MODE=new URLSearchParams(location.search).has('quoteAudit');
 const originalSet=Storage.prototype.setItem;
 let suppress=false;
 let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
@@ -28,6 +29,7 @@ async function pullInitialState(){
 }
 
 async function pushState(){
+  if(QUOTE_AUDIT_MODE)return;
   if(syncing){pending=true;return}
   syncing=true;
   try{
@@ -58,10 +60,10 @@ async function pushState(){
     if(pending){pending=false;scheduleSync(40)}
   }
 }
-function scheduleSync(delay=180){clearTimeout(timer);timer=setTimeout(pushState,delay)}
+function scheduleSync(delay=180){if(QUOTE_AUDIT_MODE)return;clearTimeout(timer);timer=setTimeout(pushState,delay)}
 
 await pullInitialState();
-Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
+Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs');
 await import('./auto-sale-app-v3.mjs');
 await import('./auto-sale-ui-business-guard.mjs');
