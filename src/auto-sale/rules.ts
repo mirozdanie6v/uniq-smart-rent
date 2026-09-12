@@ -5,7 +5,26 @@ export const QUOTE_STATUSES=['Черновик','Отправлен','На со�
 export const ORDER_STAGES=['Запрос','Подбор','Расчёт','Согласование','Выкуп','Порт США','В море','Таможня','Доставка','Выдача'];
 const text=(v:unknown)=>typeof v==='string'?v.trim():'';
 const num=(v:unknown)=>Number(v)||0;
+const records=(v:unknown):AnyRecord[]=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object') as AnyRecord[]:[];
 
+export function leadTransitionAllowed(from:string,to:string,{hasAgreedQuote=false,deposit=0}:{hasAgreedQuote?:boolean,deposit?:number}={}):boolean{
+  if(from===to)return true;
+  if(to==='Отказ')return from!=='Сделка'&&from!=='Отказ';
+  const allowed:Record<string,string[]>={'Новый':['В работе'],'В работе':['Новый','Расчёт'],'Расчёт':['В работе','Ожидает клиента'],'Ожидает клиента':['Расчёт','Сделка'],'Сделка':[],'Отказ':[]};
+  if(!(allowed[from]||[]).includes(to))return false;
+  if(to==='Сделка')return hasAgreedQuote&&num(deposit)>0;
+  return true;
+}
+export function quoteTransitionAllowed(from:string,to:string):boolean{
+  if(!from)return['Черновик','Отправлен'].includes(to);
+  if(from===to)return true;
+  const allowed:Record<string,string[]>={'Черновик':['Отправлен'],'Отправлен':['На согласовании','Отказ'],'На согласовании':['Согласован','Отказ'],'Согласован':[],'Отказ':[]};
+  return(allowed[from]||[]).includes(to);
+}
+export function nextStageAllowed(from:string,to:string):boolean{
+  const a=ORDER_STAGES.indexOf(from),b=ORDER_STAGES.indexOf(to);
+  return a>=0&&b>=0&&(b===a||b===a+1);
+}
 export function validateLead(lead:AnyRecord):string[]{
   const errors:string[]=[];
   if(!text(lead.name))errors.push('name_required');
@@ -28,7 +47,7 @@ export function validateOrder(order:AnyRecord,previousStage=''):string[]{
   const stage=text(order.stage);
   if(!text(order.leadId))errors.push('lead_required');
   if(!ORDER_STAGES.includes(stage))errors.push('invalid_order_stage');
-  if(previousStage){const from=ORDER_STAGES.indexOf(previousStage),to=ORDER_STAGES.indexOf(stage);if(to>from+1||to<from)errors.push('invalid_stage_transition')}
+  if(previousStage&&!nextStageAllowed(previousStage,stage))errors.push('invalid_stage_transition');
   if(ORDER_STAGES.indexOf(stage)>=ORDER_STAGES.indexOf('Порт США')){
     if(!text(order.lot))errors.push('lot_required');
     if(!text(order.vin))errors.push('vin_required');
@@ -36,9 +55,8 @@ export function validateOrder(order:AnyRecord,previousStage=''):string[]{
     if(!text(order.location))errors.push('location_required');
   }
   if(text(order.riskType)&&text(order.riskType)!=='Нет'&&!text(order.riskNote))errors.push('risk_note_required');
-  return errors;
-}
-export function nextStageAllowed(from:string,to:string):boolean{
-  const a=ORDER_STAGES.indexOf(from),b=ORDER_STAGES.indexOf(to);
-  return a>=0&&b>=0&&(b===a||b===a+1);
+  const payments=records(order.payments);let paid=0;
+  for(const payment of payments){const amount=num(payment.amount);if(amount<=0)errors.push('payment_amount_positive_required');if(!text(payment.date))errors.push('payment_date_required');if(!text(payment.method))errors.push('payment_method_required');paid+=Math.max(0,amount)}
+  if(num(order.total)>0&&paid>num(order.total))errors.push('payment_total_exceeds_order');
+  return[...new Set(errors)];
 }
