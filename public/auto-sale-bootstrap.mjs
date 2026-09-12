@@ -66,5 +66,6 @@ await import('./auto-sale-app-v3.mjs');
 await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
+await import('./auto-sale-required-fields.mjs');
 await import('./auto-sale-catalog-extra.mjs');
 scheduleSync(250);
