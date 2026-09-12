@@ -54,13 +54,28 @@ function fallbackSaveLead(form,button){
   localStorage.setItem(K.leads,JSON.stringify(rows));localStorage.setItem(K.notes,JSON.stringify(history));
   form.dataset.fallbackSaved='1';showSaved(form,'Сохранить карточку');
 }
+function retryQuoteSubmit(form,button){
+  if(form.dataset.quoteSubmitRetried==='1'){
+    resetButton(button);feedback(form,'Не удалось сохранить расчёт. Закройте его, откройте заново и повторите сохранение.','error');return;
+  }
+  form.dataset.quoteSubmitRetried='1';
+  const retry=new Event('submit',{bubbles:true,cancelable:true});
+  retry.autoSaleQuoteRetry=true;
+  form.dispatchEvent(retry);
+  queueMicrotask(()=>{
+    if(!form.isConnected)return;
+    const error=form.querySelector('.auto-form-error');
+    if(error?.textContent?.trim()){resetButton(button);feedback(form,`Не удалось сохранить: ${error.textContent.trim()}`,'error');return}
+    resetButton(button);feedback(form,'Не удалось сохранить расчёт. Закройте его, откройте заново и повторите сохранение.','error');
+  });
+}
 function settleLocal(form,button,type){
   queueMicrotask(()=>{
     if(!form.isConnected){if(type==='lead')showSaved(document.querySelector('#leadEditForm'),'Сохранить карточку');return}
     const error=form.querySelector('.auto-form-error');
     if(error?.textContent?.trim()){resetButton(button);feedback(form,`Не удалось сохранить: ${error.textContent.trim()}`,'error');return}
     if(type==='lead'){fallbackSaveLead(form,button);return}
-    resetButton(button);feedback(form,'Сохранение расчёта не завершилось. Проверьте обязательные поля и повторите.','error');
+    retryQuoteSubmit(form,button);
   });
 }
 
@@ -69,7 +84,7 @@ function patchQuoteForm(){
   const id=form.querySelector('input[name="id"]')?.value||'',leadSelect=form.querySelector('select[name="leadId"]');
   if(id&&leadSelect){const hidden=[...form.querySelectorAll('input[type="hidden"][name="leadId"]')].find(x=>x!==leadSelect),lockedValue=hidden?.value||leadSelect.value;hidden?.remove();leadSelect.disabled=false;leadSelect.value=lockedValue;leadSelect.dataset.lockedValue=lockedValue;leadSelect.setAttribute('aria-readonly','true');leadSelect.classList.add('auto-field-locked');leadSelect.tabIndex=-1;leadSelect.addEventListener('pointerdown',event=>event.preventDefault());leadSelect.addEventListener('keydown',event=>event.preventDefault());leadSelect.addEventListener('change',()=>{leadSelect.value=leadSelect.dataset.lockedValue||lockedValue})}
   form.addEventListener('invalid',event=>{resetButton(buttonFor(form));const control=event.target;markField(control);feedback(form,`Не удалось сохранить расчёт: проверьте поле «${fieldLabel(control)}».`,'error')},true);
-  form.addEventListener('submit',()=>{clearFieldMarks(form);const button=startSaving(form);settleLocal(form,button,'quote')},true);
+  form.addEventListener('submit',event=>{clearFieldMarks(form);const button=startSaving(form);if(!event.autoSaleQuoteRetry)settleLocal(form,button,'quote')},true);
 }
 function patchLeadForm(){
   const form=document.querySelector('#leadEditForm');if(!form||form.dataset.leadSaveFix==='1')return;form.dataset.leadSaveFix='1';
