@@ -58,3 +58,4 @@ const scheduleRender=()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>
 const observer=new MutationObserver(scheduleRender);
 observer.observe(document.getElementById('app'),{childList:true,subtree:true});
 window.addEventListener('load',renderExtraCars);
+await import('./auto-sale-telegram.mjs');
