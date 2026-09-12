@@ -56,7 +56,16 @@ function fallbackSaveLead(form,button){
 }
 function retryQuoteSubmit(form,button){
   if(form.dataset.quoteSubmitRetried==='1'){
-    resetButton(button);feedback(form,'Не удалось сохранить расчёт. Закройте его, откройте заново и повторите сохранение.','error');return;
+    const invoked=window.__AUTO_SALE_INVOKE_ROOT_SUBMIT__?.(form);
+    queueMicrotask(()=>{
+      if(!form.isConnected)return;
+      const error=form.querySelector('.auto-form-error');
+      if(error?.textContent?.trim()){resetButton(button);feedback(form,`Не удалось сохранить: ${error.textContent.trim()}`,'error');return}
+      const lead=form.elements?.namedItem?.('leadId');
+      if(!String(lead?.value||'').trim()){resetButton(button);markField(lead);feedback(form,'Не удалось сохранить расчёт: выберите клиента.','error');return}
+      resetButton(button);feedback(form,invoked?'Не удалось сохранить расчёт. Проверьте выбранного клиента и повторите.':'Не удалось сохранить расчёт. Повторите сохранение.','error');
+    });
+    return;
   }
   form.dataset.quoteSubmitRetried='1';
   const retry=new Event('submit',{bubbles:true,cancelable:true});
@@ -66,7 +75,7 @@ function retryQuoteSubmit(form,button){
     if(!form.isConnected)return;
     const error=form.querySelector('.auto-form-error');
     if(error?.textContent?.trim()){resetButton(button);feedback(form,`Не удалось сохранить: ${error.textContent.trim()}`,'error');return}
-    resetButton(button);feedback(form,'Не удалось сохранить расчёт. Закройте его, откройте заново и повторите сохранение.','error');
+    retryQuoteSubmit(form,button);
   });
 }
 function settleLocal(form,button,type){
@@ -82,7 +91,16 @@ function settleLocal(form,button,type){
 function patchQuoteForm(){
   const form=document.querySelector('#quoteForm');if(!form||form.dataset.quoteSaveFix==='1')return;form.dataset.quoteSaveFix='1';
   const id=form.querySelector('input[name="id"]')?.value||'',leadSelect=form.querySelector('select[name="leadId"]');
-  if(id&&leadSelect){const hidden=[...form.querySelectorAll('input[type="hidden"][name="leadId"]')].find(x=>x!==leadSelect),lockedValue=hidden?.value||leadSelect.value;hidden?.remove();leadSelect.disabled=false;leadSelect.value=lockedValue;leadSelect.dataset.lockedValue=lockedValue;leadSelect.setAttribute('aria-readonly','true');leadSelect.classList.add('auto-field-locked');leadSelect.tabIndex=-1;leadSelect.addEventListener('pointerdown',event=>event.preventDefault());leadSelect.addEventListener('keydown',event=>event.preventDefault());leadSelect.addEventListener('change',()=>{leadSelect.value=leadSelect.dataset.lockedValue||lockedValue})}
+  if(leadSelect){
+    const oldHidden=[...form.querySelectorAll('input[type="hidden"][name="leadId"]')];
+    const stored=oldHidden.find(x=>x.value)?.value||leadSelect.value;
+    oldHidden.forEach(x=>x.remove());
+    if(stored)leadSelect.value=stored;
+    const mirror=document.createElement('input');mirror.type='hidden';mirror.name='leadId';mirror.value=leadSelect.value||stored||'';mirror.dataset.quoteLeadMirror='1';leadSelect.insertAdjacentElement('afterend',mirror);
+    const syncMirror=()=>{mirror.value=leadSelect.value||stored||''};
+    leadSelect.addEventListener('change',syncMirror);
+    if(id){leadSelect.disabled=false;leadSelect.value=stored;syncMirror();leadSelect.dataset.lockedValue=stored;leadSelect.setAttribute('aria-readonly','true');leadSelect.classList.add('auto-field-locked');leadSelect.tabIndex=-1;leadSelect.addEventListener('pointerdown',event=>event.preventDefault());leadSelect.addEventListener('keydown',event=>event.preventDefault());leadSelect.addEventListener('change',()=>{leadSelect.value=leadSelect.dataset.lockedValue||stored;syncMirror()})}
+  }
   form.addEventListener('invalid',event=>{resetButton(buttonFor(form));const control=event.target;markField(control);feedback(form,`Не удалось сохранить расчёт: проверьте поле «${fieldLabel(control)}».`,'error')},true);
   form.addEventListener('submit',event=>{clearFieldMarks(form);const button=startSaving(form);if(!event.autoSaleQuoteRetry)settleLocal(form,button,'quote')},true);
 }
