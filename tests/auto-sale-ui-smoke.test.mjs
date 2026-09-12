@@ -2,29 +2,41 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
-const app=await readFile(new URL('../public/auto-sale-app.mjs',import.meta.url),'utf8');
+const app=await readFile(new URL('../public/auto-sale-app-v3.mjs',import.meta.url),'utf8');
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
+const bootstrap=await readFile(new URL('../public/auto-sale-bootstrap.mjs',import.meta.url),'utf8');
 const css=await readFile(new URL('../public/auto-sale-admin.css',import.meta.url),'utf8');
 const responsive=await readFile(new URL('../public/auto-sale-responsive.css',import.meta.url),'utf8');
 const mobileAdmin=await readFile(new URL('../public/auto-sale-mobile-admin.css',import.meta.url),'utf8');
 
-test('entry page loads the modular AUTO SALE application',()=>{
-  assert.match(html,/auto-sale-admin\.css/);
-  assert.match(html,/auto-sale-responsive\.css/);
-  assert.match(html,/auto-sale-mobile-admin\.css/);
-  assert.match(html,/auto-sale-app\.mjs/);
+test('entry page boots the current v3 AUTO SALE chain',()=>{
+  assert.match(html,/auto-sale-bootstrap\.mjs/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-app-v3\.mjs'\)/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-ui-business-guard\.mjs'\)/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-catalog-extra\.mjs'\)/);
 });
 
-test('all three roles and every operational route are rendered',()=>{
+test('all three roles and every operational route are rendered by v3',()=>{
   for(const token of ['client','manager','owner','work','leads','quotes','shipping','overview','pipeline','finance','ordersAdmin']) assert.ok(app.includes(token),token);
 });
 
-test('manager scenarios include lead edit quote create conversion and logistics update',()=>{
-  for(const token of ['leadEditForm','quoteForm','data-convert-order','orderForm','data-order-next','submitLead','submitQuote','submitOrder']) assert.ok(app.includes(token),token);
+test('every core rendered business action has a click handler',()=>{
+  const pairs=[
+    ['data-role','dataset.role'],['data-go','dataset.go'],['data-close','dataset.close'],['data-modal-bg','dataset.modalBg'],
+    ['data-open-request','dataset.openRequest'],['data-manager-new','dataset.managerNew'],['data-request-car','dataset.requestCar'],['data-detail','dataset.detail'],
+    ['data-lead','dataset.lead'],['data-quote','dataset.quote'],['data-order','dataset.order'],['data-new-quote','dataset.newQuote'],
+    ['data-create-quote','dataset.createQuote'],['data-convert-order','dataset.convertOrder'],['data-quote-action','dataset.quoteAction'],
+    ['data-clone-quote','dataset.cloneQuote'],['data-order-next','dataset.orderNext']
+  ];
+  for(const [markup,handler] of pairs){assert.ok(app.includes(markup),markup);assert.ok(app.includes(handler),handler)}
 });
 
-test('director panels include funnel finance team sources and risk controls',()=>{
-  for(const token of ['ownerOverview','ownerPipeline','ownerFinance','ownerOrders','managerStats','sourceStats','financeStats','risk']) assert.ok(app.includes(token),token);
+test('manager scenarios include lead edit quote conversion payments and logistics update',()=>{
+  for(const token of ['leadEditForm','quoteForm','data-convert-order','orderForm','data-order-next','paymentAmount','riskType','submitLead','submitQuote','submitOrder']) assert.ok(app.includes(token),token);
+});
+
+test('director panels include funnel finance team sources and read-only risk controls',()=>{
+  for(const token of ['ownerOverview','ownerPipeline','ownerFinance','ownerOrders','managerStats','sourceStats','financeStats','КОНТРОЛЬ']) assert.ok(app.includes(token),token);
 });
 
 test('client request and order-tracking scenarios remain available',()=>{
