@@ -35,6 +35,7 @@ function AutoSaleFormData(form,submitter){
 AutoSaleFormData.prototype=NativeFormData.prototype;
 Object.setPrototypeOf(AutoSaleFormData,NativeFormData);
 window.FormData=AutoSaleFormData;
+globalThis.FormData=AutoSaleFormData;
 
 EventTarget.prototype.addEventListener=function(type,listener,options){
   if(type==='submit'&&this instanceof Element&&this.getAttribute?.('id')==='app'&&typeof listener==='function'){
