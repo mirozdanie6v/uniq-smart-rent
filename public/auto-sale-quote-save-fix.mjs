@@ -56,14 +56,16 @@ function fallbackSaveLead(form,button){
 }
 function retryQuoteSubmit(form,button){
   if(form.dataset.quoteSubmitRetried==='1'){
+    const leadSelect=form.querySelector('select[name="leadId"]');
+    if(!String(leadSelect?.value||'').trim()){
+      resetButton(button);markField(leadSelect);feedback(form,'Не удалось сохранить расчёт: выберите клиента.','error');return;
+    }
     const invoked=window.__AUTO_SALE_INVOKE_ROOT_SUBMIT__?.(form);
     queueMicrotask(()=>{
       if(!form.isConnected)return;
       const error=form.querySelector('.auto-form-error');
       if(error?.textContent?.trim()){resetButton(button);feedback(form,`Не удалось сохранить: ${error.textContent.trim()}`,'error');return}
-      const lead=form.elements?.namedItem?.('leadId');
-      if(!String(lead?.value||'').trim()){resetButton(button);markField(lead);feedback(form,'Не удалось сохранить расчёт: выберите клиента.','error');return}
-      resetButton(button);feedback(form,invoked?'Не удалось сохранить расчёт. Проверьте выбранного клиента и повторите.':'Не удалось сохранить расчёт. Повторите сохранение.','error');
+      resetButton(button);feedback(form,invoked?'Не удалось сохранить расчёт. Повторите сохранение.':'Не удалось сохранить расчёт. Закройте его, откройте заново и повторите.','error');
     });
     return;
   }
@@ -92,14 +94,24 @@ function patchQuoteForm(){
   const form=document.querySelector('#quoteForm');if(!form||form.dataset.quoteSaveFix==='1')return;form.dataset.quoteSaveFix='1';
   const id=form.querySelector('input[name="id"]')?.value||'',leadSelect=form.querySelector('select[name="leadId"]');
   if(leadSelect){
-    const oldHidden=[...form.querySelectorAll('input[type="hidden"][name="leadId"]')];
-    const stored=oldHidden.find(x=>x.value)?.value||leadSelect.value;
-    oldHidden.forEach(x=>x.remove());
-    if(stored)leadSelect.value=stored;
-    const mirror=document.createElement('input');mirror.type='hidden';mirror.name='leadId';mirror.value=leadSelect.value||stored||'';mirror.dataset.quoteLeadMirror='1';leadSelect.insertAdjacentElement('afterend',mirror);
-    const syncMirror=()=>{mirror.value=leadSelect.value||stored||''};
-    leadSelect.addEventListener('change',syncMirror);
-    if(id){leadSelect.disabled=false;leadSelect.value=stored;syncMirror();leadSelect.dataset.lockedValue=stored;leadSelect.setAttribute('aria-readonly','true');leadSelect.classList.add('auto-field-locked');leadSelect.tabIndex=-1;leadSelect.addEventListener('pointerdown',event=>event.preventDefault());leadSelect.addEventListener('keydown',event=>event.preventDefault());leadSelect.addEventListener('change',()=>{leadSelect.value=leadSelect.dataset.lockedValue||stored;syncMirror()})}
+    const hidden=[...form.querySelectorAll('input[type="hidden"][name="leadId"]')];
+    const hiddenValue=hidden.find(x=>x.value)?.value||'';
+    hidden.forEach(x=>x.remove());
+    const pending=!id?String(window.__AUTO_SALE_PENDING_QUOTE_LEAD__||''):'';
+    const target=id?(hiddenValue||leadSelect.value):(pending||leadSelect.value);
+    if(target&&[...leadSelect.options].some(option=>option.value===target))leadSelect.value=target;
+    if(id){
+      const lockedValue=leadSelect.value;
+      leadSelect.disabled=false;
+      leadSelect.dataset.lockedValue=lockedValue;
+      leadSelect.setAttribute('aria-readonly','true');
+      leadSelect.classList.add('auto-field-locked');
+      leadSelect.tabIndex=-1;
+      leadSelect.addEventListener('pointerdown',event=>event.preventDefault());
+      leadSelect.addEventListener('keydown',event=>event.preventDefault());
+      leadSelect.addEventListener('change',()=>{leadSelect.value=leadSelect.dataset.lockedValue||lockedValue});
+    }
+    if(!id&&pending&&leadSelect.value===pending)window.__AUTO_SALE_PENDING_QUOTE_LEAD__='';
   }
   form.addEventListener('invalid',event=>{resetButton(buttonFor(form));const control=event.target;markField(control);feedback(form,`Не удалось сохранить расчёт: проверьте поле «${fieldLabel(control)}».`,'error')},true);
   form.addEventListener('submit',event=>{clearFieldMarks(form);const button=startSaving(form);if(!event.autoSaleQuoteRetry)settleLocal(form,button,'quote')},true);
@@ -110,6 +122,16 @@ function patchLeadForm(){
   form.addEventListener('submit',()=>{clearFieldMarks(form);const button=startSaving(form);settleLocal(form,button,'lead')},true);
 }
 function patchForms(){patchQuoteForm();patchLeadForm()}
+
+// Remember the exact client before the modal is rendered. This keeps a new
+// calculation attached to the lead even when another module updates the card
+// immediately before opening the calculation.
+document.addEventListener('click',event=>{
+  const create=event.target.closest?.('[data-create-quote]');
+  if(create?.dataset.createQuote)window.__AUTO_SALE_PENDING_QUOTE_LEAD__=create.dataset.createQuote;
+  else if(event.target.closest?.('[data-new-quote]'))window.__AUTO_SALE_PENDING_QUOTE_LEAD__='';
+},true);
+
 const observer=new MutationObserver(patchForms);observer.observe(document.documentElement,{childList:true,subtree:true});patchForms();
 
 window.addEventListener('auto-sale-server-synced',()=>{
