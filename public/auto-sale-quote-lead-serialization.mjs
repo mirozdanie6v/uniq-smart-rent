@@ -24,8 +24,7 @@ function resolveLeadId(form){
   const leads=read(LEADS_KEY,[]);
   const select=form.querySelector('select[name="leadId"]');
 
-  // The currently rendered form is built from the application's live lead list.
-  // Prefer it over cached quote metadata so an older cached relation cannot break save.
+  // The currently rendered form is the primary source of truth.
   const active=selectLeadId(select,leads);
   if(active)return active;
 
@@ -43,18 +42,21 @@ function resolveLeadId(form){
 
 function ensureSerializedLead(form){
   const leadId=resolveLeadId(form);
+
+  // Never serialize two controls with the same leadId name. Mobile Chrome can
+  // produce an unstable FormData result when a disabled select is re-enabled
+  // while a same-name hidden fallback is also present.
   form.querySelectorAll('input[data-auto-quote-lead-serialization],input[type="hidden"][name="leadId"]').forEach(x=>x.remove());
   if(!leadId)return false;
+
   const select=form.querySelector('select[name="leadId"]');
-  if(select){
-    select.disabled=false;
-    if([...select.options].some(option=>String(option.value)===leadId))select.value=leadId;
-  }
-  const hidden=document.createElement('input');
-  hidden.type='hidden';hidden.name='leadId';hidden.value=leadId;hidden.dataset.autoQuoteLeadSerialization='1';
-  form.append(hidden);
+  if(!select)return false;
+  select.disabled=false;
+  select.removeAttribute('disabled');
+  if([...select.options].some(option=>String(option.value)===leadId))select.value=leadId;
+  select.dataset.resolvedLeadId=leadId;
   form.dataset.resolvedLeadId=leadId;
-  return true;
+  return String(new FormData(form).get('leadId')||'').trim()===leadId;
 }
 
 document.addEventListener('submit',event=>{
