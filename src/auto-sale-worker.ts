@@ -17,7 +17,7 @@ const withDemoBusiness=(state:AnyRecord):AnyRecord=>{
 export default{async fetch(request:Request,env:AutoSaleEnv):Promise<Response>{
   const url=new URL(request.url);
   if(request.method==='OPTIONS'&&url.pathname.startsWith('/api/'))return new Response(null,{status:204,headers});
-  if(url.pathname==='/api/health')return json({ok:true,service:'auto-sale-usa',productMode:env.PRODUCT_MODE||'auto-sale-usa',d1:Boolean(env.DB),schemaVersion:5,demoMode:env.AUTO_SALE_DEMO_MODE==='1',demoBusinessOrders:env.AUTO_SALE_DEMO_MODE==='1'?demoOrders.length:0});
+  if(url.pathname==='/api/health')return json({ok:true,service:'auto-sale-usa',productMode:env.PRODUCT_MODE||'auto-sale-usa',d1:Boolean(env.DB),schemaVersion:6,demoMode:env.AUTO_SALE_DEMO_MODE==='1',demoBusinessOrders:env.AUTO_SALE_DEMO_MODE==='1'?demoOrders.length:0});
   if(url.pathname==='/api/auto-sale/state'&&request.method==='GET'){
     if(!env.DB)return json({error:'persistence_not_configured'},503);
     const state=await loadState(env.DB);
