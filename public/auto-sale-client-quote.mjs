@@ -23,10 +23,12 @@ function panel(leadId,q){
 }
 
 function updateGuide(modal,q){
-  const text=modal.querySelector('.auto-guide span');if(!text)return;
-  if(q?.status==='Согласован')text.textContent='Расчёт согласован. Следующий шаг — внесение депозита и создание заказа.';
-  else if(q?.clientDecision==='changes_requested')text.textContent='Запрос на изменения отправлен. Менеджер подготовит обновлённый расчёт.';
-  else if(q&&['Отправлен','На согласовании'].includes(q.status))text.textContent='Проверьте расчёт ниже и нажмите «Согласовать расчёт» или «Нужны изменения».';
+  const node=modal.querySelector('.auto-guide span');if(!node)return;
+  let next='';
+  if(q?.status==='Согласован')next='Расчёт согласован. Следующий шаг — внесение депозита и создание заказа.';
+  else if(q?.clientDecision==='changes_requested')next='Запрос на изменения отправлен. Менеджер подготовит обновлённый расчёт.';
+  else if(q&&['Отправлен','На согласовании'].includes(q.status))next='Проверьте расчёт ниже и нажмите «Согласовать расчёт» или «Нужны изменения».';
+  if(next&&node.textContent!==next)node.textContent=next;
 }
 
 function enhance(){
@@ -34,10 +36,11 @@ function enhance(){
   const id=modal.querySelector('[data-tg-manager]')?.dataset.tgManager||'';if(!id)return;
   const q=quoteFor(id);if(!q||q.status==='Черновик')return;
   const current=modal.querySelector('.auto-client-quote');
-  if(current?.dataset.clientQuote===q.id&&current.dataset.state===`${q.status}|${q.clientDecision||''}|${q.clientComment||''}`){updateGuide(modal,q);return}
+  const state=`${q.status}|${q.clientDecision||''}|${q.clientComment||''}`;
+  if(current?.dataset.clientQuote===q.id&&current.dataset.state===state){updateGuide(modal,q);return}
   current?.remove();
   const grid=modal.querySelector('.auto-client-order-grid');
-  if(grid){grid.insertAdjacentHTML('afterend',panel(id,q));const node=modal.querySelector('.auto-client-quote');if(node)node.dataset.state=`${q.status}|${q.clientDecision||''}|${q.clientComment||''}`}
+  if(grid){grid.insertAdjacentHTML('afterend',panel(id,q));const node=modal.querySelector('.auto-client-quote');if(node)node.dataset.state=state}
   updateGuide(modal,q);
 }
 
