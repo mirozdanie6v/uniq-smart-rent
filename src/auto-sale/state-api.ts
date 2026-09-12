@@ -1,5 +1,5 @@
 import type { AnyRecord,D1DatabaseLike } from './types.js';
-import { bumpRevision,loadState,putLead,putNote,putOrder,putPayment,putQuote } from './storage.js';
+import { bumpRevision,loadState,putLead,putNote,putOrder,putPayment,putQuote,putTeamMember } from './storage.js';
 import { leadTransitionAllowed,quoteTransitionAllowed,validateLead,validateOrder,validateQuote } from './rules.js';
 
 const arr=(v:unknown):AnyRecord[]=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object') as AnyRecord[]:[];
@@ -16,12 +16,18 @@ export async function syncState(db:D1DatabaseLike,input:AnyRecord):Promise<{stat
   const leads=arr(input.leads);
   const quotes=arr(input.quotes);
   const orders=arr(input.orders);
+  const team=arr(input.team);
   const rawNotes=(input.notes&&typeof input.notes==='object'?input.notes:{}) as Record<string,unknown>;
   const notes=rawNotes;
   const previousLeads=new Map(arr(previous.leads).map(x=>[text(x.id),x]));
   const previousQuotes=new Map(arr(previous.quotes).map(x=>[text(x.id),x]));
   const previousOrders=new Map(arr(previous.orders).map(x=>[text(x.id),x]));
   const initialized=Boolean(previous.initialized);
+
+  for(const member of team){
+    if(!text(member.id)||!text(member.name))return bad('invalid_team_member',{id:member.id||'',details:['Укажите имя сотрудника.']});
+    if(!['Директор','Менеджер','Логист','Администратор'].includes(text(member.role)))return bad('invalid_team_role',{id:member.id,role:member.role});
+  }
 
   for(const lead of leads){
     const errors=validateLead(lead);if(errors.length)return bad('invalid_lead',{id:lead.id,details:errors});
@@ -59,6 +65,7 @@ export async function syncState(db:D1DatabaseLike,input:AnyRecord):Promise<{stat
     }
   }
 
+  for(const member of team)await putTeamMember(db,member);
   for(const lead of leads)await putLead(db,lead);
   for(const quote of quotes)await putQuote(db,quote);
   for(const order of orders){await putOrder(db,order);for(const payment of arr(order.payments))await putPayment(db,text(order.id),payment)}
