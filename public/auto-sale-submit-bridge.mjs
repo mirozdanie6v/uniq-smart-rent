@@ -3,25 +3,14 @@ const NativeFormData=window.FormData;
 let rootSubmitHandler=null;
 
 const formKey=form=>String(form?.getAttribute?.('id')||'');
-const recordControls=form=>form instanceof HTMLFormElement?[...form.querySelectorAll('[name="id"]')]:[];
 
-function renameRecordIds(form){
-  const controls=recordControls(form);
-  for(const control of controls){
+function prepareSubmissionForm(form){
+  const clone=form.cloneNode(true);
+  for(const control of clone.querySelectorAll('[name="id"]')){
     control.dataset.autoRecordId='1';
     control.name='recordId';
   }
-  return controls;
-}
-function restoreRecordIds(controls=[]){
-  for(const control of controls){
-    control.name='id';
-    delete control.dataset.autoRecordId;
-  }
-}
-function withStableFormId(form,fn){
-  const controls=renameRecordIds(form);
-  try{return fn()}finally{restoreRecordIds(controls)}
+  return clone;
 }
 
 function AutoSaleFormData(form,submitter){
@@ -45,27 +34,39 @@ EventTarget.prototype.addEventListener=function(type,listener,options){
   return originalAddEventListener.call(this,type,listener,options);
 };
 
+function copySubmitError(source,target){
+  const error=source.querySelector('.auto-form-error');
+  if(!error?.textContent?.trim()||!target?.isConnected)return;
+  let box=target.querySelector('.auto-form-error');
+  if(!box){box=document.createElement('div');box.className='auto-form-error full';target.prepend(box)}
+  box.innerHTML=error.innerHTML;
+}
+
+function invokeCore(form){
+  if(!(form instanceof HTMLFormElement)||typeof rootSubmitHandler!=='function')return false;
+  const key=formKey(form);
+  if(key==='quoteForm')window.__AUTO_SALE_ENSURE_QUOTE_LEAD__?.(form);
+  const beforeQuotes=key==='quoteForm'?localStorage.getItem('auto-sale-quotes-v2'):null;
+  const submission=prepareSubmissionForm(form);
+  rootSubmitHandler.call(document.querySelector('#app'),{target:submission,preventDefault(){}});
+  copySubmitError(submission,form);
+  const saved=!form.isConnected||(key==='quoteForm'&&localStorage.getItem('auto-sale-quotes-v2')!==beforeQuotes);
+  window.__AUTO_SALE_LAST_ROOT_SUBMIT__={formId:key,saved,at:Date.now()};
+  return saved;
+}
+
+// Chrome exposes a descendant named "id" as form.id. Run forms carrying a
+// record id through a clean detached clone before the app's normal root
+// listener. Target/document handlers have already run by this bubble phase.
 const root=document.querySelector('#app');
 if(root){
   originalAddEventListener.call(root,'submit',event=>{
     const form=event.target;
-    if(!(form instanceof HTMLFormElement))return;
-    const controls=renameRecordIds(form);
-    // Document-level capture handlers have already run. Keep the record field
-    // renamed through the target and root bubble phases, then restore it.
-    queueMicrotask(()=>restoreRecordIds(controls));
-  },true);
+    if(!(form instanceof HTMLFormElement)||!form.querySelector('[name="id"]'))return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    invokeCore(form);
+  },false);
 }
 
-window.__AUTO_SALE_INVOKE_ROOT_SUBMIT__=form=>{
-  if(!(form instanceof HTMLFormElement)||typeof rootSubmitHandler!=='function')return false;
-  const key=formKey(form);
-  if(key==='quoteForm')window.__AUTO_SALE_ENSURE_QUOTE_LEAD__?.(form);
-  const before=key==='quoteForm'?localStorage.getItem('auto-sale-quotes-v2'):null;
-  const saved=withStableFormId(form,()=>{
-    rootSubmitHandler.call(document.querySelector('#app'),{target:form,preventDefault(){}});
-    return key!=='quoteForm'||!form.isConnected||localStorage.getItem('auto-sale-quotes-v2')!==before;
-  });
-  window.__AUTO_SALE_LAST_ROOT_SUBMIT__={formId:key,saved,at:Date.now()};
-  return saved;
-};
+window.__AUTO_SALE_INVOKE_ROOT_SUBMIT__=invokeCore;
