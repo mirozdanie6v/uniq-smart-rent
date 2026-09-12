@@ -4,7 +4,8 @@ const leadById=id=>read(KEYS.leads,[]).find(x=>x.id===id);
 const latestQuote=id=>read(KEYS.quotes,[]).filter(x=>x.leadId===id).sort((a,b)=>(Number(b.version)||0)-(Number(a.version)||0))[0];
 
 function quoteButtonFor(id){return [...document.querySelectorAll('[data-create-quote]')].find(x=>x.dataset.createQuote===id)||null}
-function setHint(button,text){const hint=button?.nextElementSibling;if(hint?.classList?.contains('auto-why'))hint.textContent=text}
+function setText(node,text){if(node&&node.textContent!==text)node.textContent=text}
+function setHint(button,text){const hint=button?.nextElementSibling;if(hint?.classList?.contains('auto-why'))setText(hint,text)}
 
 function refreshLeadActions(){
   const form=document.querySelector('#leadEditForm');
@@ -26,16 +27,16 @@ function refreshLeadActions(){
     create.disabled=!ready;
     if(ready){
       create.removeAttribute('aria-disabled');
-      create.textContent='Сохранить и создать расчёт';
+      setText(create,'Сохранить и создать расчёт');
       setHint(create,'Статус «В работе» будет сохранён, затем сразу откроется новый расчёт.');
     }else{
       create.setAttribute('aria-disabled','true');
-      create.textContent='Создать расчёт';
+      setText(create,'Создать расчёт');
       setHint(create,'Сначала выберите статус «В работе».');
     }
     return;
   }
-  create.disabled=false;create.removeAttribute('aria-disabled');create.textContent='Создать расчёт';
+  create.disabled=false;create.removeAttribute('aria-disabled');setText(create,'Создать расчёт');
 }
 
 const observer=new MutationObserver(refreshLeadActions);
