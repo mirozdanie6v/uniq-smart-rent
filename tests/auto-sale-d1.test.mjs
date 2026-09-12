@@ -41,8 +41,15 @@ test('server requires full payment before handoff',()=>{
   assert.match(rules,/stage==='Выдача'/);assert.match(rules,/full_payment_required_for_handoff/);assert.match(rules,/paid<num\(order\.total\)/);
 });
 
-test('browser hydrates every card from D1 and restores server state after rejected writes',()=>{
-  assert.match(bootstrap,/fetch\('\/api\/auto-sale\/state'/);assert.match(bootstrap,/baseRevision:revision/);assert.match(bootstrap,/response\.status===409/);assert.match(bootstrap,/auto-sale-server-rejected/);assert.match(bootstrap,/await pullLatest\(true\)/);assert.match(bootstrap,/await import\('\.\/auto-sale-app-v3\.mjs'\)/);assert.doesNotMatch(bootstrap,/mergeDemoRows/);
+test('browser hydrates from D1 at boot and keeps later saves reload-free',()=>{
+  assert.match(bootstrap,/fetch\('\/api\/auto-sale\/state'/);
+  assert.match(bootstrap,/baseRevision:revision/);
+  assert.match(bootstrap,/response\.status===409/);
+  assert.match(bootstrap,/auto-sale-server-rejected/);
+  assert.match(bootstrap,/await pullInitialState\(\)/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-app-v3\.mjs'\)/);
+  assert.doesNotMatch(bootstrap,/location\.reload\s*\(/);
+  assert.doesNotMatch(bootstrap,/reloadPending|refreshUiWhenSafe|mergeDemoRows/);
 });
 
 test('live API audit checks schema 8 persistent demo entities and logistics stages',()=>{
