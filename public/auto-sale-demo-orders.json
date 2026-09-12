@@ -1,4 +1,0 @@
-[
-  {"id":"O-2305","leadId":"L-105","customer":"Наталья","model":"Mercedes-Benz GLE 350 4MATIC 2021","manager":"Анна","source":"Telegram","total":52100,"cost":49600,"paid":48000,"stage":"Доставка","lot":"D2305","vin":"DEMO-GLE-2305","eta":"2026-09-16","location":"Автовоз до города выдачи","risk":"Задержка","riskType":"Задержка","riskNote":"Перенос прибытия на один день из-за графика перевозчика."},
-  {"id":"O-2306","leadId":"L-106","customer":"Сергей","model":"Ford Mustang Mach-E 2022","manager":"Максим","source":"WhatsApp","total":34400,"cost":32900,"paid":34400,"stage":"Выдача","lot":"D2306","vin":"DEMO-MACHE-2306","eta":"2026-09-12","location":"Площадка выдачи","risk":"Нет","riskType":"Нет"}
-]
