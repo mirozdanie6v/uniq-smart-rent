@@ -17,10 +17,10 @@ style.textContent=`
 if(!document.getElementById(style.id))document.head.append(style);
 
 const fields=form=>[...form.querySelectorAll('input[name],select[name],textarea[name]')].filter(el=>el.type!=='hidden'&&!el.disabled&&!el.closest('.auto-conditional-hidden'));
-const get=(form,name)=>form.querySelector(`[name="${CSS.escape(name)}"]`);
+const get=(form,name)=>form.elements?.namedItem?.(name)||null;
 const text=el=>String(el?.value??'').trim();
 const num=el=>Number(el?.value)||0;
-const labelOf=el=>el?.closest('label')||null;
+const labelOf=el=>el?.closest?.('label')||null;
 
 function ensureTag(el,on){
   const label=labelOf(el);if(!label)return;
@@ -44,10 +44,10 @@ function clearBlockers(form){
   form.querySelectorAll('.auto-blocked-label').forEach(x=>x.classList.remove('auto-blocked-label'));
 }
 function addBlocker(el,message,withMessage=true){
-  if(!el||el.disabled||el.type==='hidden'||el.closest('.auto-conditional-hidden'))return;
+  if(!el||el.disabled||el.type==='hidden'||el.closest?.('.auto-conditional-hidden'))return;
   el.classList.add('auto-field-blocked');
   const label=labelOf(el);label?.classList.add('auto-blocked-label');
-  if(withMessage&&label&&!label.querySelector(`.auto-field-blocker[data-for="${CSS.escape(el.name)}"]`)){
+  if(withMessage&&label&&!label.querySelector(`.auto-field-blocker[data-for="${el.name}"]`)){
     const msg=document.createElement('small');msg.className='auto-field-blocker';msg.dataset.for=el.name;msg.textContent=message;label.append(msg);
   }
 }
