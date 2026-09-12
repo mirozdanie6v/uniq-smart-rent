@@ -61,3 +61,37 @@ test('manager card save shows completed state after real button click',async()=>
   assert.match(fresh.querySelector('button[type="submit"]').textContent,/Сохранено|Сохранить карточку/);
   dom.window.close();
 });
+
+test('lead form fallback saves even when base bubbling submit does not run',async()=>{
+  const {dom,root}=await setup('lead-fallback');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-106"]').click();
+  await tick();
+  const form=root.querySelector('#leadEditForm');
+  form.elements.status.value='В работе';
+  form.elements.note.value='Сохранено аварийным контуром';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:false,cancelable:true}));
+  await tick();
+  const saved=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-106');
+  assert.equal(saved.status,'В работе');
+  assert.equal(saved.note,'Сохранено аварийным контуром');
+  assert.match(form.textContent,/Изменения сохранены/i);
+  dom.window.close();
+});
+
+test('lead fallback reports concrete missing field instead of generic message',async()=>{
+  const {dom,root}=await setup('lead-field-error');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-106"]').click();
+  await tick();
+  const form=root.querySelector('#leadEditForm');
+  form.elements.nextAction.value='';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:false,cancelable:true}));
+  await tick();
+  assert.match(form.textContent,/следующего действия/i);
+  assert.equal(form.elements.nextAction.getAttribute('aria-invalid'),'true');
+  assert.doesNotMatch(form.textContent,/Проверьте обязательные поля и повторите/i);
+  dom.window.close();
+});
