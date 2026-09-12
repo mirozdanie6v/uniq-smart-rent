@@ -26,6 +26,22 @@ test('server and browser both allow direct work to waiting-client transition use
   assert.match(server,/['"]В работе['"]:\[['"]Новый['"],['"]Расчёт['"],['"]Ожидает клиента['"]\]/);
 });
 
+test('active AUTO SALE save stack has no automatic page reload',()=>{
+  const bootstrap=fs.readFileSync('public/auto-sale-bootstrap.mjs','utf8');
+  const feedback=fs.readFileSync('public/auto-sale-quote-save-fix.mjs','utf8');
+  assert.doesNotMatch(bootstrap,/location\.reload\s*\(/);
+  assert.doesNotMatch(feedback,/location\.reload\s*\(/);
+  assert.doesNotMatch(bootstrap,/reloadPending|refreshUiWhenSafe/);
+});
+
+test('all business forms are intercepted as SPA submits',()=>{
+  const app=fs.readFileSync('public/auto-sale-app-v3.mjs','utf8');
+  const guard=fs.readFileSync('public/auto-sale-ui-business-guard.mjs','utf8');
+  assert.match(app,/root\.addEventListener\(['"]submit['"],event=>\{event\.preventDefault\(\)/);
+  for(const id of ['requestForm','leadEditForm','quoteForm','orderForm'])assert.match(app,new RegExp(`form\\.id===['"]${id}['"]`));
+  assert.match(guard,/form\.id===['"]clientEditForm['"]\)\{event\.preventDefault\(\)/);
+});
+
 test('quote validation error restores save button instead of leaving saving state',async()=>{
   const {dom,root}=await setup('quote-error');
   root.querySelector('[data-role="manager"]').click();
@@ -43,8 +59,9 @@ test('quote validation error restores save button instead of leaving saving stat
   dom.window.close();
 });
 
-test('manager card save shows completed state after real button click',async()=>{
+test('manager card save shows completed state after real button click without navigation',async()=>{
   const {dom,root}=await setup('lead-success');
+  const before=dom.window.location.href;
   root.querySelector('[data-role="manager"]').click();
   root.querySelector('[data-go="leads"]').click();
   root.querySelector('[data-lead="L-103"]').click();
@@ -55,6 +72,7 @@ test('manager card save shows completed state after real button click',async()=>
   await tick();
   const saved=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-103');
   assert.equal(saved.note,'Проверка фактического сохранения карточки');
+  assert.equal(dom.window.location.href,before);
   const fresh=root.querySelector('#leadEditForm');
   assert.ok(fresh);
   assert.match(fresh.textContent,/Изменения сохранены|Сохранено в общей базе/i);
@@ -64,6 +82,7 @@ test('manager card save shows completed state after real button click',async()=>
 
 test('lead form fallback saves even when base bubbling submit does not run',async()=>{
   const {dom,root}=await setup('lead-fallback');
+  const before=dom.window.location.href;
   root.querySelector('[data-role="manager"]').click();
   root.querySelector('[data-go="leads"]').click();
   root.querySelector('[data-lead="L-106"]').click();
@@ -76,6 +95,7 @@ test('lead form fallback saves even when base bubbling submit does not run',asyn
   const saved=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-106');
   assert.equal(saved.status,'В работе');
   assert.equal(saved.note,'Сохранено аварийным контуром');
+  assert.equal(dom.window.location.href,before);
   assert.match(form.textContent,/Изменения сохранены/i);
   dom.window.close();
 });
