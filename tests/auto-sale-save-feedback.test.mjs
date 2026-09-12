@@ -99,6 +99,24 @@ test('customer-facing save feedback never exposes persistence implementation det
   dom.window.close();
 });
 
+test('quote save retries as a bubbling submit when the first submit does not reach the app handler',async()=>{
+  const {dom,root}=await setup('quote-non-bubbling');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="quotes"]').click();
+  root.querySelector('[data-quote="Q-501"]').click();
+  await tick();
+  const form=root.querySelector('#quoteForm');
+  assert.ok(form);
+  form.elements.model.value='BMW X5 xDrive40i 2022 MOBILE SAVE';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:false,cancelable:true}));
+  await tick();
+  await tick();
+  const saved=JSON.parse(localStorage.getItem('auto-sale-quotes-v2')).find(x=>x.id==='Q-501');
+  assert.equal(saved.model,'BMW X5 xDrive40i 2022 MOBILE SAVE');
+  assert.equal(root.querySelector('#quoteForm'),null);
+  dom.window.close();
+});
+
 test('lead form fallback saves even when base bubbling submit does not run',async()=>{
   const {dom,root}=await setup('lead-fallback');
   const before=dom.window.location.href;
