@@ -20,7 +20,7 @@ export function leadTransitionAllowed(from:string,to:string,{hasAgreedQuote=fals
 export function quoteTransitionAllowed(from:string,to:string):boolean{
   if(!from)return['Черновик','Отправлен'].includes(to);
   if(from===to)return true;
-  const allowed:Record<string,string[]>={'Черновик':['Отправлен'],'Отправлен':['На согласовании','Отказ'],'На согласовании':['Согласован','Отказ'],'Согласован':[],'Отказ':[]};
+  const allowed:Record<string,string[]>={'Черновик':['Отправлен'],'Отправлен':['На согласовании','Согласован','Отказ'],'На согласовании':['Согласован','Отказ'],'Согласован':[],'Отказ':[]};
   return(allowed[from]||[]).includes(to);
 }
 export function nextStageAllowed(from:string,to:string):boolean{
