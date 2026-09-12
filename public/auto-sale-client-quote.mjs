@@ -31,7 +31,7 @@ function updateGuide(modal,q){
   if(next&&node.textContent!==next)node.textContent=next;
 }
 
-function enhance(){
+function enhanceClient(){
   const modal=document.querySelector('[data-client-detail-bg] .auto-tg-modal');if(!modal)return;
   const id=modal.querySelector('[data-tg-manager]')?.dataset.tgManager||'';if(!id)return;
   const q=quoteFor(id);if(!q||q.status==='Черновик')return;
@@ -44,23 +44,60 @@ function enhance(){
   updateGuide(modal,q);
 }
 
+function enhanceManager(){
+  const form=document.querySelector('#leadEditForm');if(!form)return;
+  const leadId=String(form.elements.id?.value||'');if(!leadId)return;
+  const q=quoteFor(leadId),side=form.closest('.auto-modal-grid')?.querySelector('.auto-side-panel');if(!q||!side)return;
+  const state=`${q.status}|${q.clientDecision||''}|${q.clientComment||''}`;
+  let box=side.querySelector('.auto-client-manager-decision');
+  if(!q.clientDecision){box?.remove();return}
+  if(box?.dataset.state===state)return;
+  const good=q.clientDecision==='agreed';
+  const text=good?'Клиент согласовал расчёт. Зафиксируйте сумму, дату и способ получения депозита.':`Клиент просит изменить расчёт: ${q.clientComment||'без комментария'}`;
+  const html=`<div class="auto-client-manager-decision auto-client-decision ${good?'good':'warn'}" data-state="${esc(state)}"><b>${good?'Расчёт согласован клиентом':'Клиент запросил изменения'}</b><span>${esc(text)}</span></div>`;
+  if(box)box.outerHTML=html;else side.insertAdjacentHTML('afterbegin',html);
+}
+
+function enhance(){enhanceClient();enhanceManager()}
+
+function coreQuoteAction(id,status){
+  const app=document.getElementById('app');if(!app)return null;
+  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.quoteAction=status;button.dataset.id=id;app.append(button);button.click();button.remove();
+  return read(K.quotes,[]).find(q=>q.id===id)?.status===status;
+}
+function syncCoreQuote(id,decision){
+  if(!document.getElementById('app'))return null;
+  let q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
+  if(q.status==='Отправлен'){
+    if(coreQuoteAction(id,'На согласовании')!==true)return false;
+    q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
+  }
+  if(decision==='agreed'&&q.status==='На согласовании'){
+    if(coreQuoteAction(id,'Согласован')!==true)return false;
+    q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
+  }
+  return decision==='agreed'?q.status==='Согласован':q.status==='На согласовании';
+}
+
 function saveDecision(id,decision,comment=''){
+  const before=read(K.quotes,[]).find(q=>q.id===id);if(!before||!['Отправлен','На согласовании'].includes(before.status))return false;
+  const coreResult=syncCoreQuote(id,decision);if(coreResult===false)return false;
   const list=read(K.quotes,[]),index=list.findIndex(q=>q.id===id);if(index<0)return false;
-  const q=list[index];if(!['Отправлен','На согласовании'].includes(q.status))return false;
-  const now=new Date().toISOString();
+  const q=list[index],now=new Date().toISOString();
   if(decision==='agreed')list[index]={...q,status:'Согласован',clientDecision:'agreed',clientDecisionAt:now,agreedAt:q.agreedAt||now,updatedAt:now};
   else list[index]={...q,status:q.status==='Отправлен'?'На согласовании':q.status,clientDecision:'changes_requested',clientDecisionAt:now,clientComment:comment.trim(),updatedAt:now};
   write(K.quotes,list);
   const notes=read(K.notes,{});notes[q.leadId]=notes[q.leadId]||[];
   notes[q.leadId].push({at:now,text:decision==='agreed'?`Клиент согласовал расчёт ${q.id}.`:`Клиент запросил изменения по расчёту ${q.id}: ${comment.trim()||'без комментария'}.`});
   write(K.notes,notes);
+  window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision}}));
   queueMicrotask(enhance);
   return true;
 }
 
 const style=document.createElement('style');style.id='auto-client-quote-style';style.textContent=`
 .auto-client-quote{margin:18px 0;padding:18px;border:1px solid rgba(93,169,255,.34);border-radius:20px;background:rgba(40,105,170,.08)}
-.auto-client-quote-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px}.auto-client-quote-head span{font-size:11px;font-weight:800;letter-spacing:.08em;color:#79b9ff}.auto-client-quote-head h3{margin:5px 0 0;font-size:18px}.auto-client-quote-lines{display:grid;gap:0;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden}.auto-client-quote-lines div{display:flex;justify-content:space-between;gap:16px;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.07)}.auto-client-quote-lines div:last-child{border-bottom:0}.auto-client-quote-lines span{color:#9ea8b8}.auto-client-quote-total{display:flex;justify-content:space-between;gap:16px;align-items:end;padding:16px 2px 4px}.auto-client-quote-total span{display:grid;gap:4px}.auto-client-quote-total small{color:#8f99a8}.auto-client-quote-total strong{font-size:28px;color:#6bb6ff}.auto-client-quote-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.auto-client-decision{display:grid;gap:5px;margin-top:14px;padding:13px 14px;border-radius:14px}.auto-client-decision.good{background:rgba(48,185,120,.11);border:1px solid rgba(48,185,120,.3)}.auto-client-decision.warn{background:rgba(255,179,71,.09);border:1px solid rgba(255,179,71,.3)}.auto-client-decision span{color:#b6bec9;line-height:1.45}.auto-client-change{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}.auto-client-change label{display:grid;gap:8px;font-weight:700}.auto-client-change textarea{min-height:96px;resize:vertical}.auto-client-change .auto-actions{margin-top:10px}@media(max-width:520px){.auto-client-quote-actions{grid-template-columns:1fr}.auto-client-quote-total{align-items:flex-start}.auto-client-quote-total strong{font-size:24px}}
+.auto-client-quote-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:14px}.auto-client-quote-head span{font-size:11px;font-weight:800;letter-spacing:.08em;color:#79b9ff}.auto-client-quote-head h3{margin:5px 0 0;font-size:18px}.auto-client-quote-lines{display:grid;gap:0;border:1px solid rgba(255,255,255,.08);border-radius:14px;overflow:hidden}.auto-client-quote-lines div{display:flex;justify-content:space-between;gap:16px;padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.07)}.auto-client-quote-lines div:last-child{border-bottom:0}.auto-client-quote-lines span{color:#9ea8b8}.auto-client-quote-total{display:flex;justify-content:space-between;gap:16px;align-items:end;padding:16px 2px 4px}.auto-client-quote-total span{display:grid;gap:4px}.auto-client-quote-total small{color:#8f99a8}.auto-client-quote-total strong{font-size:28px;color:#6bb6ff}.auto-client-quote-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}.auto-client-decision{display:grid;gap:5px;margin-top:14px;padding:13px 14px;border-radius:14px}.auto-client-decision.good{background:rgba(48,185,120,.11);border:1px solid rgba(48,185,120,.3)}.auto-client-decision.warn{background:rgba(255,179,71,.09);border:1px solid rgba(255,179,71,.3)}.auto-client-decision span{color:#b6bec9;line-height:1.45}.auto-client-manager-decision{margin:0 0 18px}.auto-client-change{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.09)}.auto-client-change label{display:grid;gap:8px;font-weight:700}.auto-client-change textarea{min-height:96px;resize:vertical}.auto-client-change .auto-actions{margin-top:10px}@media(max-width:520px){.auto-client-quote-actions{grid-template-columns:1fr}.auto-client-quote-total{align-items:flex-start}.auto-client-quote-total strong{font-size:24px}}
 `;if(!document.getElementById(style.id))document.head.append(style);
 
 new MutationObserver(enhance).observe(document.documentElement,{childList:true,subtree:true});
@@ -70,5 +107,6 @@ document.addEventListener('click',event=>{
   const cancel=event.target.closest?.('[data-client-quote-cancel-change]');if(cancel){event.preventDefault();const p=cancel.closest('[data-client-change-panel]');if(p)p.hidden=true;return}
   const send=event.target.closest?.('[data-client-quote-send-change]');if(send){event.preventDefault();const p=send.closest('[data-client-change-panel]'),comment=String(p?.querySelector('[data-client-quote-comment]')?.value||'').trim();if(!comment){const area=p?.querySelector('[data-client-quote-comment]');area?.focus();area?.setAttribute('placeholder','Напишите, что нужно изменить в расчёте');return}saveDecision(send.dataset.clientQuoteSendChange,'changes_requested',comment);return}
 },true);
+window.addEventListener('auto-sale-client-decision',()=>queueMicrotask(enhance));
 window.addEventListener('auto-sale-server-rejected',()=>{const box=document.querySelector('.auto-client-quote');if(box&&!box.querySelector('.auto-client-sync-error'))box.insertAdjacentHTML('beforeend','<div class="auto-client-sync-error auto-client-decision warn"><b>Не удалось сохранить решение</b><span>Повторите действие через несколько секунд.</span></div>')});
 enhance();
