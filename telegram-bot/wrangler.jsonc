@@ -1,0 +1,13 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "uniq-smart-rent-telegram-bot",
+  "main": "./worker.mjs",
+  "compatibility_date": "2026-09-12",
+  "workers_dev": true,
+  "vars": {
+    "TELEGRAM_MINIAPP_URL": "https://uniq-smart-rent-demo.viiversion.com"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
