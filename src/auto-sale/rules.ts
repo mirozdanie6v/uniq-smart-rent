@@ -12,7 +12,7 @@ const quoteSum=(q:AnyRecord)=>['lot','auction','inland','ocean','customs','repai
 export function leadTransitionAllowed(from:string,to:string,{hasAgreedQuote=false,deposit=0}:{hasAgreedQuote?:boolean,deposit?:number}={}):boolean{
   if(from===to)return true;
   if(to==='Отказ')return from!=='Сделка'&&from!=='Отказ';
-  const allowed:Record<string,string[]>={'Новый':['В работе'],'В работе':['Новый','Расчёт','Ожидает клиента'],'Расчёт':['В работе','Ожидает клиента'],'Ожидает клиента':['Расчёт','Сделка'],'Сделка':[],'Отказ':[]};
+  const allowed:Record<string,string[]>={'Новый':['В работе'],'В работе':['Новый','Расчёт'],'Расчёт':['В работе','Ожидает клиента'],'Ожидает клиента':['Расчёт','Сделка'],'Сделка':[],'Отказ':[]};
   if(!(allowed[from]||[]).includes(to))return false;
   if(to==='Сделка')return hasAgreedQuote&&num(deposit)>0;
   return true;
@@ -69,5 +69,6 @@ export function validateOrder(order:AnyRecord,previousStage=''):string[]{
   const payments=records(order.payments);let paid=0;
   for(const payment of payments){const amount=num(payment.amount);if(amount<=0)errors.push('payment_amount_positive_required');if(!text(payment.date))errors.push('payment_date_required');if(!text(payment.method))errors.push('payment_method_required');paid+=Math.max(0,amount)}
   if(num(order.total)>0&&paid>num(order.total))errors.push('payment_total_exceeds_order');
+  if(stage==='Выдача'&&num(order.total)>0&&paid<num(order.total))errors.push('full_payment_required_for_handoff');
   return[...new Set(errors)];
 }
