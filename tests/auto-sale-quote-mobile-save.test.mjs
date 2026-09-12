@@ -21,7 +21,7 @@ async function boot(tag){
   return dom;
 }
 
-test('draft quote saves on mobile-style form even when lead select is temporarily disabled',async()=>{
+test('draft quote saves on mobile-style form with exactly one serialized lead field',async()=>{
   const tag=`mobile-${Date.now()}-${Math.random()}`;
   const dom=await boot(tag);
   const root=document.querySelector('#app');
@@ -35,10 +35,17 @@ test('draft quote saves on mobile-style form even when lead select is temporaril
   assert.ok(form);
   const lead=form.querySelector('select[name="leadId"]');
   assert.ok(lead?.value);
+  const expectedLead=lead.value;
   lead.disabled=true;
   form.querySelectorAll('input[type="hidden"][name="leadId"]').forEach(x=>x.remove());
   assert.equal(new dom.window.FormData(form).get('leadId'),null);
 
+  assert.equal(window.__AUTO_SALE_ENSURE_QUOTE_LEAD__(form),true);
+  assert.equal(lead.disabled,false);
+  assert.equal(new dom.window.FormData(form).get('leadId'),expectedLead);
+  assert.equal(form.querySelectorAll('input[type="hidden"][name="leadId"]').length,0);
+
+  form.querySelector('[name="service"]').value='1600';
   form.querySelector('button[type="submit"]').click();
   await tick();
 
@@ -46,8 +53,8 @@ test('draft quote saves on mobile-style form even when lead select is temporaril
   assert.equal(rows.length,before+1);
   const saved=rows.at(-1);
   assert.equal(saved.status,'Черновик');
-  assert.equal(saved.total,1500);
-  assert.ok(saved.leadId);
+  assert.equal(saved.total,1600);
+  assert.equal(saved.leadId,expectedLead);
   assert.equal(root.querySelector('#quoteForm'),null);
   assert.match(root.textContent,/Калькуляции клиентам/i);
   dom.window.close();
@@ -58,8 +65,6 @@ test('open quote saves using the lead selected in the active form even if cached
   const dom=await boot(tag);
   const root=document.querySelector('#app');
 
-  // Simulate stale state left by an earlier mobile save attempt after the app
-  // already loaded its live arrays.
   const stale=JSON.parse(localStorage.getItem('auto-sale-quotes-v2'));
   const row=stale.find(x=>x.id==='Q-503');
   row.leadId='L-STALE-NOT-IN-APP';
