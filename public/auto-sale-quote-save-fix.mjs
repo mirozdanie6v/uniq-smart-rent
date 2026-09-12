@@ -28,7 +28,7 @@ function feedback(form,message,kind='warn'){
 function buttonFor(form){return form?.querySelector?.('button[type="submit"]')||null}
 function startSaving(form){const button=buttonFor(form);if(!button)return null;button.dataset.originalText=button.dataset.originalText||button.textContent||'';button.textContent='Сохраняем…';button.setAttribute('aria-busy','true');return button}
 function resetButton(button,text=''){if(!button)return;button.textContent=text||button.dataset.originalText||button.textContent||'';button.removeAttribute('aria-busy')}
-function showSaved(form,label){if(!form?.isConnected)return;const button=buttonFor(form);if(button){button.dataset.originalText=button.dataset.originalText||label;button.textContent='Сохранено ✓';button.removeAttribute('aria-busy');setTimeout(()=>{if(button.isConnected)resetButton(button,label)},1200)}feedback(form,'Изменения сохранены. Синхронизация с общей базой идёт в фоне — страница не перезагружается.','success')}
+function showSaved(form,label){if(!form?.isConnected)return;const button=buttonFor(form);if(button){button.dataset.originalText=button.dataset.originalText||label;button.textContent='Сохранено ✓';button.removeAttribute('aria-busy');setTimeout(()=>{if(button.isConnected)resetButton(button,label)},1200)}feedback(form,'Изменения сохранены.','success')}
 
 function leadErrors(form,data,current){
   const q=read(K.quotes,[]).filter(x=>x.leadId===current.id).sort((a,b)=>(Number(b.version)||0)-(Number(a.version)||0))[0];
@@ -46,7 +46,7 @@ function focusLeadProblem(form,data,errors){
 }
 function fallbackSaveLead(form,button){
   const data=Object.fromEntries(new FormData(form).entries()),rows=read(K.leads,[]),i=rows.findIndex(x=>x.id===data.id);
-  if(i<0){resetButton(button);feedback(form,'Карточка больше не найдена в текущем состоянии. Закройте её и откройте заново.','error');return}
+  if(i<0){resetButton(button);feedback(form,'Карточка больше недоступна. Закройте её, откройте заново и повторите действие.','error');return}
   const current=rows[i],errors=leadErrors(form,data,current);
   if(errors.length){resetButton(button);focusLeadProblem(form,data,errors);feedback(form,`Не удалось сохранить карточку: ${errors.join(' ')}`,'error');return}
   rows[i]={...current,status:data.status,manager:data.manager,name:String(data.name||'').trim(),contact:String(data.contact||'').trim(),model:String(data.model||'').trim(),budget:Number(data.budget)||0,source:data.source,priority:data.priority,nextAction:data.nextAction||'',yearFrom:data.yearFrom||'',yearTo:data.yearTo||'',mileageMax:data.mileageMax||'',engine:data.engine||'Не важно',drive:data.drive||'Не важно',damage:data.damage||'Минимальные',deliveryCity:data.deliveryCity||'',deposit:Number(data.deposit)||0,depositDate:data.depositDate||'',paymentMethod:data.paymentMethod||'',note:data.note||'',lostReason:data.status==='Отказ'?(data.lostReason||''):''};
@@ -82,10 +82,10 @@ const observer=new MutationObserver(patchForms);observer.observe(document.docume
 window.addEventListener('auto-sale-server-synced',()=>{
   const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;
   form.dataset.fallbackSaved='0';
-  feedback(form,'Сохранено в общей базе D1. Страница осталась открыта.','success');
+  feedback(form,'Изменения сохранены.','success');
 });
-window.addEventListener('auto-sale-server-rejected',event=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;resetButton(buttonFor(form));const detail=event.detail||{},extra=Array.isArray(detail.details)&&detail.details.length?`: ${detail.details.join(', ')}`:'';feedback(form,`Сервер не принял изменения (${detail.error||'ошибка проверки'})${extra}. Исправьте данные и сохраните ещё раз.`,'error')});
-window.addEventListener('auto-sale-server-conflict',()=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(form){resetButton(buttonFor(form));feedback(form,'Данные были изменены в другой сессии. Автоматической перезагрузки не будет; текущая карточка оставлена открытой, чтобы вы не потеряли введённые значения.','warn')}});
-window.addEventListener('auto-sale-server-deferred',()=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(form)feedback(form,'Изменения сохранены локально. Связь с общей базой временно недоступна; синхронизация будет повторена при следующем сохранении.','warn')});
+window.addEventListener('auto-sale-server-rejected',()=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;resetButton(buttonFor(form));feedback(form,'Не удалось сохранить изменения. Проверьте выделенные поля и повторите.','error')});
+window.addEventListener('auto-sale-server-conflict',()=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(form){resetButton(buttonFor(form));feedback(form,'Карточка была изменена в другом окне или другим пользователем. Закройте её, откройте заново и повторите изменения.','warn')}});
+window.addEventListener('auto-sale-server-deferred',()=>{const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(form){resetButton(buttonFor(form));feedback(form,'Сейчас нет связи. Проверьте интернет-соединение и повторите сохранение.','warn')}});
 
 if(!document.getElementById('autoSaleQuoteSaveFixStyles')){const style=document.createElement('style');style.id='autoSaleQuoteSaveFixStyles';style.textContent='.auto-field-locked{pointer-events:none;opacity:.78;background:rgba(255,255,255,.035)}.auto-field-error{border-color:#ef6b6b!important;box-shadow:0 0 0 2px rgba(239,107,107,.16)!important}.auto-save-submit-feedback{padding:10px 12px;margin:8px 0;border:1px solid rgba(230,177,71,.35);border-radius:12px;background:rgba(230,177,71,.08);font-size:12px;line-height:1.45;color:#f1d28f}.auto-save-submit-feedback[data-kind="success"]{border-color:rgba(74,190,130,.38);background:rgba(74,190,130,.09);color:#bdebd2}.auto-save-submit-feedback[data-kind="error"]{border-color:rgba(235,102,102,.4);background:rgba(235,102,102,.09);color:#ffc7c7}';document.head.append(style)}
