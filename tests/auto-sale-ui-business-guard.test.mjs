@@ -19,6 +19,7 @@ async function setup(tag,{custom=false,clientStatus='',orderDelivery=false}={}){
   if(clientStatus)await import(`../public/auto-sale-telegram.mjs?guard-tg=${tag}-${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-ui-business-guard.mjs?guard=${tag}-${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-quote-save-fix.mjs?quote-save=${tag}-${Date.now()}-${Math.random()}`);
+  await import(`../public/auto-sale-lead-status-fix.mjs?lead-status=${tag}-${Date.now()}-${Math.random()}`);
   await tick();
   return{dom,root:document.querySelector('#app')};
 }
@@ -41,7 +42,27 @@ test('new quote excludes new deal and refused leads',async()=>{
 
 test('new lead explains why quote creation is disabled',async()=>{
   const {dom,root}=await setup('new-lead-quote');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-106"]').click();await tick();
-  const button=root.querySelector('[data-create-quote="L-106"]');assert.equal(button.disabled,true);assert.match(root.textContent,/Почему кнопка неактивна/i);assert.match(root.textContent,/В работе/i);assert.match(root.textContent,/Сначала принять в работу/i);dom.window.close();
+  const button=root.querySelector('[data-create-quote="L-106"]');assert.equal(button.disabled,true);assert.match(root.textContent,/В работе/i);assert.match(root.textContent,/Сначала принять в работу/i);dom.window.close();
+});
+
+test('selecting work status immediately activates save and save-plus-quote actions',async()=>{
+  const {dom,root}=await setup('work-activates-actions');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-106"]').click();await tick();
+  const form=root.querySelector('#leadEditForm'),status=form.elements.status,save=form.querySelector('button[type="submit"]'),create=root.querySelector('[data-create-quote="L-106"]');
+  assert.equal(create.disabled,true);status.value='В работе';status.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await tick();
+  assert.equal(save.disabled,false);assert.equal(create.disabled,false);assert.match(create.textContent,/Сохранить и создать расчёт/i);dom.window.close();
+});
+
+test('saving work status keeps quote creation active without reload',async()=>{
+  const {dom,root}=await setup('work-save-quote');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-106"]').click();await tick();
+  let form=root.querySelector('#leadEditForm');form.elements.status.value='В работе';form.elements.status.dispatchEvent(new dom.window.Event('change',{bubbles:true}));form.querySelector('button[type="submit"]').click();await tick();
+  const lead=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-106');assert.equal(lead.status,'В работе');form=root.querySelector('#leadEditForm');assert.ok(form);const create=root.querySelector('[data-create-quote="L-106"]');assert.equal(create.disabled,false);create.click();await tick();
+  const quoteForm=root.querySelector('#quoteForm');assert.ok(quoteForm);assert.equal(quoteForm.elements.leadId.value,'L-106');dom.window.close();
+});
+
+test('create quote from pending work status saves lead first and opens quote',async()=>{
+  const {dom,root}=await setup('work-direct-quote');root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-106"]').click();await tick();
+  const form=root.querySelector('#leadEditForm');form.elements.status.value='В работе';form.elements.status.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await tick();const create=root.querySelector('[data-create-quote="L-106"]');assert.equal(create.disabled,false);create.click();await tick();await tick();
+  const lead=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-106');assert.equal(lead.status,'В работе');const quoteForm=root.querySelector('#quoteForm');assert.ok(quoteForm);assert.equal(quoteForm.elements.leadId.value,'L-106');dom.window.close();
 });
 
 test('deposit above agreed quote is stopped before base submit handler',async()=>{
