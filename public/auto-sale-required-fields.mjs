@@ -141,10 +141,19 @@ function refresh(form){
   form.dataset.requiredHighlight='1';
 }
 function refreshAll(scope=document){scope.querySelectorAll?.(FORM_SELECTOR).forEach(refresh)}
+function containsTrackedForm(node){
+  if(node?.nodeType!==1)return false;
+  if(node.matches?.('.auto-required-tag,.auto-field-blocker,#auto-required-fields-style'))return false;
+  return Boolean(node.matches?.(FORM_SELECTOR)||node.querySelector?.(FORM_SELECTOR));
+}
 
 refreshAll();
 let queued=false;
-new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;refreshAll()})}).observe(document.documentElement,{childList:true,subtree:true});
+new MutationObserver(mutations=>{
+  const relevant=mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(containsTrackedForm));
+  if(!relevant||queued)return;
+  queued=true;queueMicrotask(()=>{queued=false;refreshAll()});
+}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('input',event=>{const form=event.target?.closest?.(FORM_SELECTOR);if(form)refresh(form)},true);
 document.addEventListener('change',event=>{const form=event.target?.closest?.(FORM_SELECTOR);if(form)refresh(form)},true);
 document.addEventListener('submit',event=>{const form=event.target?.matches?.(FORM_SELECTOR)?event.target:null;if(form)refresh(form)},true);
