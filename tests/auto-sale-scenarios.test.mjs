@@ -9,6 +9,7 @@ async function setup(tag){
   return{dom,root:document.querySelector('#app')};
 }
 const active=(root,id)=>root.querySelector(`.auto-bottom [data-go="${id}"]`)?.classList.contains('active');
+const submit=(dom,form)=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
 
 test('every role navigation button opens its current v3 business screen',async()=>{
   const {dom,root}=await setup('routes');
@@ -46,6 +47,24 @@ test('deal and refusal lead statuses are terminal in the manager UI',async()=>{
   root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();
   root.querySelector('[data-lead="L-104"]').click();let options=[...root.querySelector('#leadStatus').options].map(x=>x.value);assert.deepEqual(options,['Сделка']);root.querySelector('[data-close]').click();
   root.querySelector('[data-lead="L-107"]').click();options=[...root.querySelector('#leadStatus').options].map(x=>x.value);assert.deepEqual(options,['Отказ']);
+  dom.window.close();
+});
+
+test('terminal quote is read-only and clone creates a new draft version',async()=>{
+  const {dom,root}=await setup('quote-clone');
+  root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="quotes"]').click();root.querySelector('[data-quote="Q-504"]').click();
+  assert.equal(root.querySelector('#quoteForm'),null);const clone=root.querySelector('[data-clone-quote="Q-504"]');assert.ok(clone);clone.click();
+  const quotes=JSON.parse(localStorage.getItem('auto-sale-quotes-v2')),original=quotes.find(x=>x.id==='Q-504'),copy=quotes.find(x=>x.revisionOf==='Q-504');
+  assert.equal(original.status,'Согласован');assert.ok(copy);assert.equal(copy.status,'Черновик');assert.equal(copy.version,2);assert.ok(root.querySelector('#quoteForm'));
+  dom.window.close();
+});
+
+test('order rejects payment above remaining balance',async()=>{
+  const {dom,root}=await setup('overpayment');
+  root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="shipping"]').click();root.querySelector('[data-order="O-2301"]').click();
+  const form=root.querySelector('#orderForm'),before=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id==='O-2301');
+  form.querySelector('[name="paymentAmount"]').value='12000';form.querySelector('[name="paymentDate"]').value='2026-09-12';submit(dom,form);
+  const after=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id==='O-2301');assert.equal(after.paid,before.paid);assert.match(form.textContent,/больше остатка/);
   dom.window.close();
 });
 
