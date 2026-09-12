@@ -18,10 +18,10 @@ test('manager-created lead requires manager source and next action',()=>{
   assert.ok(bad.length>=2);
 });
 
-test('lead transition matrix allows only canonical CRM movement',()=>{
+test('lead transition matrix allows canonical CRM movement and combined sent-quote step',()=>{
   const allowed={
     'Новый':['Новый','В работе','Отказ'],
-    'В работе':['Новый','В работе','Расчёт','Отказ'],
+    'В работе':['Новый','В работе','Расчёт','Ожидает клиента','Отказ'],
     'Расчёт':['В работе','Расчёт','Ожидает клиента','Отказ'],
     'Ожидает клиента':['Расчёт','Ожидает клиента','Отказ'],
     'Сделка':['Сделка'],
