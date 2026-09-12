@@ -75,8 +75,27 @@ test('manager card save shows completed state after real button click without na
   assert.equal(dom.window.location.href,before);
   const fresh=root.querySelector('#leadEditForm');
   assert.ok(fresh);
-  assert.match(fresh.textContent,/Изменения сохранены|Сохранено в общей базе/i);
+  assert.match(fresh.textContent,/Изменения сохранены/i);
   assert.match(fresh.querySelector('button[type="submit"]').textContent,/Сохранено|Сохранить карточку/);
+  dom.window.close();
+});
+
+test('customer-facing save feedback never exposes persistence implementation details',async()=>{
+  const {dom,root}=await setup('public-feedback');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-103"]').click();
+  await tick();
+  const form=root.querySelector('#leadEditForm');
+  const forbidden=/\bD1\b|сервер|синхронизац|локальн|localStorage|\bAPI\b|база данных/i;
+  for(const type of ['auto-sale-server-synced','auto-sale-server-rejected','auto-sale-server-conflict','auto-sale-server-deferred']){
+    window.dispatchEvent(new dom.window.CustomEvent(type,{detail:{error:'internal_code',details:['internal_field']}}));
+    await tick();
+    const text=form.querySelector('.auto-save-submit-feedback')?.textContent||'';
+    assert.ok(text.length>0);
+    assert.doesNotMatch(text,forbidden);
+    assert.doesNotMatch(text,/internal_code|internal_field/i);
+  }
   dom.window.close();
 });
 
