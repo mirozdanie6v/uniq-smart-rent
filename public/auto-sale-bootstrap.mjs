@@ -65,6 +65,7 @@ Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);i
 await import('./auto-sale-submit-bridge.mjs');
 await import('./auto-sale-app-v3.mjs');
 await import('./auto-sale-ui-business-guard.mjs');
+await import('./auto-sale-quote-lead-serialization.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
