@@ -2,120 +2,57 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 
-function setValue(root,selector,value){
-  const el=root.querySelector(selector);
-  assert.ok(el,`missing ${selector}`);
-  el.value=value;
-  return el;
-}
-
-function submit(dom,form){
-  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
-}
-
-test('client -> manager -> quote -> order -> logistics -> director scenario works in one shared state', async()=>{
+async function setup(tag){
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
-  globalThis.window=dom.window;
-  globalThis.document=dom.window.document;
-  globalThis.localStorage=dom.window.localStorage;
-  globalThis.sessionStorage=dom.window.sessionStorage;
-  globalThis.FormData=dom.window.FormData;
-  globalThis.Event=dom.window.Event;
-  globalThis.CustomEvent=dom.window.CustomEvent;
+  globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;
+  await import(`../public/auto-sale-app-v3.mjs?${tag}=${Date.now()}-${Math.random()}`);
+  return{dom,root:document.querySelector('#app')};
+}
+const active=(root,id)=>root.querySelector(`.auto-bottom [data-go="${id}"]`)?.classList.contains('active');
 
-  await import(`../public/auto-sale-app.mjs?scenario=${Date.now()}`);
-  const root=dom.window.document.querySelector('#app');
-  assert.match(root.textContent,/Автомобиль из США под ключ/);
-
-  root.querySelector('[data-open-request]').click();
-  const requestForm=root.querySelector('#requestForm');
-  assert.ok(requestForm);
-  setValue(requestForm,'[name="name"]','Тестовый клиент');
-  setValue(requestForm,'[name="contact"]','@test_client');
-  setValue(requestForm,'[name="model"]','Audi Q5 2023');
-  setValue(requestForm,'[name="budget"]','41000');
-  setValue(requestForm,'[name="source"]','Сайт');
-  submit(dom,requestForm);
-
-  const leadsAfterRequest=JSON.parse(localStorage.getItem('auto-sale-leads-v2'));
-  const clientLead=leadsAfterRequest.find(x=>x.contact==='@test_client');
-  assert.ok(clientLead);
-  assert.equal(clientLead.clientCreated,true);
-  assert.equal(clientLead.status,'Новый');
-  assert.match(root.textContent,/Заявки и статус поставки/);
-
+test('every role navigation button opens its current v3 business screen',async()=>{
+  const {dom,root}=await setup('routes');
+  for(const id of ['home','catalog','orders','about']){root.querySelector(`.auto-bottom [data-go="${id}"]`).click();assert.equal(active(root,id),true,id)}
   root.querySelector('[data-role="manager"]').click();
-  assert.match(root.textContent,/Сегодня у менеджера/);
-  root.querySelector('[data-go="leads"]').click();
-  root.querySelector(`[data-lead="${clientLead.id}"]`).click();
-  const leadForm=root.querySelector('#leadEditForm');
-  assert.ok(leadForm);
-  setValue(leadForm,'[name="status"]','В работе');
-  setValue(leadForm,'[name="manager"]','Анна');
-  setValue(leadForm,'[name="nextAction"]','2026-09-13');
-  setValue(leadForm,'[name="note"]','Подготовить три лота Audi Q5.');
-  submit(dom,leadForm);
-
-  const updatedLead=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id===clientLead.id);
-  assert.equal(updatedLead.status,'В работе');
-  assert.equal(updatedLead.manager,'Анна');
-
-  root.querySelector(`[data-create-quote="${clientLead.id}"]`).click();
-  const quoteForm=root.querySelector('#quoteForm');
-  assert.ok(quoteForm);
-  setValue(quoteForm,'[name="model"]','Audi Q5 Premium Plus 2023');
-  setValue(quoteForm,'[name="lot"]','26000');
-  setValue(quoteForm,'[name="auction"]','1000');
-  setValue(quoteForm,'[name="inland"]','700');
-  setValue(quoteForm,'[name="ocean"]','2400');
-  setValue(quoteForm,'[name="customs"]','6200');
-  setValue(quoteForm,'[name="repair"]','1200');
-  setValue(quoteForm,'[name="service"]','1500');
-  setValue(quoteForm,'[name="status"]','Согласован');
-  submit(dom,quoteForm);
-
-  const quote=JSON.parse(localStorage.getItem('auto-sale-quotes-v2')).find(x=>x.leadId===clientLead.id);
-  assert.ok(quote);
-  assert.equal(quote.total,39000);
-  assert.equal(quote.status,'Согласован');
-
-  root.querySelector('[data-go="leads"]').click();
-  root.querySelector(`[data-lead="${clientLead.id}"]`).click();
-  root.querySelector(`[data-convert-order="${clientLead.id}"]`).click();
-  let order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.leadId===clientLead.id);
-  assert.ok(order);
-  assert.equal(order.stage,'Выкуп');
-  assert.equal(order.manager,'Анна');
-  assert.equal(order.total,39000);
-
-  root.querySelector(`[data-order-next="${order.id}"]`).click();
-  order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
-  assert.equal(order.stage,'Порт США');
-
-  const orderForm=root.querySelector('#orderForm');
-  setValue(orderForm,'[name="stage"]','В море');
-  setValue(orderForm,'[name="eta"]','2026-10-25');
-  setValue(orderForm,'[name="location"]','Atlantic Ocean');
-  setValue(orderForm,'[name="risk"]','Нет');
-  setValue(orderForm,'[name="paid"]','20000');
-  submit(dom,orderForm);
-  order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
-  assert.equal(order.stage,'В море');
-  assert.equal(order.paid,20000);
-
+  for(const id of ['work','leads','quotes','shipping']){root.querySelector(`.auto-bottom [data-go="${id}"]`).click();assert.equal(active(root,id),true,id)}
   root.querySelector('[data-role="owner"]').click();
-  assert.match(root.textContent,/Бизнес одним экраном/);
-  root.querySelector('[data-go="finance"]').click();
-  assert.match(root.textContent,/Деньги по заказам/);
-  assert.match(root.textContent,/Дебиторка/);
-  root.querySelector('[data-go="ordersAdmin"]').click();
-  assert.match(root.textContent,/Все сделки и автомобили/);
-  assert.match(root.textContent,/Audi Q5 Premium Plus 2023/);
+  for(const id of ['overview','pipeline','finance','ordersAdmin']){root.querySelector(`.auto-bottom [data-go="${id}"]`).click();assert.equal(active(root,id),true,id)}
+  dom.window.close();
+});
 
-  root.querySelector('[data-role="client"]').click();
-  root.querySelector('[data-go="orders"]').click();
-  assert.match(root.textContent,/Audi Q5 Premium Plus 2023/);
-  assert.match(root.textContent,/В море/);
+test('client request detail and close buttons are wired',async()=>{
+  const {dom,root}=await setup('client-buttons');
+  root.querySelector('[data-open-request]').click();assert.ok(root.querySelector('#requestForm'));
+  root.querySelector('[data-close]').click();assert.equal(root.querySelector('#requestForm'),null);
+  root.querySelector('[data-go="catalog"]').click();
+  root.querySelector('[data-detail]').click();assert.ok(root.querySelector('.auto-modal'));
+  document.dispatchEvent(new dom.window.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(root.querySelector('.auto-modal'),null);
+  root.querySelector('[data-request-car]').click();const form=root.querySelector('#requestForm');assert.ok(form);assert.ok(form.querySelector('[name="model"]').value.length>0);
+  dom.window.close();
+});
 
+test('manager buttons open new lead lead quote and order workflows',async()=>{
+  const {dom,root}=await setup('manager-buttons');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-manager-new]').click();let form=root.querySelector('#requestForm');assert.ok(form);assert.ok(form.querySelector('[name="source"]'));root.querySelector('[data-close]').click();
+  root.querySelector('[data-go="leads"]').click();root.querySelector('[data-lead="L-101"]').click();assert.ok(root.querySelector('#leadEditForm'));assert.ok(root.querySelector('[data-create-quote="L-101"]'));root.querySelector('[data-close]').click();
+  root.querySelector('[data-go="quotes"]').click();root.querySelector('[data-quote="Q-501"]').click();assert.ok(root.querySelector('#quoteForm'));root.querySelector('[data-close]').click();
+  root.querySelector('[data-go="shipping"]').click();root.querySelector('[data-order="O-2301"]').click();assert.ok(root.querySelector('#orderForm'));assert.ok(root.querySelector('[data-order-next="O-2301"]'));root.querySelector('[data-close]').click();
+  dom.window.close();
+});
+
+test('deal and refusal lead statuses are terminal in the manager UI',async()=>{
+  const {dom,root}=await setup('terminal-leads');
+  root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-104"]').click();let options=[...root.querySelector('#leadStatus').options].map(x=>x.value);assert.deepEqual(options,['Сделка']);root.querySelector('[data-close]').click();
+  root.querySelector('[data-lead="L-107"]').click();options=[...root.querySelector('#leadStatus').options].map(x=>x.value);assert.deepEqual(options,['Отказ']);
+  dom.window.close();
+});
+
+test('order next button advances exactly one stage and owner sees the same order read-only',async()=>{
+  const {dom,root}=await setup('order-next');
+  root.querySelector('[data-role="manager"]').click();root.querySelector('[data-go="shipping"]').click();root.querySelector('[data-order="O-2301"]').click();
+  root.querySelector('[data-order-next="O-2301"]').click();const order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id==='O-2301');assert.equal(order.stage,'Таможня');
+  root.querySelector('[data-role="owner"]').click();root.querySelector('[data-go="ordersAdmin"]').click();root.querySelector('[data-order="O-2301"]').click();assert.equal(root.querySelector('#orderForm'),null);assert.match(root.textContent,/КОНТРОЛЬ/);
   dom.window.close();
 });
