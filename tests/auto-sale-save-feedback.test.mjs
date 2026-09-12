@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {JSDOM} from 'jsdom';
+import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+import {leadTransitionAllowed as browserLeadTransitionAllowed} from '../public/auto-sale-business-rules.mjs';
+
+const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
+
+async function setup(tag){
+  const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
+  globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;globalThis.MutationObserver=dom.window.MutationObserver;globalThis.HTMLFormElement=dom.window.HTMLFormElement;
+  localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
+  localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
+  localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  await import(`../public/auto-sale-app-v3.mjs?save-app=${tag}-${Date.now()}-${Math.random()}`);
+  await import(`../public/auto-sale-ui-business-guard.mjs?save-guard=${tag}-${Date.now()}-${Math.random()}`);
+  await import(`../public/auto-sale-quote-save-fix.mjs?save-feedback=${tag}-${Date.now()}-${Math.random()}`);
+  await tick();
+  return{dom,root:document.querySelector('#app')};
+}
+
+test('server and browser both allow direct work to waiting-client transition used by sent quote',()=>{
+  assert.equal(browserLeadTransitionAllowed('В работе','Ожидает клиента'),true);
+  const server=fs.readFileSync('src/auto-sale/rules.ts','utf8');
+  assert.match(server,/['"]В работе['"]:\[['"]Новый['"],['"]Расчёт['"],['"]Ожидает клиента['"]\]/);
+});
+
+test('quote validation error restores save button instead of leaving saving state',async()=>{
+  const {dom,root}=await setup('quote-error');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="quotes"]').click();
+  root.querySelector('[data-new-quote]').click();
+  await tick();
+  const form=root.querySelector('#quoteForm');
+  assert.ok(form);
+  form.elements.status.value='Отправлен';
+  const button=form.querySelector('button[type="submit"]');
+  button.click();
+  await tick();
+  assert.equal(button.textContent,'Сохранить расчёт');
+  assert.match(form.textContent,/Не удалось сохранить/i);
+  dom.window.close();
+});
+
+test('manager card save shows completed state after real button click',async()=>{
+  const {dom,root}=await setup('lead-success');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-103"]').click();
+  await tick();
+  const form=root.querySelector('#leadEditForm');
+  form.elements.note.value='Проверка фактического сохранения карточки';
+  form.querySelector('button[type="submit"]').click();
+  await tick();
+  const saved=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-103');
+  assert.equal(saved.note,'Проверка фактического сохранения карточки');
+  const fresh=root.querySelector('#leadEditForm');
+  assert.ok(fresh);
+  assert.match(fresh.textContent,/Изменения сохранены|Сохранено в общей базе/i);
+  assert.match(fresh.querySelector('button[type="submit"]').textContent,/Сохранено|Сохранить карточку/);
+  dom.window.close();
+});
