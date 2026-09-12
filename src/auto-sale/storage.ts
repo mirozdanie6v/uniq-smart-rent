@@ -53,6 +53,13 @@ export async function putNote(db:D1DatabaseLike,leadId:string,note:AnyRecord,ind
     .bind(noteId,leadId,text(note.text),JSON.stringify(payload),at).run();
   return payload;
 }
+export async function putTeamMember(db:D1DatabaseLike,member:AnyRecord):Promise<AnyRecord>{
+  member.id=id(member,'TM');
+  await db.prepare(`INSERT INTO auto_sale_team (id,name,role,phone,telegram,active,payload_json,updated_at)
+    VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,role=excluded.role,phone=excluded.phone,telegram=excluded.telegram,active=excluded.active,payload_json=excluded.payload_json,updated_at=excluded.updated_at`)
+    .bind(text(member.id),text(member.name),text(member.role)||'Менеджер',text(member.phone),text(member.telegram),bool(member.active)?1:0,JSON.stringify(member),new Date().toISOString()).run();
+  return member;
+}
 
 export async function loadState(db:D1DatabaseLike):Promise<AnyRecord>{
   const leadsR=await db.prepare('SELECT payload_json FROM auto_sale_leads ORDER BY updated_at,id').all<{payload_json:string}>();
@@ -60,12 +67,14 @@ export async function loadState(db:D1DatabaseLike):Promise<AnyRecord>{
   const ordersR=await db.prepare('SELECT id,payload_json FROM auto_sale_orders ORDER BY updated_at,id').all<{id:string,payload_json:string}>();
   const paymentsR=await db.prepare('SELECT order_id,payload_json FROM auto_sale_payments ORDER BY payment_date,created_at,id').all<{order_id:string,payload_json:string}>();
   const notesR=await db.prepare('SELECT lead_id,payload_json FROM auto_sale_notes ORDER BY created_at,id').all<{lead_id:string,payload_json:string}>();
+  const teamR=await db.prepare('SELECT payload_json FROM auto_sale_team ORDER BY active DESC,name,id').all<{payload_json:string}>();
   const leads=(leadsR.results||[]).map(r=>parse(r.payload_json));
   const quotes=(quotesR.results||[]).map(r=>parse(r.payload_json));
+  const team=(teamR.results||[]).map(r=>parse(r.payload_json));
   const byOrder=new Map<string,AnyRecord[]>();
   for(const r of paymentsR.results||[]){const list=byOrder.get(r.order_id)||[];list.push(parse(r.payload_json));byOrder.set(r.order_id,list)}
   const orders=(ordersR.results||[]).map(r=>{const order=parse(r.payload_json),payments=byOrder.get(r.id)||[];return{...order,payments,paid:payments.reduce((s,p)=>s+num(p.amount),0)}});
   const notes:Record<string,AnyRecord[]>={};
   for(const r of notesR.results||[])(notes[r.lead_id]||=[]).push(parse(r.payload_json));
-  return{revision:await getRevision(db),initialized:leads.length>0,leads,quotes,orders,notes};
+  return{revision:await getRevision(db),initialized:leads.length>0,leads,quotes,orders,notes,team};
 }
