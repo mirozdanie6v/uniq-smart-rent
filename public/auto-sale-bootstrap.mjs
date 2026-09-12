@@ -64,7 +64,6 @@ function scheduleSync(delay=180){if(QUOTE_AUDIT_MODE)return;clearTimeout(timer);
 
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
-await import('./auto-sale-form-id-compat.mjs');
 await import('./auto-sale-submit-bridge.mjs');
 await import('./auto-sale-app-v3.mjs');
 await import('./auto-sale-ui-business-guard.mjs');
