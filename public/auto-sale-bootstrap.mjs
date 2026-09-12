@@ -20,6 +20,7 @@ function scheduleSync(delay=180){clearTimeout(timer);timer=setTimeout(pushState,
 await pullLatest(true);
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-app-v3.mjs');
+await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-catalog-extra.mjs');
 scheduleSync(250);
 window.addEventListener('focus',()=>pullLatest(false));
