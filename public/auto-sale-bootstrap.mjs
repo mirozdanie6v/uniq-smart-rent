@@ -1,4 +1,4 @@
-const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2'};
+const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',team:'auto-sale-team-v1'};
 const REVISION_KEY='auto-sale-server-revision-v1';
 const originalSet=Storage.prototype.setItem;
 let suppress=false;
@@ -9,8 +9,8 @@ let pending=false;
 
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
-function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{})}
-function payload(){return{baseRevision:revision,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{})}}
+function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{});writeCache(DATA_KEYS.team,state.team||[])}
+function payload(){return{baseRevision:revision,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{}),team:readCache(DATA_KEYS.team,[])}}
 
 async function pullInitialState(){
   try{
@@ -68,5 +68,6 @@ await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
+await import('./auto-sale-director-team.mjs');
 await import('./auto-sale-catalog-extra.mjs');
 scheduleSync(250);
