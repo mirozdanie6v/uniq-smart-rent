@@ -10,7 +10,7 @@ async function parse(request:Request):Promise<AnyRecord|null>{try{return await r
 export default{async fetch(request:Request,env:AutoSaleEnv):Promise<Response>{
   const url=new URL(request.url);
   if(request.method==='OPTIONS'&&url.pathname.startsWith('/api/'))return new Response(null,{status:204,headers});
-  if(url.pathname==='/api/health')return json({ok:true,service:'auto-sale-usa',productMode:env.PRODUCT_MODE||'auto-sale-usa',d1:Boolean(env.DB),schemaVersion:8,demoMode:env.AUTO_SALE_DEMO_MODE==='1',demoCardsPersistent:true});
+  if(url.pathname==='/api/health')return json({ok:true,service:'auto-sale-usa',productMode:env.PRODUCT_MODE||'auto-sale-usa',d1:Boolean(env.DB),schemaVersion:9,demoMode:env.AUTO_SALE_DEMO_MODE==='1',demoCardsPersistent:true,teamManagement:true});
   if(url.pathname==='/api/auto-sale/state'&&request.method==='GET'){
     if(!env.DB)return json({error:'persistence_not_configured'},503);
     return json(await loadState(env.DB));
