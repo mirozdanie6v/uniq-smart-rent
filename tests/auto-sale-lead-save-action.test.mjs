@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {JSDOM} from 'jsdom';
+import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+
+test('manager save card button persists edited lead data',async()=>{
+  const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/'});
+  globalThis.window=dom.window;
+  globalThis.document=dom.window.document;
+  globalThis.localStorage=dom.window.localStorage;
+  globalThis.sessionStorage=dom.window.sessionStorage;
+  globalThis.FormData=dom.window.FormData;
+  globalThis.Event=dom.window.Event;
+  globalThis.CustomEvent=dom.window.CustomEvent;
+  globalThis.MutationObserver=dom.window.MutationObserver;
+  globalThis.HTMLFormElement=dom.window.HTMLFormElement;
+  localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
+  localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
+  localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  await import('../public/auto-sale-app-v3.mjs?lead-save-action');
+  const root=document.querySelector('#app');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-go="leads"]').click();
+  root.querySelector('[data-lead="L-103"]').click();
+  const form=root.querySelector('#leadEditForm');
+  assert.ok(form);
+  form.elements.note.value='Сохранение работает';
+  form.querySelector('button[type="submit"]').click();
+  const saved=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id==='L-103');
+  assert.equal(saved.note,'Сохранение работает');
+  dom.window.close();
+});
