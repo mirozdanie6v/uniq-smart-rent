@@ -73,4 +73,5 @@ await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
 await import('./auto-sale-director-team.mjs');
 await import('./auto-sale-catalog-extra.mjs');
+await import('./auto-sale-client-quote.mjs');
 scheduleSync(250);
