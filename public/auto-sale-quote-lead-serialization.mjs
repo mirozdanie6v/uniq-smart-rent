@@ -9,26 +9,51 @@ function showError(form,message){
   box.dataset.kind='error';box.textContent=message;box.scrollIntoView?.({block:'nearest',behavior:'smooth'});
 }
 
+function validLeadId(id,leads){const value=String(id||'').trim();return value&&leads.some(x=>String(x?.id||'')===value)?value:''}
+function selectLeadId(select,leads){
+  if(!select)return'';
+  const values=[select.value,select.dataset?.lockedValue]
+    .map(x=>String(x||'').trim()).filter(Boolean);
+  for(const value of values){
+    if(![...select.options].some(option=>String(option.value)===value))continue;
+    const valid=validLeadId(value,leads);if(valid)return valid;
+  }
+  return'';
+}
 function resolveLeadId(form){
+  const leads=read(LEADS_KEY,[]);
+  const select=form.querySelector('select[name="leadId"]');
+
+  // The currently rendered form is built from the application's live lead list.
+  // Prefer it over cached quote metadata so an older cached relation cannot break save.
+  const active=selectLeadId(select,leads);
+  if(active)return active;
+
+  const pending=validLeadId(window.__AUTO_SALE_PENDING_QUOTE_LEAD__,leads);
+  if(pending&&(!select||[...select.options].some(option=>String(option.value)===pending)))return pending;
+
   const quoteId=String(form.querySelector('input[name="id"]')?.value||'').trim();
   if(quoteId){
     const quote=read(QUOTES_KEY,[]).find(x=>String(x?.id||'')===quoteId);
-    if(quote?.leadId)return String(quote.leadId);
+    const cached=validLeadId(quote?.leadId,leads);
+    if(cached&&(!select||[...select.options].some(option=>String(option.value)===cached)))return cached;
   }
-  const select=form.querySelector('select[name="leadId"]');
-  const candidates=[select?.value,select?.dataset?.lockedValue,window.__AUTO_SALE_PENDING_QUOTE_LEAD__]
-    .map(x=>String(x||'').trim()).filter(Boolean);
-  const leads=read(LEADS_KEY,[]);
-  return candidates.find(id=>leads.some(x=>String(x?.id||'')===id))||'';
+  return'';
 }
 
 function ensureSerializedLead(form){
   const leadId=resolveLeadId(form);
-  form.querySelectorAll('input[data-auto-quote-lead-serialization]').forEach(x=>x.remove());
+  form.querySelectorAll('input[data-auto-quote-lead-serialization],input[type="hidden"][name="leadId"]').forEach(x=>x.remove());
   if(!leadId)return false;
+  const select=form.querySelector('select[name="leadId"]');
+  if(select){
+    select.disabled=false;
+    if([...select.options].some(option=>String(option.value)===leadId))select.value=leadId;
+  }
   const hidden=document.createElement('input');
   hidden.type='hidden';hidden.name='leadId';hidden.value=leadId;hidden.dataset.autoQuoteLeadSerialization='1';
   form.append(hidden);
+  form.dataset.resolvedLeadId=leadId;
   return true;
 }
 
@@ -38,7 +63,7 @@ document.addEventListener('submit',event=>{
   if(ensureSerializedLead(form))return;
   event.preventDefault();event.stopImmediatePropagation();
   const button=form.querySelector('button[type="submit"]');if(button){button.textContent=button.dataset.originalText||'Сохранить расчёт';button.removeAttribute('aria-busy')}
-  showError(form,'Не удалось сохранить расчёт: клиент не выбран. Выберите лида и повторите сохранение.');
+  showError(form,'Не удалось сохранить расчёт: выберите клиента и повторите сохранение.');
 },true);
 
 window.__AUTO_SALE_ENSURE_QUOTE_LEAD__=ensureSerializedLead;
