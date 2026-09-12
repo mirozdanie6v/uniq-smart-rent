@@ -12,7 +12,7 @@ const quoteSum=(q:AnyRecord)=>['lot','auction','inland','ocean','customs','repai
 export function leadTransitionAllowed(from:string,to:string,{hasAgreedQuote=false,deposit=0}:{hasAgreedQuote?:boolean,deposit?:number}={}):boolean{
   if(from===to)return true;
   if(to==='Отказ')return from!=='Сделка'&&from!=='Отказ';
-  const allowed:Record<string,string[]>={'Новый':['В работе'],'В работе':['Новый','Расчёт'],'Расчёт':['В работе','Ожидает клиента'],'Ожидает клиента':['Расчёт','Сделка'],'Сделка':[],'Отказ':[]};
+  const allowed:Record<string,string[]>={'Новый':['В работе'],'В работе':['Новый','Расчёт','Ожидает клиента'],'Расчёт':['В работе','Ожидает клиента'],'Ожидает клиента':['Расчёт','Сделка'],'Сделка':[],'Отказ':[]};
   if(!(allowed[from]||[]).includes(to))return false;
   if(to==='Сделка')return hasAgreedQuote&&num(deposit)>0;
   return true;
