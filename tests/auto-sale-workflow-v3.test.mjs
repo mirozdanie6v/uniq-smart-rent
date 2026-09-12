@@ -5,7 +5,7 @@ import {JSDOM} from 'jsdom';
 const set=(root,selector,value)=>{const el=root.querySelector(selector);assert.ok(el,`missing ${selector}`);el.value=value;return el;};
 const submit=(dom,form)=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
 
-test('validated client to delivery workflow preserves business rules',async()=>{
+test('validated client to handoff workflow preserves all business rules',async()=>{
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
   globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;
   await import(`../public/auto-sale-app-v3.mjs?scenario=${Date.now()}`);
@@ -63,6 +63,8 @@ test('validated client to delivery workflow preserves business rules',async()=>{
   assert.ok(quote);
   assert.equal(quote.total,39000);
   assert.equal(quote.status,'Отправлен');
+  lead=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id===lead.id);
+  assert.equal(lead.status,'Ожидает клиента');
   root.querySelector(`[data-id="${quote.id}"][data-quote-action="На согласовании"]`).click();
   root.querySelector(`[data-id="${quote.id}"][data-quote-action="Согласован"]`).click();
   quote=JSON.parse(localStorage.getItem('auto-sale-quotes-v2')).find(x=>x.id===quote.id);
@@ -110,15 +112,51 @@ test('validated client to delivery workflow preserves business rules',async()=>{
   assert.equal(order.paid,20000);
   assert.equal(order.payments.length,2);
 
+  form=root.querySelector('#orderForm');
+  set(form,'[name="stage"]','Таможня');
+  set(form,'[name="location"]','Таможенный терминал');
+  set(form,'[name="riskType"]','Документы');
+  form.querySelector('#riskType').dispatchEvent(new dom.window.Event('change',{bubbles:true}));
+  set(form,'[name="riskNote"]','Проверяется комплект документов.');
+  submit(dom,form);
+  order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
+  assert.equal(order.stage,'Таможня');
+  assert.equal(order.riskType,'Документы');
+
+  form=root.querySelector('#orderForm');
+  set(form,'[name="stage"]','Доставка');
+  set(form,'[name="location"]','Автовоз до Москвы');
+  set(form,'[name="riskType"]','Нет');
+  submit(dom,form);
+  order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
+  assert.equal(order.stage,'Доставка');
+  assert.equal(order.riskType,'Нет');
+
+  form=root.querySelector('#orderForm');
+  set(form,'[name="stage"]','Выдача');
+  set(form,'[name="location"]','Площадка выдачи');
+  set(form,'[name="eta"]','2026-10-25');
+  set(form,'[name="paymentAmount"]','19000');
+  set(form,'[name="paymentDate"]','2026-10-25');
+  set(form,'[name="paymentMethod"]','Банк');
+  set(form,'[name="paymentNote"]','Финальный расчёт');
+  submit(dom,form);
+  order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
+  assert.equal(order.stage,'Выдача');
+  assert.equal(order.paid,39000);
+  assert.equal(order.payments.length,3);
+  assert.equal(root.querySelector(`[data-order-next="${order.id}"]`),null);
+
   root.querySelector('[data-role="owner"]').click();
   root.querySelector('[data-go="ordersAdmin"]').click();
   root.querySelector(`[data-order="${order.id}"]`).click();
   assert.equal(root.querySelector('#orderForm'),null);
   assert.match(root.textContent,/КОНТРОЛЬ/);
+  assert.match(root.textContent,/\$39,000/);
 
   root.querySelector('[data-role="client"]').click();
   root.querySelector('[data-go="orders"]').click();
   assert.match(root.textContent,/Audi Q5 Premium Plus 2023/);
-  assert.match(root.textContent,/В море/);
+  assert.match(root.textContent,/Выдача/);
   dom.window.close();
 });
