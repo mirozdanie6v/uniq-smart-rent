@@ -33,17 +33,10 @@ test('lead transition matrix allows canonical CRM movement and combined sent-quo
   assert.equal(leadTransitionAllowed('Ожидает клиента','Сделка',{hasAgreedQuote:true,deposit:0}),false);
 });
 
-test('active lead requires next action while terminal refusal does not',()=>{
-  const common={name:'A',contact:'@a',model:'BMW',budget:40000,source:'Сайт',manager:'Анна',nextAction:''};
-  assert.ok(validateLeadUpdate({...common,status:'В работе'},{status:'Новый'}).length>0);
-  assert.equal(validateLeadUpdate({...common,status:'Отказ',lostReason:'Неактуально'},{status:'Новый'}).length,0);
-  assert.ok(validateLeadUpdate({...common,status:'Отказ',lostReason:''},{status:'Новый'}).length>0);
-});
-
-test('quote transition matrix locks terminal versions',()=>{
+test('quote transition matrix allows client to approve a sent quote and locks terminal versions',()=>{
   const allowed={
     'Черновик':['Черновик','Отправлен'],
-    'Отправлен':['Отправлен','На согласовании','Отказ'],
+    'Отправлен':['Отправлен','На согласовании','Согласован','Отказ'],
     'На согласовании':['На согласовании','Согласован','Отказ'],
     'Согласован':['Согласован'],
     'Отказ':['Отказ']
@@ -52,6 +45,13 @@ test('quote transition matrix locks terminal versions',()=>{
   assert.equal(quoteTransitionAllowed('','Отправлен'),true);
   assert.equal(quoteTransitionAllowed('','Согласован'),false);
   for(const from of QUOTE_STATUSES)for(const to of QUOTE_STATUSES)assert.equal(quoteTransitionAllowed(from,to),allowed[from].includes(to),`${from} -> ${to}`);
+});
+
+test('active lead requires next action while terminal refusal does not',()=>{
+  const common={name:'A',contact:'@a',model:'BMW',budget:40000,source:'Сайт',manager:'Анна',nextAction:''};
+  assert.ok(validateLeadUpdate({...common,status:'В работе'},{status:'Новый'}).length>0);
+  assert.equal(validateLeadUpdate({...common,status:'Отказ',lostReason:'Неактуально'},{status:'Новый'}).length,0);
+  assert.ok(validateLeadUpdate({...common,status:'Отказ',lostReason:''},{status:'Новый'}).length>0);
 });
 
 test('sent quote requires complete cost structure and validity date',()=>{
