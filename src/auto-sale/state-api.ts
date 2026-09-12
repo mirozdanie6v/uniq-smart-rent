@@ -5,7 +5,6 @@ import { leadTransitionAllowed,quoteTransitionAllowed,validateLead,validateOrder
 const arr=(v:unknown):AnyRecord[]=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object') as AnyRecord[]:[];
 const text=(v:unknown)=>String(v??'').trim();
 const num=(v:unknown)=>Number(v)||0;
-const demoId=(v:unknown)=>/(^|-)DEMO(-|$)/i.test(text(v));
 const same=(a:unknown,b:unknown)=>String(a??'')===String(b??'');
 const latestQuote=(quotes:AnyRecord[],leadId:string)=>quotes.filter(q=>text(q.leadId)===leadId).sort((a,b)=>num(b.version)-num(a.version))[0];
 const bad=(error:string,data:AnyRecord={}):{status:number,data:AnyRecord}=>({status:400,data:{error,...data}});
@@ -14,14 +13,14 @@ export async function syncState(db:D1DatabaseLike,input:AnyRecord):Promise<{stat
   const previous=await loadState(db),current=Number(previous.revision)||0,supplied=input.baseRevision;
   if(supplied!==undefined&&supplied!==null&&Number(supplied)!==current)return{status:409,data:{error:'revision_conflict',currentRevision:current,state:previous}};
 
-  const leads=arr(input.leads).filter(x=>!demoId(x.id));
-  const quotes=arr(input.quotes).filter(x=>!demoId(x.id)&&!demoId(x.leadId));
-  const orders=arr(input.orders).filter(x=>!demoId(x.id)&&!demoId(x.leadId));
+  const leads=arr(input.leads);
+  const quotes=arr(input.quotes);
+  const orders=arr(input.orders);
   const rawNotes=(input.notes&&typeof input.notes==='object'?input.notes:{}) as Record<string,unknown>;
-  const notes=Object.fromEntries(Object.entries(rawNotes).filter(([leadId])=>!demoId(leadId)));
-  const previousLeads=new Map(arr(previous.leads).filter(x=>!demoId(x.id)).map(x=>[text(x.id),x]));
-  const previousQuotes=new Map(arr(previous.quotes).filter(x=>!demoId(x.id)).map(x=>[text(x.id),x]));
-  const previousOrders=new Map(arr(previous.orders).filter(x=>!demoId(x.id)).map(x=>[text(x.id),x]));
+  const notes=rawNotes;
+  const previousLeads=new Map(arr(previous.leads).map(x=>[text(x.id),x]));
+  const previousQuotes=new Map(arr(previous.quotes).map(x=>[text(x.id),x]));
+  const previousOrders=new Map(arr(previous.orders).map(x=>[text(x.id),x]));
   const initialized=Boolean(previous.initialized);
 
   for(const lead of leads){
