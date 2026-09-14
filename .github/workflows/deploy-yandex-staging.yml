@@ -79,7 +79,7 @@ jobs:
           docker push "$IMAGE"
           echo "AUTO_SALE_IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Deploy read-only staging container
+      - name: Deploy private read-only staging container
         run: |
           set -euo pipefail
           yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
@@ -94,15 +94,14 @@ jobs:
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --network-id "$YC_NETWORK_ID" \
             --secret environment-variable=DATABASE_URL,id="$YC_DB_SECRET_ID",version-id="$YC_DB_SECRET_VERSION_ID",key=database_url
-          yc serverless container allow-unauthenticated-invoke "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
 
-      - name: Verify Yandex staging
+      - name: Verify Yandex staging with IAM
         run: |
           set -euo pipefail
           URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "postgresql"' >/dev/null; then
+            if curl -fsS -H "Authorization: Bearer $YC_IAM_TOKEN" "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "postgresql"' >/dev/null; then
               echo "Yandex staging verified: $URL"
               exit 0
             fi
