@@ -1,0 +1,111 @@
+name: Deploy AUTO SALE to Yandex staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
+  YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
+  YC_NETWORK_ID: ${{ vars.YC_NETWORK_ID }}
+  YC_DB_SECRET_ID: ${{ vars.YC_DB_SECRET_ID }}
+  YC_DB_SECRET_VERSION_ID: ${{ vars.YC_DB_SECRET_VERSION_ID }}
+  YC_CONTAINER_NAME: ${{ vars.YC_CONTAINER_NAME }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Validate Yandex configuration
+        run: |
+          set -euo pipefail
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YC_NETWORK_ID YC_DB_SECRET_ID YC_DB_SECRET_VERSION_ID YC_CONTAINER_NAME; do
+            test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
+          done
+
+      - name: Validate application
+        run: |
+          npm install
+          npm run check
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken()
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        id: yandex-auth
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          IAM_TOKEN=$(curl -fsS -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Build and push image
+        run: |
+          set -euo pipefail
+          IMAGE="cr.yandex/${YC_REGISTRY_ID}/auto-sale:${GITHUB_SHA}"
+          echo "$YC_IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
+          docker build -f Dockerfile.yandex -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "AUTO_SALE_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Deploy read-only staging container
+        run: |
+          set -euo pipefail
+          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
+            yc serverless container create --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          yc serverless container revision deploy \
+            --container-name "$YC_CONTAINER_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --image "$AUTO_SALE_IMAGE" \
+            --cores 1 \
+            --memory 512MB \
+            --execution-timeout 30s \
+            --service-account-id "$YC_RUNTIME_SA_ID" \
+            --network-id "$YC_NETWORK_ID" \
+            --secret environment-variable=DATABASE_URL,id="$YC_DB_SECRET_ID",version-id="$YC_DB_SECRET_VERSION_ID",key=database_url
+          yc serverless container allow-unauthenticated-invoke "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+
+      - name: Verify Yandex staging
+        run: |
+          set -euo pipefail
+          URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
+          test -n "$URL" && test "$URL" != "null"
+          for attempt in $(seq 1 20); do
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "postgresql"' >/dev/null; then
+              echo "Yandex staging verified: $URL"
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
