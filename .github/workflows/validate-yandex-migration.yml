@@ -1,0 +1,33 @@
+name: Validate AUTO SALE Yandex migration
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - package.json
+      - Dockerfile.yandex
+      - .dockerignore
+      - server/**
+      - yandex/**
+      - scripts/migrate-auto-sale-to-postgres.mjs
+      - .github/workflows/deploy-yandex-staging.yml
+      - .github/workflows/validate-yandex-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Install and test
+        run: |
+          npm install
+          npm run check
+      - name: Build Yandex image
+        run: docker build -f Dockerfile.yandex -t auto-sale-yandex:check .
