@@ -62,6 +62,27 @@ async function pushState(){
 }
 function scheduleSync(delay=180){if(QUOTE_AUDIT_MODE)return;clearTimeout(timer);timer=setTimeout(pushState,delay)}
 
+function normalizeSettledPaymentField(){
+  const form=document.querySelector('#orderForm');if(!form)return;
+  const amount=form.elements?.paymentAmount,id=form.elements?.id?.value;if(!amount||!id)return;
+  const order=readCache(DATA_KEYS.orders,[]).find(x=>x.id===id);if(!order)return;
+  const remaining=Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0));
+  if(remaining<=0){
+    amount.value='0';
+    amount.removeAttribute('max');
+    amount.disabled=true;
+    amount.setAttribute('aria-disabled','true');
+    amount.dataset.paymentSettled='1';
+    amount.classList.remove('auto-field-blocked');
+    amount.closest('label')?.querySelector('.auto-field-blocker')?.remove();
+    return;
+  }
+  amount.disabled=false;
+  amount.removeAttribute('aria-disabled');
+  delete amount.dataset.paymentSettled;
+  amount.max=String(remaining);
+}
+
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs');
@@ -74,4 +95,8 @@ await import('./auto-sale-required-fields.mjs');
 await import('./auto-sale-director-team.mjs');
 await import('./auto-sale-catalog-extra.mjs');
 await import('./auto-sale-client-quote.mjs');
+normalizeSettledPaymentField();
+const appRoot=document.querySelector('#app');
+if(appRoot)new MutationObserver(()=>queueMicrotask(normalizeSettledPaymentField)).observe(appRoot,{childList:true,subtree:true});
+document.addEventListener('input',event=>{if(event.target?.closest?.('#orderForm'))queueMicrotask(normalizeSettledPaymentField)},true);
 scheduleSync(250);
