@@ -112,6 +112,24 @@ function quoteRules(form){
   }
   const validUntil=get(form,'validUntil');if(validUntil){ensureTag(validUntil,required);if(required&&!text(validUntil))addBlocker(validUntil,'Укажите срок действия расчёта.');}
 }
+function normalizeOrderPayment(form){
+  if(form.id!=='orderForm')return;
+  const amount=get(form,'paymentAmount');if(!amount)return;
+  const id=text(get(form,'id')),order=readLocal('auto-sale-orders-v2',[]).find(x=>x.id===id);if(!order)return;
+  const remaining=Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0));
+  if(remaining<=0){
+    amount.value='0';
+    amount.removeAttribute('max');
+    amount.disabled=true;
+    amount.setAttribute('aria-disabled','true');
+    amount.dataset.paymentSettled='1';
+    return;
+  }
+  amount.disabled=false;
+  amount.removeAttribute('aria-disabled');
+  delete amount.dataset.paymentSettled;
+  amount.max=String(remaining);
+}
 function orderRules(form){
   const stage=get(form,'stage')?.value||'';
   const required=new Set(orderRequiredFields(stage));
@@ -121,9 +139,9 @@ function orderRules(form){
   const riskType=get(form,'riskType')?.value||'Нет',riskNote=get(form,'riskNote');
   if(riskNote){ensureTag(riskNote,riskType!=='Нет');if(riskType!=='Нет'&&!text(riskNote))addBlocker(riskNote,'Опишите риск или блокер.');}
   const amount=get(form,'paymentAmount'),date=get(form,'paymentDate');
-  if(amount&&num(amount)>0){requireField(form,'paymentDate',{message:'Для платежа укажите дату.'});}
+  if(amount&&!amount.disabled&&num(amount)>0){requireField(form,'paymentDate',{message:'Для платежа укажите дату.'});}
   else if(date)ensureTag(date,false);
-  if(stage==='Выдача'&&amount){
+  if(stage==='Выдача'&&amount&&!amount.disabled){
     const id=get(form,'id')?.value||'';
     let order=null;try{order=(JSON.parse(localStorage.getItem('auto-sale-orders-v2')||'[]')||[]).find(x=>x.id===id)}catch{}
     if(order){const remaining=Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0)-num(amount));if(remaining>0){ensureTag(amount,true);addBlocker(amount,`Для выдачи внесите оставшуюся оплату $${new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(remaining)}.`)}}
@@ -149,6 +167,7 @@ function depositSaved(draft){const lead=readLocal('auto-sale-leads-v2',[]).find(
 
 function refresh(form){
   if(!form?.matches?.(FORM_SELECTOR))return;
+  normalizeOrderPayment(form);
   clearBlockers(form);
   for(const el of fields(form))if(!el.required)ensureTag(el,false);
   markNative(form);
