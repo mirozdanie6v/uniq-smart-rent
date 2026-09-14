@@ -21,6 +21,8 @@ const get=(form,name)=>form.elements?.namedItem?.(name)||null;
 const text=el=>String(el?.value??'').trim();
 const num=el=>Number(el?.value)||0;
 const labelOf=el=>el?.closest?.('label')||null;
+const today=()=>new Date().toISOString().slice(0,10);
+const readLocal=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
 
 function ensureTag(el,on){
   const label=labelOf(el);if(!label)return;
@@ -92,8 +94,13 @@ function leadRules(form){
   const status=get(form,'status')?.value||'';
   const next=get(form,'nextAction');if(next){ensureTag(next,ACTIVE_LEAD_STATUSES.includes(status));if(ACTIVE_LEAD_STATUSES.includes(status)&&!text(next))addBlocker(next,'Для активного лида укажите дату следующего действия.');}
   const lost=get(form,'lostReason');if(lost){ensureTag(lost,status==='Отказ');if(status==='Отказ'&&!text(lost))addBlocker(lost,'Для отказа обязательна причина.');}
-  const deposit=get(form,'deposit');if(deposit&&num(deposit)>0){requireField(form,'depositDate',{message:'Для депозита укажите дату.'});requireField(form,'paymentMethod',{message:'Для депозита укажите способ оплаты.'});}
-  else{const d=get(form,'depositDate'),m=get(form,'paymentMethod');if(d)ensureTag(d,false);if(m)ensureTag(m,false)}
+  const deposit=get(form,'deposit');if(deposit&&num(deposit)>0){
+    const date=get(form,'depositDate'),method=get(form,'paymentMethod');
+    if(date&&!text(date))date.value=today();
+    if(method&&!text(method))method.value='Банк';
+    requireField(form,'depositDate',{message:'Для депозита укажите дату.'});
+    requireField(form,'paymentMethod',{message:'Для депозита укажите способ оплаты.'});
+  }else{const d=get(form,'depositDate'),m=get(form,'paymentMethod');if(d)ensureTag(d,false);if(m)ensureTag(m,false)}
   validateYearRange(form);
 }
 function quoteRules(form){
@@ -127,6 +134,18 @@ function clientEditRules(form){
   const budget=get(form,'budget');if(budget){ensureTag(budget,true);if(num(budget)<10000)addBlocker(budget,'Бюджет должен быть не меньше $10 000.');}
   validateYearRange(form);
 }
+function syncConvertOrder(form){
+  if(form.id!=='leadEditForm')return;
+  const modal=form.closest('.auto-modal'),button=modal?.querySelector('[data-convert-order]');if(!button)return;
+  const leadId=text(get(form,'id')),quote=readLocal('auto-sale-quotes-v2',[]).filter(x=>x.leadId===leadId).sort((a,b)=>(Number(b.version)||0)-(Number(a.version)||0))[0];
+  const deposit=num(get(form,'deposit')),date=text(get(form,'depositDate')),method=text(get(form,'paymentMethod'));
+  const ready=quote?.status==='Согласован'&&deposit>0&&Boolean(date)&&Boolean(method);
+  button.disabled=!ready;button.setAttribute('aria-disabled',String(!ready));
+  const hint=button.parentElement?.querySelector('.auto-rule-hint');
+  if(hint){hint.classList.toggle('good',ready);hint.textContent=ready?'Расчёт согласован и депозит зафиксирован.':quote?.status!=='Согласован'?'Заказ можно создать только после согласования расчёта.':'Перед созданием заказа зафиксируйте полученный депозит.'}
+}
+function depositDraft(form){return{id:text(get(form,'id')),deposit:num(get(form,'deposit')),depositDate:text(get(form,'depositDate')),paymentMethod:text(get(form,'paymentMethod'))}}
+function depositSaved(draft){const lead=readLocal('auto-sale-leads-v2',[]).find(x=>x.id===draft.id);return Boolean(lead&&Number(lead.deposit)===draft.deposit&&String(lead.depositDate||'')===draft.depositDate&&String(lead.paymentMethod||'')===draft.paymentMethod)}
 
 function refresh(form){
   if(!form?.matches?.(FORM_SELECTOR))return;
@@ -138,6 +157,7 @@ function refresh(form){
   else if(form.id==='quoteForm')quoteRules(form);
   else if(form.id==='orderForm')orderRules(form);
   else if(form.id==='clientEditForm')clientEditRules(form);
+  syncConvertOrder(form);
   form.dataset.requiredHighlight='1';
 }
 function refreshAll(scope=document){scope.querySelectorAll?.(FORM_SELECTOR).forEach(refresh)}
@@ -158,5 +178,13 @@ document.addEventListener('input',event=>{const form=event.target?.closest?.(FOR
 document.addEventListener('change',event=>{const form=event.target?.closest?.(FORM_SELECTOR);if(form)refresh(form)},true);
 document.addEventListener('submit',event=>{const form=event.target?.matches?.(FORM_SELECTOR)?event.target:null;if(form)refresh(form)},true);
 document.addEventListener('invalid',event=>{const form=event.target?.closest?.(FORM_SELECTOR);if(form){refresh(form);addBlocker(event.target,nativeMessage(event.target)||'Проверьте это поле.')}},true);
+document.addEventListener('click',event=>{
+  const button=event.target?.closest?.('[data-convert-order]');if(!button||button.disabled)return;
+  const form=button.closest('.auto-modal')?.querySelector('#leadEditForm');if(!form)return;
+  refresh(form);const draft=depositDraft(form);if(depositSaved(draft))return;
+  event.preventDefault();event.stopPropagation();
+  form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+  queueMicrotask(()=>{if(!depositSaved(draft))return;const next=document.querySelector(`[data-convert-order="${draft.id}"]`);if(next&&!next.disabled)next.click()});
+},true);
 
 window.__AUTO_SALE_REFRESH_REQUIRED_FIELDS__=()=>refreshAll();
