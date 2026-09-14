@@ -1,6 +1,5 @@
 const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',team:'auto-sale-team-v1'};
 const REVISION_KEY='auto-sale-server-revision-v1';
-const ASSET_REVISION='20260914-payment-max-fix-2';
 const QUOTE_AUDIT_MODE=new URLSearchParams(location.search).has('quoteAudit');
 const originalSet=Storage.prototype.setItem;
 let suppress=false;
@@ -86,16 +85,16 @@ function normalizeSettledPaymentField(){
 
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
-await import(`./auto-sale-submit-bridge.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-app-v3.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-ui-business-guard.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-quote-lead-serialization.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-quote-save-fix.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-lead-status-fix.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-required-fields.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-director-team.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-catalog-extra.mjs?v=${ASSET_REVISION}`);
-await import(`./auto-sale-client-quote.mjs?v=${ASSET_REVISION}`);
+await import('./auto-sale-submit-bridge.mjs');
+await import('./auto-sale-app-v3.mjs');
+await import('./auto-sale-ui-business-guard.mjs');
+await import('./auto-sale-quote-lead-serialization.mjs');
+await import('./auto-sale-quote-save-fix.mjs');
+await import('./auto-sale-lead-status-fix.mjs');
+await import('./auto-sale-required-fields.mjs');
+await import('./auto-sale-director-team.mjs');
+await import('./auto-sale-catalog-extra.mjs');
+await import('./auto-sale-client-quote.mjs');
 normalizeSettledPaymentField();
 const appRoot=document.querySelector('#app');
 if(appRoot)new MutationObserver(()=>queueMicrotask(normalizeSettledPaymentField)).observe(appRoot,{childList:true,subtree:true});
