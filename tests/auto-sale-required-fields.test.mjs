@@ -80,3 +80,29 @@ test('logistics fields and risk description are highlighted when they block the 
   assert.equal(form.elements.riskNote.classList.contains('auto-field-blocked'),false);
   dom.window.close();
 });
+
+test('fully paid order clears stale payment value instead of validating against max zero',async()=>{
+  const html=`<form class="auto-form" id="orderForm">
+    <input type="hidden" name="id" value="O-PAID">
+    <label>Этап<select name="stage"><option selected>Доставка</option><option>Выдача</option></select></label>
+    <label>LOT<input name="lot" value="11"></label>
+    <label>VIN<input name="vin" value="11"></label>
+    <label>ETA<input name="eta" type="date" value="2026-09-15"></label>
+    <label>Локация<input name="location" value="11"></label>
+    <label>Риск<select name="riskType"><option selected>Нет</option></select></label>
+    <label>Платёж<input name="paymentAmount" type="number" min="0" max="0" step="100" value="6100"></label>
+    <label>Дата<input name="paymentDate" type="date" value="2026-09-14"></label>
+  </form>`;
+  const dom=new JSDOM(`<!doctype html><html><head></head><body>${html}</body></html>`,{url:'https://auto-sale.viiversion.com/'});
+  globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.MutationObserver=dom.window.MutationObserver;globalThis.Event=dom.window.Event;
+  localStorage.setItem('auto-sale-orders-v2',JSON.stringify([{id:'O-PAID',total:7100,paid:7100,payments:[{id:'PAY-1',amount:1000},{id:'PAY-2',amount:6100}]}]));
+  await import(`../public/auto-sale-required-fields.mjs?required=paid-${Date.now()}-${Math.random()}`);
+  await tick();
+  const amount=document.querySelector('[name="paymentAmount"]');
+  assert.equal(amount.value,'0');
+  assert.equal(amount.disabled,true);
+  assert.equal(amount.hasAttribute('max'),false);
+  assert.equal(amount.classList.contains('auto-field-blocked'),false);
+  assert.doesNotMatch(amount.closest('label').textContent,/Максимальное значение: 0/i);
+  dom.window.close();
+});
