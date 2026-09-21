@@ -9,6 +9,8 @@ on:
       - .dockerignore
       - server/**
       - scripts/migrate-auto-sale-to-ydb.mjs
+      - scripts/e2e-yandex-workflow.mjs
+      - tests/yandex-state-sync.test.mjs
       - .github/workflows/deploy-yandex-staging.yml
       - .github/workflows/validate-yandex-migration.yml
   workflow_dispatch:
@@ -28,8 +30,11 @@ jobs:
         run: |
           npm install
           npm run check
+          node --check server/auto-sale-rules.mjs
           node --check server/ydb-state.mjs
+          node --check server/ydb-sync.mjs
           node --check server/yandex-server.mjs
           node --check scripts/migrate-auto-sale-to-ydb.mjs
+          node --check scripts/e2e-yandex-workflow.mjs
       - name: Build Yandex image
         run: docker build -f Dockerfile.yandex -t auto-sale-yandex:check .
