@@ -1,8 +1,10 @@
 import {Driver} from '@ydbjs/core';
 import {query} from '@ydbjs/query';
 import {MetadataCredentialsProvider} from '@ydbjs/auth/metadata';
+import {Uint64} from '@ydbjs/value/primitive';
 
 const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[]};
+const STATE_ID=new Uint64(1n);
 
 export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider()}){
   const driver=new Driver(connectionString,{credentialsProvider});
@@ -19,11 +21,11 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     )
   `;
 
-  const [rows]=await sql`SELECT id FROM auto_sale_state WHERE id = ${1n}`;
+  const [rows]=await sql`SELECT id FROM auto_sale_state WHERE id = ${STATE_ID}`;
   if(!rows.length){
     await sql`
       UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
-      VALUES (${1n}, ${0n}, ${JSON.stringify(EMPTY)}, ${new Date().toISOString()})
+      VALUES (${STATE_ID}, ${new Uint64(0n)}, ${JSON.stringify(EMPTY)}, ${new Date().toISOString()})
     `;
   }
 
@@ -31,7 +33,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     const [result]=await sql`
       SELECT revision, payload
       FROM auto_sale_state
-      WHERE id = ${1n}
+      WHERE id = ${STATE_ID}
     `;
     const row=result[0];
     if(!row)return{revision:0,...EMPTY};
@@ -45,7 +47,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
       const [rows]=await tx`
         SELECT revision
         FROM auto_sale_state
-        WHERE id = ${1n}
+        WHERE id = ${STATE_ID}
       `;
       const current=Number(rows[0]?.revision||0n);
       if(expectedRevision!==null&&Number(expectedRevision)!==current){
@@ -62,7 +64,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
       };
       await tx`
         UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
-        VALUES (${1n}, ${BigInt(next)}, ${JSON.stringify(payload)}, ${new Date().toISOString()})
+        VALUES (${STATE_ID}, ${new Uint64(BigInt(next))}, ${JSON.stringify(payload)}, ${new Date().toISOString()})
       `;
       return{status:200,data:{ok:true,revision:next}};
     });
