@@ -1,0 +1,27 @@
+name: Inspect AUTO SALE live demo state
+
+on:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .github/workflows/inspect-auto-sale-state.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print live customer/order summary
+        run: |
+          set -euo pipefail
+          URL="https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/api/auto-sale/state"
+          curl -fsS "$URL" -o /tmp/state.json
+          jq '{
+            revision,
+            leads: [.leads[] | {id,name,contact,model,status,clientCreated,demo}],
+            orders: [.orders[] | {id,leadId,customer,model,stage,demo}],
+            quotes: [.quotes[] | {id,leadId,status,demo}]
+          }' /tmp/state.json
