@@ -1,0 +1,125 @@
+name: Setup AUTO SALE Yandex demo domain
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.setup-yandex-demo-domain'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  GATEWAY_NAME: auto-sale-demo
+  CERT_NAME: auto-sale-demo-viiversion
+  DEMO_DOMAIN: auto-sale-demo.viiversion.com
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "$BODY"
+            exit 1
+          fi
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Create or update API Gateway
+        run: |
+          set -euo pipefail
+          if yc serverless api-gateway get --name "$GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless api-gateway update "$GATEWAY_NAME" \
+              --folder-id "$YC_FOLDER_ID" \
+              --spec=infra/yandex/auto-sale-demo-gateway.yaml >/tmp/gateway.txt
+          else
+            yc serverless api-gateway create \
+              --name "$GATEWAY_NAME" \
+              --description "AUTO SALE demo on viiversion.com" \
+              --folder-id "$YC_FOLDER_ID" \
+              --spec=infra/yandex/auto-sale-demo-gateway.yaml >/tmp/gateway.txt
+          fi
+          yc serverless api-gateway get --name "$GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json > /tmp/gateway.json
+          cat /tmp/gateway.json
+          echo "GATEWAY_ID=$(jq -r '.id' /tmp/gateway.json)" >> "$GITHUB_ENV"
+          echo "GATEWAY_DOMAIN=$(jq -r '.domain' /tmp/gateway.json)" >> "$GITHUB_ENV"
+
+      - name: Verify API Gateway default domain
+        run: |
+          set -euo pipefail
+          test -n "$GATEWAY_DOMAIN" && test "$GATEWAY_DOMAIN" != "null"
+          for attempt in $(seq 1 20); do
+            CODE=$(curl -sS -o /tmp/gateway-root.html -w '%{http_code}' "https://$GATEWAY_DOMAIN/")
+            if [ "$CODE" = "200" ]; then
+              echo "API_GATEWAY_OK https://$GATEWAY_DOMAIN/"
+              break
+            fi
+            test "$attempt" -lt 20 || { echo "Gateway returned HTTP $CODE"; exit 1; }
+            sleep 5
+          done
+
+      - name: Request or inspect managed certificate
+        run: |
+          set -euo pipefail
+          if ! yc certificate-manager certificate get --name "$CERT_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc certificate-manager certificate request \
+              --name "$CERT_NAME" \
+              --description "TLS for AUTO SALE demo" \
+              --domains "$DEMO_DOMAIN" \
+              --challenge DNS \
+              --folder-id "$YC_FOLDER_ID"
+          fi
+          yc certificate-manager certificate get --name "$CERT_NAME" --folder-id "$YC_FOLDER_ID" --full --format json > /tmp/cert.json
+          cat /tmp/cert.json
+          echo "CERT_ID=$(jq -r '.id' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_STATUS=$(jq -r '.status' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_NAME=$(jq -r '.challenges[0].dns_challenge.name // .challenges[0].dnsChallenge.name // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_TYPE=$(jq -r '.challenges[0].dns_challenge.type // .challenges[0].dnsChallenge.type // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_VALUE=$(jq -r '.challenges[0].dns_challenge.value // .challenges[0].dnsChallenge.value // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+
+      - name: Print DNS records to create
+        run: |
+          echo "YANDEX_DOMAIN_SETUP"
+          echo "gateway_id=$GATEWAY_ID"
+          echo "gateway_default_domain=$GATEWAY_DOMAIN"
+          echo "certificate_id=$CERT_ID"
+          echo "certificate_status=$CERT_STATUS"
+          echo "challenge_name=$CERT_CHALLENGE_NAME"
+          echo "challenge_type=$CERT_CHALLENGE_TYPE"
+          echo "challenge_value=$CERT_CHALLENGE_VALUE"
+          echo "future_domain_cname_target=$GATEWAY_DOMAIN"
