@@ -2,10 +2,6 @@ name: Deploy AUTO SALE to Yandex staging
 
 on:
   workflow_dispatch:
-  push:
-    branches: [prototype/auto-sale-usa]
-    paths:
-      - '.deploy-yandex-staging'
 
 permissions:
   contents: read
@@ -21,6 +17,7 @@ env:
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/prototype/auto-sale-usa'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -47,8 +44,6 @@ jobs:
         with:
           script: |
             const token = await core.getIDToken('https://github.com/mirozdanie6v')
-            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
-            core.info(`OIDC claims: ${JSON.stringify({iss: payload.iss, aud: payload.aud, sub: payload.sub, repository: payload.repository, ref: payload.ref, event_name: payload.event_name, job_workflow_ref: payload.job_workflow_ref})}`)
             core.setSecret(token)
             core.setOutput('token', token)
 
