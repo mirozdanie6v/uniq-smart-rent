@@ -8,6 +8,7 @@ paths:
       x-yc-apigateway-integration:
         type: serverless_containers
         container_id: bba01u6g86lg2q49p34d
+        service_account_id: aje8o9ric0d20k11521r
       parameters:
         - explode: false
           in: path
