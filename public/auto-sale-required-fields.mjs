@@ -113,7 +113,7 @@ function quoteRules(form){
   const validUntil=get(form,'validUntil');if(validUntil){ensureTag(validUntil,required);if(required&&!text(validUntil))addBlocker(validUntil,'Укажите срок действия расчёта.');}
 }
 function normalizeOrderPayment(form){
-  if(form.id!=='orderForm')return;
+  if(form.getAttribute?.('id')!=='orderForm')return;
   const amount=get(form,'paymentAmount');if(!amount)return;
   const id=text(get(form,'id')),order=readLocal('auto-sale-orders-v2',[]).find(x=>x.id===id);if(!order)return;
   const remaining=Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0));
@@ -153,7 +153,7 @@ function clientEditRules(form){
   validateYearRange(form);
 }
 function syncConvertOrder(form){
-  if(form.id!=='leadEditForm')return;
+  if(form.getAttribute?.('id')!=='leadEditForm')return;
   const modal=form.closest('.auto-modal'),button=modal?.querySelector('[data-convert-order]');if(!button)return;
   const leadId=text(get(form,'id')),quote=readLocal('auto-sale-quotes-v2',[]).filter(x=>x.leadId===leadId).sort((a,b)=>(Number(b.version)||0)-(Number(a.version)||0))[0];
   const deposit=num(get(form,'deposit')),date=text(get(form,'depositDate')),method=text(get(form,'paymentMethod'));
@@ -171,11 +171,11 @@ function refresh(form){
   clearBlockers(form);
   for(const el of fields(form))if(!el.required)ensureTag(el,false);
   markNative(form);
-  if(form.id==='requestForm')requestRules(form);
-  else if(form.id==='leadEditForm')leadRules(form);
-  else if(form.id==='quoteForm')quoteRules(form);
-  else if(form.id==='orderForm')orderRules(form);
-  else if(form.id==='clientEditForm')clientEditRules(form);
+  if(form.getAttribute?.('id')==='requestForm')requestRules(form);
+  else if(form.getAttribute?.('id')==='leadEditForm')leadRules(form);
+  else if(form.getAttribute?.('id')==='quoteForm')quoteRules(form);
+  else if(form.getAttribute?.('id')==='orderForm')orderRules(form);
+  else if(form.getAttribute?.('id')==='clientEditForm')clientEditRules(form);
   syncConvertOrder(form);
   form.dataset.requiredHighlight='1';
 }
