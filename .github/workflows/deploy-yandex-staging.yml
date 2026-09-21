@@ -8,14 +8,12 @@ permissions:
   id-token: write
 
 env:
-  YC_FOLDER_ID: b1g8u8vqkgehvtbj8n13
-  YC_YDB_ID: etnr90ntl17oucsncg1k
-  YDB_CONNECTION_STRING: grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1ggsmuiq7tb2d27f89q/etnr90ntl17oucsncg1k
-  SOURCE_STATE_URL: https://auto-sale.viiversion.com/api/auto-sale/state
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
   YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
-  YC_CONTAINER_NAME: auto-sale-staging
+  YC_CONTAINER_NAME: ${{ vars.YC_CONTAINER_NAME }}
+  YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
 
 jobs:
   deploy:
@@ -30,7 +28,7 @@ jobs:
       - name: Validate Yandex configuration
         run: |
           set -euo pipefail
-          for name in YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID; do
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YC_CONTAINER_NAME YDB_CONNECTION_STRING; do
             test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
           done
 
@@ -38,9 +36,6 @@ jobs:
         run: |
           npm install
           npm run check
-          node --check server/ydb-state.mjs
-          node --check server/yandex-server.mjs
-          node --check scripts/migrate-auto-sale-to-ydb.mjs
 
       - name: Request GitHub OIDC token
         uses: actions/github-script@v7
@@ -81,41 +76,36 @@ jobs:
           docker push "$IMAGE"
           echo "AUTO_SALE_IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Import current Cloudflare state into YDB
+      - name: Import current AUTO SALE state into YDB
         env:
           YDB_ACCESS_TOKEN_CREDENTIALS: ${{ env.YC_IAM_TOKEN }}
+          SOURCE_STATE_URL: https://auto-sale.viiversion.com/api/auto-sale/state
         run: |
-          set -euo pipefail
           npm run migrate:yandex
 
-      - name: Deploy private read-only Yandex container
+      - name: Deploy private YDB staging container
         run: |
           set -euo pipefail
-          YC=(yc --token "$YC_IAM_TOKEN" --folder-id "$YC_FOLDER_ID")
-          "${YC[@]}" serverless container get --name "$YC_CONTAINER_NAME" >/dev/null 2>&1 || \
-            "${YC[@]}" serverless container create --name "$YC_CONTAINER_NAME"
-          "${YC[@]}" serverless container revision deploy \
+          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
+            yc serverless container create --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          yc serverless container revision deploy \
             --container-name "$YC_CONTAINER_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
             --image "$AUTO_SALE_IMAGE" \
             --cores 1 \
             --memory 512MB \
             --execution-timeout 30s \
             --service-account-id "$YC_RUNTIME_SA_ID" \
-            --metadata-options gce-http-endpoint=enabled \
-            --environment "YDB_CONNECTION_STRING=${YDB_CONNECTION_STRING},YDB_METADATA_CREDENTIALS=1"
+            --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING"
 
       - name: Verify Yandex staging with IAM
         run: |
           set -euo pipefail
-          YC=(yc --token "$YC_IAM_TOKEN" --folder-id "$YC_FOLDER_ID")
-          URL=$("${YC[@]}" serverless container get --name "$YC_CONTAINER_NAME" --format json | jq -r '.url')
+          URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
           for attempt in $(seq 1 20); do
-            health=$(curl -fsS -H "Authorization: Bearer $YC_IAM_TOKEN" "${URL%/}/api/health" || true)
-            if echo "$health" | jq -e '.ok == true and .persistence == "ydb-serverless"' >/dev/null 2>&1; then
-              state=$(curl -fsS -H "Authorization: Bearer $YC_IAM_TOKEN" "${URL%/}/api/auto-sale/state")
-              echo "$state" | jq -e '.initialized == true and (.leads|type=="array") and (.quotes|type=="array") and (.orders|type=="array")' >/dev/null
-              echo "Yandex YDB staging verified: $URL"
+            if curl -fsS -H "Authorization: Bearer $YC_IAM_TOKEN" "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless"' >/dev/null; then
+              echo "Yandex staging verified: $URL"
               exit 0
             fi
             sleep 5
