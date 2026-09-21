@@ -1,0 +1,52 @@
+name: Diagnose AUTO SALE demo DNS
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.diagnose-yandex-demo-domain'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  CERT_ID: fpqca11j683rem8j8jfn
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DNS
+        run: |
+          echo "ACME:"
+          dig +short CNAME _acme-challenge.auto-sale-demo.viiversion.com
+          echo "DEMO:"
+          dig +short CNAME auto-sale-demo.viiversion.com
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange token and inspect certificate
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          curl -fsS -H "Authorization: Bearer $IAM_TOKEN" \
+            "https://certificate-manager.api.cloud.yandex.net/certificate-manager/v1/certificates/$CERT_ID?view=FULL" | jq .
