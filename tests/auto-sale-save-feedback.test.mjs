@@ -38,8 +38,9 @@ test('all business forms are intercepted as SPA submits',()=>{
   const app=fs.readFileSync('public/auto-sale-app-v3.mjs','utf8');
   const guard=fs.readFileSync('public/auto-sale-ui-business-guard.mjs','utf8');
   assert.match(app,/root\.addEventListener\(['"]submit['"],event=>\{event\.preventDefault\(\)/);
-  for(const id of ['requestForm','leadEditForm','quoteForm','orderForm'])assert.match(app,new RegExp(`form\\.id===['"]${id}['"]`));
-  assert.match(guard,/form\.id===['"]clientEditForm['"]\)\{event\.preventDefault\(\)/);
+  for(const id of ['requestForm','leadEditForm','quoteForm','orderForm'])assert.match(app,new RegExp(`formId===['"]${id}['"]`));
+  assert.match(app,/getAttribute\?\.\('id'\)/);
+  assert.match(guard,/form\.getAttribute\?\.\('id'\)===['"]clientEditForm['"]\)\{event\.preventDefault\(\)/);
 });
 
 test('quote validation error restores save button instead of leaving saving state',async()=>{
