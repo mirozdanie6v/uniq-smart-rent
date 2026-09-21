@@ -1,25 +1,53 @@
 import http from 'node:http';
 import path from 'node:path';
+import {timingSafeEqual} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {readFile,stat} from 'node:fs/promises';
 import {createYdbStateStore} from './ydb-state.mjs';
+import {syncYdbState} from './ydb-sync.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
 const port=Number(process.env.PORT||8080);
 const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
+const apiKey=String(process.env.AUTO_SALE_API_KEY||'').trim();
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
+if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
 const store=await createYdbStateStore({connectionString});
 
+const apiHeaders={
+  'content-type':'application/json; charset=utf-8',
+  'cache-control':'no-store',
+  'access-control-allow-origin':'*',
+  'access-control-allow-headers':'content-type,x-auto-sale-key',
+  'access-control-allow-methods':'GET,PUT,OPTIONS'
+};
 const json=(res,data,status=200)=>{
   const body=JSON.stringify(data);
-  res.writeHead(status,{
-    'content-type':'application/json; charset=utf-8',
-    'cache-control':'no-store',
-    'content-length':Buffer.byteLength(body)
-  });
+  res.writeHead(status,{...apiHeaders,'content-length':Buffer.byteLength(body)});
   res.end(body);
 };
+const authorized=req=>{
+  const supplied=String(req.headers['x-auto-sale-key']||'');
+  const expected=Buffer.from(apiKey);
+  const actual=Buffer.from(supplied);
+  return expected.length===actual.length&&expected.length>0&&timingSafeEqual(expected,actual);
+};
+async function parseJson(req,maxBytes=2_000_000){
+  const chunks=[];let size=0;
+  for await(const chunk of req){
+    size+=chunk.length;
+    if(size>maxBytes){
+      const error=new Error('payload_too_large');error.statusCode=413;throw error;
+    }
+    chunks.push(chunk);
+  }
+  if(!chunks.length)return null;
+  try{return JSON.parse(Buffer.concat(chunks).toString('utf8'))}catch{
+    const error=new Error('invalid_json');error.statusCode=400;throw error;
+  }
+}
+
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp','.ico':'image/x-icon'};
 async function staticFile(res,url){
   let rel;
@@ -43,13 +71,25 @@ async function staticFile(res,url){
 const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||'/',`http://${req.headers.host||'localhost'}`);
+    if(req.method==='OPTIONS'&&url.pathname.startsWith('/api/')){
+      res.writeHead(204,apiHeaders);res.end();return;
+    }
     if(url.pathname==='/api/health'){
       await store.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:1,writeMode:'disabled-until-auth'});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:2,writeMode:'authenticated',stateReadMode:'authenticated'});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       json(res,await store.loadState());
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      const input=await parseJson(req);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const result=await syncYdbState(store,input);
+      json(res,result.data,result.status);
       return;
     }
     if(url.pathname.startsWith('/api/')){
@@ -59,7 +99,8 @@ const server=http.createServer(async(req,res)=>{
     await staticFile(res,url);
   }catch(error){
     console.error('AUTO SALE Yandex request failed',error);
-    json(res,{error:'internal_error'},500);
+    const status=Number(error?.statusCode)||500;
+    json(res,{error:status===413?'payload_too_large':status===400?'invalid_json':'internal_error'},status);
   }
 });
 server.listen(port,'0.0.0.0',()=>console.log(`AUTO SALE Yandex listening on ${port}`));
