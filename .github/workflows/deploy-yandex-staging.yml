@@ -89,10 +89,16 @@ jobs:
         env:
           YDB_ACCESS_TOKEN_CREDENTIALS: ${{ env.YC_IAM_TOKEN }}
           SOURCE_STATE_URL: https://auto-sale.viiversion.com/api/auto-sale/state
-        run: |
-          npm run migrate:yandex
+        run: npm run migrate:yandex
 
-      - name: Deploy private YDB staging container
+      - name: Generate staging API credential
+        run: |
+          set -euo pipefail
+          AUTO_SALE_API_KEY=$(openssl rand -hex 32)
+          echo "::add-mask::$AUTO_SALE_API_KEY"
+          echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
+
+      - name: Deploy authenticated YDB staging container
         run: |
           set -euo pipefail
           yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
@@ -105,18 +111,26 @@ jobs:
             --memory 512MB \
             --execution-timeout 30s \
             --service-account-id "$YC_RUNTIME_SA_ID" \
-            --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING"
+            --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
+            --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY"
 
-      - name: Verify Yandex staging with IAM
+      - name: Verify public health and authenticated state boundary
         run: |
           set -euo pipefail
           URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
+          echo "STAGING_URL=$URL" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS -H "Authorization: Bearer $YC_IAM_TOKEN" "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless"' >/dev/null; then
-              echo "Yandex staging verified: $URL"
-              exit 0
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "authenticated"' >/dev/null; then
+              break
             fi
+            test "$attempt" -lt 20 || exit 1
             sleep 5
           done
-          exit 1
+          CODE=$(curl -sS -o /tmp/unauthorized.json -w '%{http_code}' "${URL%/}/api/auto-sale/state")
+          test "$CODE" = "401"
+          curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "${URL%/}/api/auto-sale/state" | jq -e '.initialized == true and (.revision|tonumber) >= 1' >/dev/null
+          echo "Yandex authenticated staging verified: $URL"
+
+      - name: Run reversible client-to-handoff Yandex E2E
+        run: node scripts/e2e-yandex-workflow.mjs
