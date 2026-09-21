@@ -20,7 +20,8 @@
   "dependencies":{
     "@ydbjs/auth":"latest",
     "@ydbjs/core":"latest",
-    "@ydbjs/query":"latest"
+    "@ydbjs/query":"latest",
+    "@ydbjs/value":"latest"
   },
   "devDependencies":{"jsdom":"latest","typescript":"latest","wrangler":"latest"}
 }
