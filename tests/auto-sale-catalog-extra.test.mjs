@@ -24,7 +24,7 @@ test('catalog extension prevents self-triggered render loops',()=>{
 });
 
 test('bootstrap loads expanded catalog after main AUTO SALE application',()=>{
-  const app=bootstrap.indexOf("await import('./auto-sale-app-v3.mjs')");
+  const app=bootstrap.indexOf("await import('./auto-sale-app-v3.mjs");
   const extra=bootstrap.indexOf("await import('./auto-sale-catalog-extra.mjs')");
   assert.ok(app>=0&&extra>app);
 });
