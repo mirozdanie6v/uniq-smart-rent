@@ -96,21 +96,34 @@ jobs:
       - name: Request or inspect managed certificate
         run: |
           set -euo pipefail
-          if ! yc certificate-manager certificate get --name "$CERT_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
-            yc certificate-manager certificate request \
-              --name "$CERT_NAME" \
-              --description "TLS for AUTO SALE demo" \
-              --domains "$DEMO_DOMAIN" \
-              --challenge DNS \
-              --folder-id "$YC_FOLDER_ID"
+          API="https://certificate-manager.api.cloud.yandex.net/certificate-manager/v1/certificates"
+          auth=(-H "Authorization: Bearer $YC_IAM_TOKEN")
+          curl -fsS "${auth[@]}" "$API?folderId=$YC_FOLDER_ID&view=FULL&pageSize=1000" > /tmp/certs.json
+          CERT_ID=$(jq -r --arg name "$CERT_NAME" '.certificates[]? | select(.name == $name) | .id' /tmp/certs.json | head -n1)
+          if [ -z "$CERT_ID" ]; then
+            jq -n \
+              --arg folderId "$YC_FOLDER_ID" \
+              --arg name "$CERT_NAME" \
+              --arg domain "$DEMO_DOMAIN" \
+              '{folderId:$folderId,name:$name,domains:[$domain],challengeType:"DNS",description:"TLS for AUTO SALE demo"}' > /tmp/request-cert.json
+            curl -fsS "${auth[@]}" -H 'Content-Type: application/json' \
+              -d @/tmp/request-cert.json "$API/requestNew" > /tmp/request-op.json
+            cat /tmp/request-op.json
           fi
-          yc certificate-manager certificate get --name "$CERT_NAME" --folder-id "$YC_FOLDER_ID" --full --format json > /tmp/cert.json
+          for attempt in $(seq 1 20); do
+            curl -fsS "${auth[@]}" "$API?folderId=$YC_FOLDER_ID&view=FULL&pageSize=1000" > /tmp/certs.json
+            CERT_ID=$(jq -r --arg name "$CERT_NAME" '.certificates[]? | select(.name == $name) | .id' /tmp/certs.json | head -n1)
+            if [ -n "$CERT_ID" ]; then break; fi
+            test "$attempt" -lt 20 || { echo "Certificate did not appear"; exit 1; }
+            sleep 3
+          done
+          curl -fsS "${auth[@]}" "$API/$CERT_ID?view=FULL" > /tmp/cert.json
           cat /tmp/cert.json
-          echo "CERT_ID=$(jq -r '.id' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_ID=$CERT_ID" >> "$GITHUB_ENV"
           echo "CERT_STATUS=$(jq -r '.status' /tmp/cert.json)" >> "$GITHUB_ENV"
-          echo "CERT_CHALLENGE_NAME=$(jq -r '.challenges[0].dns_challenge.name // .challenges[0].dnsChallenge.name // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
-          echo "CERT_CHALLENGE_TYPE=$(jq -r '.challenges[0].dns_challenge.type // .challenges[0].dnsChallenge.type // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
-          echo "CERT_CHALLENGE_VALUE=$(jq -r '.challenges[0].dns_challenge.value // .challenges[0].dnsChallenge.value // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_NAME=$(jq -r '.challenges[0].dnsChallenge.name // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_TYPE=$(jq -r '.challenges[0].dnsChallenge.type // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
+          echo "CERT_CHALLENGE_VALUE=$(jq -r '.challenges[0].dnsChallenge.value // empty' /tmp/cert.json)" >> "$GITHUB_ENV"
 
       - name: Print DNS records to create
         run: |
