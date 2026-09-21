@@ -33,8 +33,9 @@ async function mutate(mutator){
   return putState(state);
 }
 
-const unauthorized=await fetch(base+'/api/auto-sale/state',{headers:{accept:'application/json'}});
-if(unauthorized.status!==401)throw new Error(`unauthorized_state_read_expected_401_got_${unauthorized.status}`);
+const publicStateResponse=await fetch(base+'/api/auto-sale/state',{headers:{accept:'application/json'},cache:'no-store'});
+const publicState=await publicStateResponse.json().catch(()=>({}));
+if(!publicStateResponse.ok||publicState.initialized!==true)throw new Error(`public_demo_state_expected_200_got_${publicStateResponse.status}`);
 
 const original=clone(await getState());
 const suffix=Date.now().toString(36).toUpperCase();
