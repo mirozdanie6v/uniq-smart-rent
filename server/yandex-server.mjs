@@ -11,8 +11,9 @@ const distDir=path.join(rootDir,'dist');
 const port=Number(process.env.PORT||8080);
 const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
 const apiKey=String(process.env.AUTO_SALE_API_KEY||'').trim();
+const publicDemoWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_PUBLIC_DEMO_WRITE||''));
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
-if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
+if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
 const store=await createYdbStateStore({connectionString});
 
 const apiHeaders={
@@ -28,6 +29,7 @@ const json=(res,data,status=200)=>{
   res.end(body);
 };
 const authorized=req=>{
+  if(publicDemoWrite)return true;
   const supplied=String(req.headers['x-auto-sale-key']||'');
   const expected=Buffer.from(apiKey);
   const actual=Buffer.from(supplied);
@@ -76,7 +78,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(url.pathname==='/api/health'){
       await store.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:2,writeMode:'authenticated',stateReadMode:'authenticated'});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:2,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated'});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
