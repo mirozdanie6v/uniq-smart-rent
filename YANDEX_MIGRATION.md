@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Cloudflare production stays unchanged. Yandex staging is prepared as a private Serverless Container with PostgreSQL persistence. GitHub validates the application and the Yandex Docker image before any Yandex deployment.
+Cloudflare production stays unchanged. Yandex staging is deployed as a public Serverless Container with YDB Serverless persistence. The application UI is publicly reachable, while the CRM state API is protected by an ephemeral staging API credential generated at deploy time. GitHub OIDC authenticates deployments to Yandex Cloud without permanent cloud keys.
 
 ## Resource names
 
@@ -61,27 +61,38 @@ Subject:
 
 ## Database
 
-Keep PostgreSQL hosts private. Place the Serverless Container and PostgreSQL cluster in `auto-sale-net`.
-
-Create a Lockbox secret named `auto-sale-db` with key `database_url`. Store the PostgreSQL connection string as the value. Do not commit it to GitHub.
+AUTO SALE staging uses YDB Serverless through `YDB_CONNECTION_STRING`. The runtime service account authenticates to YDB through Yandex metadata credentials. No database password is committed to GitHub.
 
 ## Deployment
 
-Run GitHub Actions workflow `Deploy AUTO SALE to Yandex staging` manually after all repository variables are configured.
+Run GitHub Actions workflow `Deploy AUTO SALE to Yandex staging` manually from branch `prototype/auto-sale-usa` after all repository variables are configured.
 
-The first Yandex stage is intentionally read-only. After the PostgreSQL snapshot is verified against the current Cloudflare state, authenticated writes will be enabled and the full client → manager → quote → deposit → order → logistics workflow will be tested on Yandex before DNS cutover.
+Each deploy:
+
+1. Validates the application and Yandex image.
+2. Exchanges GitHub OIDC for a Yandex IAM token.
+3. Pushes the Docker image to Container Registry.
+4. Imports the current Cloudflare AUTO SALE state into YDB.
+5. Generates an ephemeral staging API credential.
+6. Deploys a Serverless Container revision with authenticated state reads/writes.
+7. Verifies that unauthenticated CRM state access returns `401`.
+8. Runs a reversible Yandex E2E flow from lead creation through quote, deposit, order, logistics and handoff.
+9. Restores the pre-test state and verifies record counts.
+
+Validated staging URL: `https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/`.
 
 ## Cutover order
 
-1. Yandex infrastructure.
-2. Private staging container.
-3. Snapshot D1 state to PostgreSQL.
-4. Record-by-record reconciliation.
-5. Authenticated write API.
-6. Full E2E workflow on Yandex.
-7. Move frontend to Object Storage + CDN.
-8. Issue certificate and configure custom domain.
-9. Final delta migration.
-10. Switch DNS.
-11. Keep Cloudflare rollback path temporarily.
-12. Remove Cloudflare Worker/D1 only after stable operation.
+1. Yandex infrastructure. ✅
+2. YDB Serverless persistence. ✅
+3. Snapshot current Cloudflare state to YDB and reconcile counts. ✅
+4. Authenticated YDB state API. ✅
+5. Reversible client → manager → quote → deposit → order → logistics → handoff E2E. ✅
+6. Add durable staff authentication for browser UI and public client-intake API.
+7. Run browser E2E against Yandex staging.
+8. Move frontend to Object Storage + CDN if retained in the final topology.
+9. Issue certificate and configure custom domain.
+10. Final delta migration.
+11. Switch DNS.
+12. Keep Cloudflare rollback path temporarily.
+13. Remove Cloudflare Worker/D1 only after stable operation.
