@@ -1,0 +1,27 @@
+name: Verify AUTO SALE public staging
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.verify-yandex-public'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify public root and health
+        run: |
+          set -euo pipefail
+          BASE="https://bba01u6g86lg2q49p34d.containers.yandexcloud.net"
+          ROOT_CODE=$(curl -sS -o /tmp/root.html -w '%{http_code}' "$BASE/")
+          HEALTH_CODE=$(curl -sS -o /tmp/health.json -w '%{http_code}' "$BASE/api/health")
+          echo "ROOT_CODE=$ROOT_CODE"
+          echo "HEALTH_CODE=$HEALTH_CODE"
+          test "$ROOT_CODE" = "200"
+          test "$HEALTH_CODE" = "200"
+          cat /tmp/health.json
+          jq -e '.ok == true and .persistence == "ydb-serverless"' /tmp/health.json >/dev/null
