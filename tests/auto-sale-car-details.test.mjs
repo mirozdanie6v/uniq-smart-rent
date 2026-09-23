@@ -32,3 +32,22 @@ test('rich details are keyboard accessible and responsive assets are loaded',()=
   assert.match(index,/auto-sale-car-details\.mjs/);
   assert.match(css,/@media\(max-width:760px\)/);
 });
+
+
+test('client popup uses a swipeable photo slider with arrows and thumbnails',()=>{
+  assert.match(details,/data-car-slider/);
+  assert.match(details,/data-car-slide-prev/);
+  assert.match(details,/data-car-slide-next/);
+  assert.match(details,/data-car-slide-thumb/);
+  assert.match(details,/touchstart/);
+  assert.match(details,/touchend/);
+  assert.match(details,/setSliderIndex/);
+  assert.match(css,/auto-car-slider-track/);
+  assert.match(css,/touch-action:pan-y/);
+});
+
+test('rich popup can open managed catalog cars without a static detail registry entry',()=>{
+  assert.match(details,/const currentCar=id=>/);
+  assert.match(details,/if\(!base&&!managed\)return null/);
+  assert.match(details,/if\(!currentCar\(id\)\)return/);
+});
