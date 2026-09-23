@@ -3,6 +3,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 const SOURCE_PATH=process.env.SOURCE_PATH||'data/autoworld-georgia-recent/cars.json';
 const OUTPUT_PATH=process.env.OUTPUT_PATH||'data/autoworld-georgia-recent/catalog-import.json';
 const STATE_URL=process.env.AUTO_SALE_STATE_URL||'https://auto-sale-demo.viiversion.com/api/auto-sale/state';
+const DRY_RUN=/^(1|true|yes)$/i.test(String(process.env.DRY_RUN||''));
 
 const clean=value=>String(value??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();
 const unique=list=>[...new Set((Array.isArray(list)?list:[]).filter(Boolean))];
@@ -55,7 +56,12 @@ function normalizeDrive(value,raw){
 function extractMileage(car){
   const raw=String(car.rawText||'');
   const m=raw.match(/Пробег[\s\S]{0,80}?(\d[\d\s]*(?:ml|mi|км|km))/i);
-  return clean(m?.[1]||car.mileage||'').replace(/\s+/g,' ');
+  const value=clean(m?.[1]||car.mileage||'').replace(/\s+/g,' ');
+  const n=value.match(/(\d[\d\s]*)\s*(ml|mi|км|km)/i);
+  if(!n)return value;
+  const amount=Number(n[1].replace(/\D/g,''))||0;
+  const unit=/^(ml|mi)$/i.test(n[2])?'mi':'км';
+  return amount?new Intl.NumberFormat('ru-RU').format(amount)+' '+unit:value;
 }
 
 function extractBid(car){
@@ -166,6 +172,15 @@ async function main(){
   const imported=dedupe(source.map(normalizeCar));
   if(!imported.length)throw new Error('no_valid_imported_cars');
   await writeFile(OUTPUT_PATH,JSON.stringify(imported,null,2)+'\n','utf8');
+  console.log('AUTOWORLD_NORMALIZE_OK',JSON.stringify({
+    source:source.length,
+    normalized:imported.length,
+    skipped:source.length-imported.length,
+    pricedRub:imported.filter(x=>Number(x.priceRub)>0).length,
+    pricedBid:imported.filter(x=>Number(x.estimatedBidUsd)>0).length,
+    withPhotos:imported.filter(x=>x.image).length
+  }));
+  if(DRY_RUN)return;
 
   for(let attempt=0;attempt<8;attempt++){
     const state=await fetchState();
