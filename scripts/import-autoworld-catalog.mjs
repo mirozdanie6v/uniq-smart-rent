@@ -110,6 +110,21 @@ function sourceQualityReason(source){
 }
 
 
+function buildBodyType(brand,model){
+  const key=`${clean(brand)} ${clean(model)}`.toLowerCase();
+
+  if(/(?:f-?150|f350|super duty|ram 1500|ram 2500|sierra 1500|tundra|tacoma|canyon|santa cruz)/i.test(key))return'Пикап';
+  if(/(?:gle coupe|cayenne coupe|\bx6\b)/i.test(key))return'SUV-купе';
+  if(/(?:228|gran coupe)/i.test(key))return'4-дверное купе';
+  if(/prius/i.test(key))return'Лифтбек';
+  if(/(?:k4|forte|elantra|sentra|corolla|jetta|tlx|\ba6\b|\ba3\b|330|530|amg c63)/i.test(key))return'Седан';
+  if(/impreza/i.test(key))return'Компактный автомобиль';
+  if(/soul/i.test(key))return'Компактный кроссовер';
+  if(/(?:trailblazer|trax|envista|rogue|qashqai|hr-v|h-rv|cr-v|crosstrek|seltos|venue|kona|gle|glb|gla|\bx1\b|\bx2\b|\bx3\b|\bx7\b|q5|q7|macan|cayenne|atlas|tiguan|evoque|kicks|eclipse|encore|ecosport)/i.test(key))return'Кроссовер / SUV';
+
+  return'Легковой автомобиль';
+}
+
 function buildBestFor(car){
   const brand=clean(car.brand),model=clean(car.model),name=`${brand} ${model}`;
   const key=name.toLowerCase();
@@ -178,6 +193,7 @@ function normalizeCar(source){
     brand,
     model,
     year,
+    body:buildBodyType(brand,model),
     mileage:extractMileage(source)||'Пробег уточняется',
     engine:engine||'Двигатель уточняется',
     drive,
