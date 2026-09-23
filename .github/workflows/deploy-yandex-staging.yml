@@ -85,12 +85,6 @@ jobs:
           docker push "$IMAGE"
           echo "AUTO_SALE_IMAGE=$IMAGE" >> "$GITHUB_ENV"
 
-      - name: Import current AUTO SALE state into YDB
-        env:
-          YDB_ACCESS_TOKEN_CREDENTIALS: ${{ env.YC_IAM_TOKEN }}
-          SOURCE_STATE_URL: https://auto-sale.viiversion.com/api/auto-sale/state
-        run: npm run migrate:yandex
-
       - name: Generate staging API credential
         run: |
           set -euo pipefail
