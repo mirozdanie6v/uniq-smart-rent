@@ -1,0 +1,147 @@
+name: Verify AUTO SALE Object Storage live
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.verify-object-storage-live'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_URL: https://auto-sale-demo.viiversion.com
+      MEDIA_PREFIX: https://storage.yandexcloud.net/viiversion-auto-sale-media/
+    steps:
+      - name: Install Playwright
+        run: |
+          python -m pip install --quiet playwright
+          python -m playwright install --with-deps chromium >/dev/null
+
+      - name: Upload local photos, verify Object Storage and clean up
+        run: |
+          python - <<'PY'
+          import os,base64,time,requests
+          from playwright.sync_api import sync_playwright
+
+          base=os.environ['DEMO_URL']
+          media_prefix=os.environ['MEDIA_PREFIX']
+          name='QA Object Storage '+str(int(time.time()))
+          png=base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Zl1sAAAAASUVORK5CYII=')
+
+          def file(n):
+              return {'name':n,'mimeType':'image/png','buffer':png}
+
+          car_id=None
+          uploaded=[]
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              page=browser.new_page(viewport={'width':1440,'height':1100},locale='ru-RU')
+              page.goto(base,wait_until='networkidle',timeout=60000)
+              page.wait_for_timeout(1200)
+
+              health=page.evaluate("""async()=>await (await fetch('/api/health',{cache:'no-store'})).json()""")
+              assert health.get('mediaStorage')=='object-storage',health
+              assert health.get('mediaBucket')=='viiversion-auto-sale-media',health
+              print('AUTO_SALE_OBJECT_STORAGE_HEALTH_OK')
+
+              page.locator('[data-role="manager"]').click()
+              page.locator('[data-go="catalogAdmin"]').click()
+              page.locator('[data-catalog-add]').click()
+              form=page.locator('#catalogCarForm')
+              form.wait_for(state='visible',timeout=5000)
+
+              form.locator('[name="brand"]').fill('Ford')
+              form.locator('[name="model"]').fill(name)
+              form.locator('[name="year"]').fill('2024')
+              form.locator('[name="mileage"]').fill('10 000 км')
+              form.locator('[name="engine"]').fill('2.7 бензин')
+              form.locator('[name="drive"]').select_option('4WD')
+              form.locator('[name="auction"]').fill('Manheim')
+              form.locator('[name="price"]').fill('45000')
+              form.locator('[name="delivery"]').fill('8–11 недель')
+              form.locator('[name="tag"]').fill('Storage demo')
+
+              form.locator('[data-catalog-photo-upload="main"]').set_input_files(file('main.png'))
+              page.wait_for_function("""document.querySelector('#catalogCarForm [name=image]').value.startsWith('https://storage.yandexcloud.net/')""",timeout=20000)
+              form.locator('[data-catalog-photo-upload="interior"]').set_input_files([file('interior-1.png'),file('interior-2.png')])
+              page.wait_for_function("""JSON.parse(document.querySelector('#catalogCarForm [name=interiorPhotos]').value).length===2""",timeout=30000)
+              form.locator('[data-catalog-photo-upload="other"]').set_input_files(file('other-1.png'))
+              page.wait_for_function("""JSON.parse(document.querySelector('#catalogCarForm [name=otherPhotos]').value).length===1""",timeout=20000)
+
+              main=form.locator('[name="image"]').input_value()
+              interior=page.evaluate("""JSON.parse(document.querySelector('#catalogCarForm [name=interiorPhotos]').value)""")
+              other=page.evaluate("""JSON.parse(document.querySelector('#catalogCarForm [name=otherPhotos]').value)""")
+              uploaded=[main,*interior,*other]
+              assert all(x.startswith(media_prefix) for x in uploaded),uploaded
+              assert all(not x.startswith('data:') for x in uploaded),uploaded
+              print('AUTO_SALE_OBJECT_STORAGE_UPLOAD_URLS_OK',len(uploaded))
+
+              for url in uploaded:
+                  r=requests.get(url,timeout=20)
+                  assert r.status_code==200,(r.status_code,url,r.text[:200])
+                  assert r.headers.get('content-type','').startswith('image/'),r.headers
+              print('AUTO_SALE_OBJECT_STORAGE_PUBLIC_READ_OK',len(uploaded))
+
+              form.locator('button[type="submit"]').click()
+              state=None
+              car=None
+              for _ in range(30):
+                  page.wait_for_timeout(300)
+                  state=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
+                  car=next((x for x in state.get('catalog',[]) if x.get('model')==name),None)
+                  if car:
+                      break
+              assert car,'vehicle did not reach YDB'
+              car_id=car['id']
+              refs=[car.get('image',''),*car.get('interiorPhotos',[]),*car.get('otherPhotos',[])]
+              assert refs==uploaded,(refs,uploaded)
+              assert all(x.startswith(media_prefix) for x in refs)
+              assert not any(str(x).startswith('data:image/') for x in refs)
+              print('AUTO_SALE_OBJECT_STORAGE_YDB_URL_ONLY_OK',car_id)
+
+              page.locator('[data-role="client"]').click()
+              page.locator('.auto-bottom [data-go="catalog"]').click()
+              detail=page.locator('[data-detail="'+car_id+'"]')
+              assert detail.count()==1
+              detail.click()
+              page.wait_for_timeout(300)
+              assert page.locator('.auto-detail-gallery img').count()==4
+              print('AUTO_SALE_OBJECT_STORAGE_CLIENT_GALLERY_OK',car_id)
+
+              # Clean test media through the application API.
+              for url in uploaded:
+                  status=page.evaluate("""async(url)=>{
+                    const r=await fetch('/api/auto-sale/media',{method:'DELETE',headers:{'content-type':'application/json'},body:JSON.stringify({url})});
+                    return r.status;
+                  }""",url)
+                  assert status==200,(status,url)
+
+              cleaned=False
+              for _ in range(10):
+                  latest=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
+                  payload={
+                    'baseRevision':int(latest.get('revision',0)),
+                    'leads':latest.get('leads',[]),'quotes':latest.get('quotes',[]),'orders':latest.get('orders',[]),
+                    'notes':latest.get('notes',{}),'team':latest.get('team',[]),
+                    'catalog':[x for x in latest.get('catalog',[]) if x.get('id')!=car_id]
+                  }
+                  status=page.evaluate("""async(payload)=>{
+                    const r=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+                    return r.status;
+                  }""",payload)
+                  if status==200:
+                      cleaned=True
+                      break
+                  assert status==409,status
+                  page.wait_for_timeout(250)
+              assert cleaned
+              for url in uploaded:
+                  r=requests.get(url,timeout=20)
+                  assert r.status_code in (403,404),(r.status_code,url)
+              print('AUTO_SALE_OBJECT_STORAGE_CLEANUP_OK',car_id)
+              browser.close()
+          PY
