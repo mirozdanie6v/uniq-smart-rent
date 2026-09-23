@@ -4,7 +4,7 @@ import {JSDOM} from 'jsdom';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
-async function setup(tag){
+async function setup(tag,{emptyCatalog=false}={}){
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale-demo.viiversion.com/'});
   globalThis.window=dom.window;
   globalThis.document=dom.window.document;
@@ -13,6 +13,7 @@ async function setup(tag){
   globalThis.FormData=dom.window.FormData;
   globalThis.Event=dom.window.Event;
   globalThis.CustomEvent=dom.window.CustomEvent;
+  if(emptyCatalog)localStorage.setItem('auto-sale-catalog-v1','[]');
   await import(`../public/auto-sale-app-v3.mjs?manager-catalog=${tag}-${Date.now()}-${Math.random()}`);
   await tick();
   return{dom,root:document.querySelector('#app')};
@@ -73,5 +74,22 @@ test('manager can edit and hide a catalog vehicle from clients',async()=>{
   root.querySelector('[data-role="client"]').click();await tick();
   root.querySelector('[data-go="catalog"]').click();await tick();
   assert.equal(root.querySelector(`[data-detail="${id}"]`),null);
+  dom.window.close();
+});
+
+
+test('empty server catalog is seeded with existing cars and each row opens edit form',async()=>{
+  const {dom,root}=await setup('seed-existing',{emptyCatalog:true});
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  const rows=[...root.querySelectorAll('[data-catalog-edit]')];
+  assert.equal(rows.length,16);
+  const bmw=root.querySelector('[data-catalog-edit="bmw-x5-22"]');
+  assert.ok(bmw);
+  bmw.click();await tick();
+  const form=root.querySelector('#catalogCarForm');assert.ok(form);
+  assert.equal(form.elements.brand.value,'BMW');
+  assert.equal(form.elements.model.value,'X5 xDrive40i');
+  assert.equal(form.elements.price.value,'46800');
   dom.window.close();
 });
