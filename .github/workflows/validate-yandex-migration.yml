@@ -5,6 +5,9 @@ on:
     branches: [prototype/auto-sale-usa]
     paths:
       - package.json
+      - index.html
+      - public/**
+      - tests/**
       - Dockerfile.yandex
       - .dockerignore
       - server/**
