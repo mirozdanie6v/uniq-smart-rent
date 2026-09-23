@@ -5,6 +5,7 @@ const OUTPUT_PATH=process.env.OUTPUT_PATH||'data/autoworld-georgia-recent/catalo
 const AUDIT_PATH=process.env.AUDIT_PATH||OUTPUT_PATH.replace(/\.json$/,'-audit.json');
 const STATE_URL=process.env.AUTO_SALE_STATE_URL||'https://auto-sale-demo.viiversion.com/api/auto-sale/state';
 const DRY_RUN=/^(1|true|yes)$/i.test(String(process.env.DRY_RUN||''));
+const REPLACE_SOURCE_ALL=/^(1|true|yes)$/i.test(String(process.env.REPLACE_SOURCE_ALL||''));
 
 const clean=value=>String(value??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();
 const unique=list=>[...new Set((Array.isArray(list)?list:[]).filter(Boolean))];
@@ -133,7 +134,8 @@ function normalizeCar(source){
     trim&&`Комплектация: ${trim}`,
     vin&&`VIN: ${vin}`,
     source.lot&&`Лот: ${clean(source.lot)}`,
-    source.auctionDate&&`Торги: ${clean(source.auctionDate)}`
+    source.auctionDate&&`Торги: ${clean(source.auctionDate)}`,
+    source.calculationDate&&`Расчёт источника: ${clean(source.calculationDate)}`
   ].filter(Boolean);
   const safety=[
     safetyText&&`Безопасность: ${safetyText.replace(/^["']|["']$/g,'')}`,
@@ -213,8 +215,12 @@ async function main(){
   if(!imported.length)throw new Error('no_valid_imported_cars');
   await writeFile(OUTPUT_PATH,JSON.stringify(imported,null,2)+'\n','utf8');
 
+  const candidates=normalizedRows.filter(x=>x.car).map(x=>x.car);
   const brandCounts={};
   for(const car of imported)brandCounts[car.brand]=(brandCounts[car.brand]||0)+1;
+  const vinGroups={};
+  for(const car of candidates)(vinGroups[car.vin]??=[]).push(car.sourcePostId);
+  const duplicateVins=Object.entries(vinGroups).filter(([,posts])=>posts.length>1).map(([vin,posts])=>({vin,posts}));
   const skipped=normalizedRows.filter(x=>!x.car).map(x=>({
     sourcePostId:String(x.source.sourcePostId||''),
     sourceUrl:clean(x.source.sourceUrl),
@@ -224,13 +230,17 @@ async function main(){
   }));
   const audit={
     sourceCount:source.length,
+    candidateCount:candidates.length,
     normalizedCount:imported.length,
-    skippedCount:skipped.length,
+    skippedInvalidCount:skipped.length,
+    duplicateVinCount:candidates.length-imported.length,
+    excludedTotal:source.length-imported.length,
     pricedRub:imported.filter(x=>Number(x.priceRub)>0).length,
     pricedBid:imported.filter(x=>Number(x.estimatedBidUsd)>0).length,
     noPrice:imported.filter(x=>!Number(x.priceRub)&&!Number(x.estimatedBidUsd)).length,
     withPhotos:imported.filter(x=>x.image).length,
     brandCounts,
+    duplicateVins,
     skipped
   };
   await writeFile(AUDIT_PATH,JSON.stringify(audit,null,2)+'\n','utf8');
@@ -241,10 +251,11 @@ async function main(){
     const state=await fetchState();
     const importedIds=new Set(imported.map(x=>x.id));
     const importedVins=new Set(imported.map(x=>x.vin));
-    const existing=(state.catalog||[]).filter(car=>
-      !importedIds.has(String(car.id||'')) &&
-      !(String(car.source||'')==='AutoWorld_Georgia'&&importedVins.has(String(car.vin||'').toUpperCase()))
-    );
+    const existing=(state.catalog||[]).filter(car=>{
+      if(REPLACE_SOURCE_ALL&&String(car.source||'')==='AutoWorld_Georgia')return false;
+      return !importedIds.has(String(car.id||'')) &&
+        !(String(car.source||'')==='AutoWorld_Georgia'&&importedVins.has(String(car.vin||'').toUpperCase()));
+    });
     const catalog=[...existing,...imported];
     const response=await putState(state,catalog);
     if(response.ok){
