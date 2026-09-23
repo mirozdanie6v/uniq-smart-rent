@@ -2,6 +2,7 @@ import {readFile,writeFile} from 'node:fs/promises';
 
 const SOURCE_PATH=process.env.SOURCE_PATH||'data/autoworld-georgia-recent/cars.json';
 const OUTPUT_PATH=process.env.OUTPUT_PATH||'data/autoworld-georgia-recent/catalog-import.json';
+const AUDIT_PATH=process.env.AUDIT_PATH||OUTPUT_PATH.replace(/\.json$/,'-audit.json');
 const STATE_URL=process.env.AUTO_SALE_STATE_URL||'https://auto-sale-demo.viiversion.com/api/auto-sale/state';
 const DRY_RUN=/^(1|true|yes)$/i.test(String(process.env.DRY_RUN||''));
 
@@ -71,13 +72,51 @@ function extractBid(car){
   return m?Number(m[1].replace(/\D/g,''))||0:0;
 }
 
+const BRAND_MAP=new Map([
+  ['KIA','Kia'],['HYUNDAI','Hyundai'],['TOYOTA','Toyota'],['NISSAN','Nissan'],
+  ['HONDA','Honda'],['FORD','Ford'],['AUDI','Audi'],['ACURA','Acura'],
+  ['VW','Volkswagen'],['MB','Mercedes-Benz'],['MERSEDES','Mercedes-Benz']
+]);
+
+function canonicalVehicleName(brand,model,rawTitle,vin){
+  let b=clean(brand),m=clean(model),title=clean(rawTitle),v=clean(vin).toUpperCase();
+  const mapped=BRAND_MAP.get(b.toUpperCase());
+  if(mapped)b=mapped;
+
+  if(/^пришел$/i.test(b)&&/SUBARU\s+Crosstrek/i.test(title)){b='Subaru';m='Crosstrek'}
+  if(/^Trailblazer$/i.test(b)&&/^KL79/i.test(v)){b='Chevrolet';m='Trailblazer'}
+  if(/^Eclipse$/i.test(b)&&/^JA4/i.test(v)){b='Mitsubishi';m='Eclipse Cross'}
+  if(/^X1$/i.test(b)&&/^WBX/i.test(v)){b='BMW';m=('X1 '+m).trim()}
+  if(/^GLB$/i.test(b)&&/^W1N/i.test(v)){b='Mercedes-Benz';m=('GLB '+m).trim()}
+  if(/^Range$/i.test(b)&&/^SAL/i.test(v)){b='Land Rover';m=('Range '+m).trim()}
+
+  const exactModel=new Map([
+    ['ELANTRA','Elantra'],['SOUL','Soul']
+  ]);
+  if(exactModel.has(m))m=exactModel.get(m);
+  return{brand:b,model:m};
+}
+
+function sourceQualityReason(source){
+  const title=titleFromRaw(source.rawText);
+  const vin=clean(source.vin).toUpperCase();
+  const photos=unique(source.photos).filter(url=>/^https:\/\/storage\.yandexcloud\.net\//i.test(url));
+  if(!vin||vin.length!==17)return'invalid_or_missing_vin';
+  if(!title.brand||!title.model)return'missing_vehicle_title';
+  if(Number(title.year)<2000||Number(title.year)>2030)return'invalid_year';
+  if(!photos.length)return'missing_recovered_photos';
+  return'';
+}
+
 function normalizeCar(source){
   const title=titleFromRaw(source.rawText);
-  const brand=clean(title.brand||source.brand);
-  const model=clean(title.model||source.model).replace(/\bSou\s+l\b/i,'Soul');
+  const rawBrand=clean(title.brand||source.brand);
+  const rawModel=clean(title.model||source.model).replace(/\bSou\s+l\b/i,'Soul');
   const year=Number(title.year||source.year)||0;
   const vin=clean(source.vin).toUpperCase();
   const photos=unique(source.photos).filter(url=>/^https:\/\/storage\.yandexcloud\.net\//i.test(url));
+  const names=canonicalVehicleName(rawBrand,rawModel,title.title||source.title,vin);
+  const brand=names.brand,model=names.model;
   if(!vin||vin.length!==17||!brand||!model||year<2000||year>2030||!photos.length)return null;
 
   const engine=clean(source.engine)||field(source.rawText,'Двигатель');
@@ -169,17 +208,33 @@ async function putState(state,catalog){
 
 async function main(){
   const source=JSON.parse(await readFile(SOURCE_PATH,'utf8'));
-  const imported=dedupe(source.map(normalizeCar));
+  const normalizedRows=source.map(item=>({source:item,car:normalizeCar(item)}));
+  const imported=dedupe(normalizedRows.map(x=>x.car));
   if(!imported.length)throw new Error('no_valid_imported_cars');
   await writeFile(OUTPUT_PATH,JSON.stringify(imported,null,2)+'\n','utf8');
-  console.log('AUTOWORLD_NORMALIZE_OK',JSON.stringify({
-    source:source.length,
-    normalized:imported.length,
-    skipped:source.length-imported.length,
+
+  const brandCounts={};
+  for(const car of imported)brandCounts[car.brand]=(brandCounts[car.brand]||0)+1;
+  const skipped=normalizedRows.filter(x=>!x.car).map(x=>({
+    sourcePostId:String(x.source.sourcePostId||''),
+    sourceUrl:clean(x.source.sourceUrl),
+    title:titleFromRaw(x.source.rawText).title||clean(x.source.title),
+    vin:clean(x.source.vin),
+    reason:sourceQualityReason(x.source)
+  }));
+  const audit={
+    sourceCount:source.length,
+    normalizedCount:imported.length,
+    skippedCount:skipped.length,
     pricedRub:imported.filter(x=>Number(x.priceRub)>0).length,
     pricedBid:imported.filter(x=>Number(x.estimatedBidUsd)>0).length,
-    withPhotos:imported.filter(x=>x.image).length
-  }));
+    noPrice:imported.filter(x=>!Number(x.priceRub)&&!Number(x.estimatedBidUsd)).length,
+    withPhotos:imported.filter(x=>x.image).length,
+    brandCounts,
+    skipped
+  };
+  await writeFile(AUDIT_PATH,JSON.stringify(audit,null,2)+'\n','utf8');
+  console.log('AUTOWORLD_NORMALIZE_OK',JSON.stringify(audit));
   if(DRY_RUN)return;
 
   for(let attempt=0;attempt<8;attempt++){
