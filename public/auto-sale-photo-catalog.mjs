@@ -21,9 +21,15 @@ const normalized=value=>String(value||'').trim().toLowerCase().replace(/\s+/g,' 
 const byAlias=new Map();
 for(const photo of verifiedPhotos)for(const alias of photo.aliases)byAlias.set(normalized(alias),photo);
 
+function managedCatalog(){try{const value=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')||'null');return Array.isArray(value)&&value.length?value:[]}catch{return[]}}
 function applyVerifiedPhotos(scope=document){
+  const managed=managedCatalog();
+  const managedIds=new Set(managed.map(car=>car.id));
   const images=scope.querySelectorAll?.('.auto-car-media img, .auto-detail-media img')||[];
   for(const image of images){
+    const card=image.closest('.auto-car');
+    const id=card?.querySelector('[data-detail]')?.dataset.detail||card?.dataset.extraCar||'';
+    if(id&&managedIds.has(id))continue;
     const photo=byAlias.get(normalized(image.alt));
     if(!photo||image.dataset.photoVerified===photo.id)continue;
     image.src=photo.image;
