@@ -5,6 +5,7 @@ import {fileURLToPath} from 'node:url';
 import {readFile,stat} from 'node:fs/promises';
 import {createYdbStateStore} from './ydb-state.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
+import {createObjectStorage} from './object-storage.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -12,16 +13,18 @@ const port=Number(process.env.PORT||8080);
 const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
 const apiKey=String(process.env.AUTO_SALE_API_KEY||'').trim();
 const publicDemoWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_PUBLIC_DEMO_WRITE||''));
+const mediaBucket=String(process.env.AUTO_SALE_MEDIA_BUCKET||'').trim();
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
 if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
 const store=await createYdbStateStore({connectionString});
+const media=createObjectStorage({bucket:mediaBucket});
 
 const apiHeaders={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
   'access-control-allow-origin':'*',
   'access-control-allow-headers':'content-type,x-auto-sale-key',
-  'access-control-allow-methods':'GET,PUT,OPTIONS'
+  'access-control-allow-methods':'GET,PUT,POST,DELETE,OPTIONS'
 };
 const json=(res,data,status=200)=>{
   const body=JSON.stringify(data);
@@ -78,7 +81,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(url.pathname==='/api/health'){
       await store.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:2,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated'});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:3,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
@@ -94,6 +97,29 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(url.pathname==='/api/auto-sale/media'&&req.method==='POST'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
+      const input=await parseJson(req,3_000_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const result=await media.upload({
+        carId:input.carId,
+        category:input.category,
+        dataUrl:input.dataUrl,
+        fileName:input.fileName
+      });
+      json(res,{ok:true,...result},201);
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/media'&&req.method==='DELETE'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
+      const input=await parseJson(req,50_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const result=await media.remove(input.url);
+      json(res,result);
+      return;
+    }
     if(url.pathname.startsWith('/api/')){
       json(res,{error:'not_found'},404);
       return;
@@ -102,7 +128,8 @@ const server=http.createServer(async(req,res)=>{
   }catch(error){
     console.error('AUTO SALE Yandex request failed',error);
     const status=Number(error?.statusCode)||500;
-    json(res,{error:status===413?'payload_too_large':status===400?'invalid_json':'internal_error'},status);
+    const code=String(error?.message||'internal_error');
+    json(res,{error:status===413?(code==='image_too_large'?'image_too_large':'payload_too_large'):status===400?code:status===503?code:'internal_error'},status);
   }
 });
 server.listen(port,'0.0.0.0',()=>console.log(`AUTO SALE Yandex listening on ${port}`));
