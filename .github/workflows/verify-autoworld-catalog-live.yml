@@ -50,7 +50,7 @@ jobs:
               assert card.count()==1
               text=card.inner_text()
               assert 'BMW 228' in text,text
-              assert '4 300 000' in text,text
+              assert '4 300 000' in text.replace('\u00a0',' '),text
               print('AUTO_SALE_AUTOWORLD_CLIENT_CARD_OK')
 
               page.locator('[data-detail="AWG-3713"]').click()
@@ -58,7 +58,7 @@ jobs:
               assert page.locator('[data-car-slide]').count()==7
               modal=page.locator('.auto-car-detail-modal')
               assert 'BMW 228' in modal.inner_text()
-              assert '4 300 000' in modal.inner_text()
+              assert '4 300 000' in modal.inner_text().replace('\u00a0',' ')
               print('AUTO_SALE_AUTOWORLD_CLIENT_DETAIL_OK',page.locator('[data-car-slide]').count())
 
               page.locator('[data-car-detail-close]').first.click()
