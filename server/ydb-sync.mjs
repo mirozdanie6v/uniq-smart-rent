@@ -6,6 +6,14 @@ const num=v=>Number(v)||0;
 const same=(a,b)=>String(a??'')===String(b??'');
 const latestQuote=(quotes,leadId)=>quotes.filter(q=>text(q.leadId)===leadId).sort((a,b)=>num(b.version)-num(a.version))[0];
 const bad=(error,data={})=>({status:400,data:{error,...data}});
+const photoList=v=>Array.isArray(v)?v.filter(Boolean):[];
+const validPhoto=value=>{
+  const src=text(value);
+  if(!src)return false;
+  if(/^https?:\/\//i.test(src))return src.length<=4000;
+  if(/^data:image\/(jpeg|png|webp);base64,/i.test(src))return src.length<=220000;
+  return false;
+};
 
 export async function syncYdbState(store,input){
   const previous=await store.loadState();
@@ -38,7 +46,11 @@ export async function syncYdbState(store,input){
     if(catalogIds.has(id))return bad('duplicate_catalog_car',{id});
     catalogIds.add(id);
     if(num(car.price)<=0)return bad('invalid_catalog_car',{id,details:['Цена автомобиля должна быть больше нуля.']});
-    if(!text(car.image))return bad('invalid_catalog_car',{id,details:['Укажите изображение автомобиля.']});
+    if(!validPhoto(car.image))return bad('invalid_catalog_car',{id,details:['Укажите корректное главное фото автомобиля.']});
+    const interior=photoList(car.interiorPhotos),other=photoList(car.otherPhotos);
+    if(interior.length>4)return bad('invalid_catalog_photos',{id,details:['Допускается не более 4 фото салона.']});
+    if(other.length>6)return bad('invalid_catalog_photos',{id,details:['Допускается не более 6 дополнительных фото.']});
+    if([...interior,...other].some(src=>!validPhoto(src)))return bad('invalid_catalog_photos',{id,details:['Одно из фото имеет неподдерживаемый формат или слишком большой размер.']});
   }
 
   for(const lead of leads){
