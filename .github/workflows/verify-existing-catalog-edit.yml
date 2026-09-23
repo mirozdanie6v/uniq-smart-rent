@@ -49,7 +49,7 @@ jobs:
               form=page.locator('#catalogCarForm')
               form.wait_for(state='visible',timeout=5000)
               original=int(form.locator('[name="price"]').input_value())
-              temporary=original+111
+              temporary=original+100
               form.locator('[name="price"]').fill(str(temporary))
               form.locator('button[type="submit"]').click()
               page.wait_for_timeout(400)
