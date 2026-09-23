@@ -116,25 +116,25 @@ function buildBestFor(car){
   const facts=[
     Number(car.year)>0?`${car.year} год`:'',
     clean(car.drive)&&!/^[—-]+$/.test(clean(car.drive))?`привод ${clean(car.drive)}`:'',
-    clean(car.engine)&&!\u002Fуточняется|^[-—]$/i.test(clean(car.engine))?`двигатель ${clean(car.engine)}`:'',
+    clean(car.engine)&&!/уточняется|^[-—]$/i.test(clean(car.engine))?`двигатель ${clean(car.engine)}`:'',
     clean(car.trim)?`комплектация ${clean(car.trim)}`:'',
-    clean(car.mileage)&&!\u002Fуточняется|н\/д|^[-—]$/i.test(clean(car.mileage))?`пробег ${clean(car.mileage)}`:''
+    clean(car.mileage)&&!/уточняется|н\/д|^[-—]$/i.test(clean(car.mileage))?`пробег ${clean(car.mileage)}`:''
   ].filter(Boolean);
 
   let use='Сбалансированный вариант для повседневных поездок и загородных маршрутов.';
-  if(\u002F(?:f-?150|f350|super duty|ram 1500|ram 2500|sierra|tundra|tacoma|canyon|santa cruz)/i.test(key)){
+  if(/(?:f-?150|f350|super duty|ram 1500|ram 2500|sierra|tundra|tacoma|canyon|santa cruz)/i.test(key)){
     use='Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.';
-  }else if(\u002F(?:gle|glb|gla|x1|x2|x3|x6|x7|q5|q7|macan|cayenne|atlas|tiguan|evoque|trailblazer|envista|rogue|qashqai|hr-v|h-rv|trax|crosstrek|seltos|venue|kona|cr-v|kicks|eclipse|encore|ecosport)/i.test(key)){
-    use=\u002F(?:porsche|bmw|mercedes|audi|land rover)/i.test(key)
+  }else if(/(?:gle|glb|gla|x1|x2|x3|x6|x7|q5|q7|macan|cayenne|atlas|tiguan|evoque|trailblazer|envista|rogue|qashqai|hr-v|h-rv|trax|crosstrek|seltos|venue|kona|cr-v|kicks|eclipse|encore|ecosport)/i.test(key)){
+    use=/(?:porsche|bmw|mercedes|audi|land rover)/i.test(key)
       ?'Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.'
       :'Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.';
-  }else if(\u002Fprius/i.test(key)){
+  }else if(/prius/i.test(key)){
     use='Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность.';
-  }else if(\u002F(?:amg|228|330|530|tlx|a6|a3|k4|forte|elantra|sentra|corolla|jetta|impreza)/i.test(key)){
-    use=\u002F(?:amg|bmw|audi|acura)/i.test(key)
+  }else if(/(?:amg|228|330|530|tlx|a6|a3|k4|forte|elantra|sentra|corolla|jetta|impreza)/i.test(key)){
+    use=/(?:amg|bmw|audi|acura)/i.test(key)
       ?'Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.'
       :'Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.';
-  }else if(\u002Fsoul/i.test(key)){
+  }else if(/soul/i.test(key)){
     use='Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах.';
   }
   return facts.length?`${name}: ${facts.join(', ')}. ${use}`:`${name}. ${use}`;
