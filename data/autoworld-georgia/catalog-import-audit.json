@@ -1,7 +1,10 @@
 {
   "sourceCount": 169,
+  "candidateCount": 124,
   "normalizedCount": 117,
-  "skippedCount": 45,
+  "skippedInvalidCount": 45,
+  "duplicateVinCount": 7,
+  "excludedTotal": 52,
   "pricedRub": 58,
   "pricedBid": 48,
   "noPrice": 59,
@@ -27,6 +30,51 @@
     "Acura": 1,
     "Land Rover": 1
   },
+  "duplicateVins": [
+    {
+      "vin": "W1N4N4GB9TJ780704",
+      "posts": [
+        "1923",
+        "2125"
+      ]
+    },
+    {
+      "vin": "W1KAF8AB3RR221754",
+      "posts": [
+        "2165",
+        "2226"
+      ]
+    },
+    {
+      "vin": "3KPF24AD0NE445365",
+      "posts": [
+        "2257",
+        "3667"
+      ]
+    },
+    {
+      "vin": "3CZRU6H13NM770526",
+      "posts": [
+        "2276",
+        "2565",
+        "3543"
+      ]
+    },
+    {
+      "vin": "3N1AB8DV9PY244266",
+      "posts": [
+        "2893",
+        "2930"
+      ]
+    },
+    {
+      "vin": "KNDJ23AU3P7894711",
+      "posts": [
+        "3021",
+        "3752"
+      ]
+    }
+  ],
   "skipped": [
     {
       "sourcePostId": "65",
