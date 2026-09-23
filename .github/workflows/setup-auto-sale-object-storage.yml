@@ -1,0 +1,89 @@
+name: Setup AUTO SALE Object Storage
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.setup-auto-sale-object-storage'
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
+  MEDIA_BUCKET: viiversion-auto-sale-media
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY"; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Create media bucket
+        run: |
+          set -euo pipefail
+          if yc storage bucket get --name "$MEDIA_BUCKET" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            echo "Bucket already exists: $MEDIA_BUCKET"
+          else
+            yc storage bucket create \
+              --name "$MEDIA_BUCKET" \
+              --folder-id "$YC_FOLDER_ID" \
+              --default-storage-class standard \
+              --max-size 1073741824 \
+              --public-read \
+              --grants "grantee-id=$YC_RUNTIME_SA_ID,grant-type=grant-type-account,permission=permission-full-control"
+          fi
+
+      - name: Ensure public read and runtime write access
+        run: |
+          set -euo pipefail
+          yc storage bucket update \
+            --name "$MEDIA_BUCKET" \
+            --folder-id "$YC_FOLDER_ID" \
+            --public-read \
+            --grants "grantee-id=$YC_RUNTIME_SA_ID,grant-type=grant-type-account,permission=permission-full-control"
+          yc storage bucket get --name "$MEDIA_BUCKET" --folder-id "$YC_FOLDER_ID" --full --format json > /tmp/bucket.json
+          jq '{name,folder_id,anonymous_access_flags,max_size,default_storage_class}' /tmp/bucket.json
+
+      - name: Verify anonymous object read is not bucket listing
+        run: |
+          set -euo pipefail
+          CODE=$(curl -sS -o /tmp/listing -w '%{http_code}' "https://storage.yandexcloud.net/$MEDIA_BUCKET/")
+          echo "bucket_listing_http=$CODE"
+          test "$CODE" = "403" || test "$CODE" = "404"
+          echo "AUTO_SALE_OBJECT_STORAGE_READY $MEDIA_BUCKET"
