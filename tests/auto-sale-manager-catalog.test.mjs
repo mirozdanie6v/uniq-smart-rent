@@ -130,3 +130,31 @@ test('manager catalog form supports local main, interior and other photo sets',a
   assert.deepEqual(car.otherPhotos,['data:image/jpeg;base64,OTH1']);
   dom.window.close();
 });
+
+
+test('manager can edit an imported source-priced car without losing source metadata',async()=>{
+  const {dom,root}=await setup('source-price');
+  const catalog=JSON.parse(localStorage.getItem('auto-sale-catalog-v1'));
+  catalog.push({
+    id:'AWG-999',brand:'Kia',model:'K4',year:2026,mileage:'393 mi',engine:'2.0L',
+    drive:'FWD',auction:'AutoWorld Georgia',price:0,priceRub:2970000,delivery:'Срок по запросу',
+    tag:'EX',image:'https://example.com/k4.jpg',interiorPhotos:[],otherPhotos:[],active:true,
+    source:'AutoWorld_Georgia',sourcePostId:'999',sourceUrl:'https://t.me/AutoWorld_Georgia/999',vin:'VINTEST1234567890'
+  });
+  localStorage.setItem('auto-sale-catalog-v1',JSON.stringify(catalog));
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  root.querySelector('[data-catalog-edit="AWG-999"]').click();await tick();
+  const form=root.querySelector('#catalogCarForm');assert.ok(form);
+  assert.equal(form.elements.price.value,'0');
+  assert.equal(form.elements.priceRub.value,'2970000');
+  form.elements.priceRub.value='3000000';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  const updated=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')).find(x=>x.id==='AWG-999');
+  assert.equal(updated.priceRub,3000000);
+  assert.equal(updated.source,'AutoWorld_Georgia');
+  assert.equal(updated.sourcePostId,'999');
+  assert.equal(updated.vin,'VINTEST1234567890');
+  dom.window.close();
+});
