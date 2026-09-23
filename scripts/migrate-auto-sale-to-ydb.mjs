@@ -17,7 +17,8 @@ const counts={
   quotes:Array.isArray(state.quotes)?state.quotes.length:0,
   orders:Array.isArray(state.orders)?state.orders.length:0,
   notes:Object.values(state.notes||{}).reduce((n,list)=>n+(Array.isArray(list)?list.length:0),0),
-  team:Array.isArray(state.team)?state.team.length:0
+  team:Array.isArray(state.team)?state.team.length:0,
+  catalog:Array.isArray(state.catalog)?state.catalog.length:0
 };
 
 const store=await createYdbStateStore({
@@ -34,7 +35,8 @@ try{
     quotes:imported.quotes.length,
     orders:imported.orders.length,
     notes:Object.values(imported.notes||{}).reduce((n,list)=>n+(Array.isArray(list)?list.length:0),0),
-    team:imported.team.length
+    team:imported.team.length,
+    catalog:imported.catalog.length
   };
   for(const key of Object.keys(counts)){
     if(counts[key]!==importedCounts[key])throw new Error(`Count mismatch for ${key}: source=${counts[key]} ydb=${importedCounts[key]}`);
