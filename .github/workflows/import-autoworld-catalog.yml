@@ -19,9 +19,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Import curated AutoWorld cars into YDB catalog
+      - name: Import normalized full AutoWorld catalog into YDB
         env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: data/autoworld-georgia/catalog-import.json
+          AUDIT_PATH: data/autoworld-georgia/catalog-import-audit.json
           AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+          REPLACE_SOURCE_ALL: 'true'
         run: node scripts/import-autoworld-catalog.mjs
 
       - name: Commit normalized catalog preview
@@ -30,10 +34,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin prototype/auto-sale-usa
-          git add data/autoworld-georgia-recent/catalog-import.json
+          git add data/autoworld-georgia/catalog-import.json data/autoworld-georgia/catalog-import-audit.json
           if git diff --cached --quiet; then
             echo "No preview changes"
             exit 0
           fi
-          git commit -m "Normalize AutoWorld Georgia cars for AUTO SALE catalog"
+          git commit -m "Normalize full AutoWorld Georgia catalog"
           git push origin HEAD:prototype/auto-sale-usa
