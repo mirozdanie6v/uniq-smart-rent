@@ -19,6 +19,7 @@ const matchesBudget=(car,value)=>value==='all'||value==='35'&&car.price<=35000||
 function card(car){return `<article class="auto-car auto-extra-car" data-extra-car="${car.id}"><div class="auto-car-media"><img src="${car.image}" alt="${esc(car.brand+' '+car.model)}"><span class="auto-chip">${esc(car.tag)}</span></div><div class="auto-car-body"><div class="auto-car-top"><div><small>${car.year} · ${esc(car.auction)}</small><h3>${esc(car.brand+' '+car.model)}</h3></div><div class="auto-price"><b>от ${money(car.price)}</b><span>ориентир под ключ</span></div></div><div class="auto-specs"><span>${esc(car.mileage)}</span><span>${esc(car.engine)}</span><span>${esc(car.drive)}</span></div><div class="auto-card-actions"><button class="auto-btn primary" data-open-request data-extra-model="${esc(car.brand+' '+car.model)}">Рассчитать</button><button class="auto-btn ghost" data-extra-detail="${car.id}">Подробнее</button></div></div></article>`}
 
 function renderExtraCars(){
+  if(localStorage.getItem('auto-sale-catalog-v1'))return;
   const brandFilter=document.getElementById('brandFilter');
   const budgetFilter=document.getElementById('budgetFilter');
   const search=document.getElementById('autoSearch');
