@@ -1,0 +1,90 @@
+name: Verify AUTO SALE employee save live
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.verify-auto-sale-employee-save'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_URL: https://auto-sale-demo.viiversion.com
+    steps:
+      - name: Install Playwright
+        run: |
+          python -m pip install --quiet playwright
+          python -m playwright install --with-deps chromium >/dev/null
+
+      - name: Save employee through live UI
+        run: |
+          python - <<'PY'
+          import os, time
+          from playwright.sync_api import sync_playwright
+
+          base=os.environ['DEMO_URL']
+          name='QA SAVE '+str(int(time.time()))
+          with open('/tmp/qa-name','w',encoding='utf-8') as f:f.write(name)
+
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              page=browser.new_page(viewport={'width':1440,'height':1000},locale='ru-RU')
+              page.goto(base,wait_until='networkidle',timeout=60000)
+              page.locator('[data-role="owner"]').click()
+              page.wait_for_timeout(300)
+              team=page.locator('[data-director-team]').first
+              team.wait_for(state='visible',timeout=10000)
+              team.click()
+              page.locator('[data-director-add]').click()
+              form=page.locator('#directorTeamForm')
+              form.wait_for(state='visible',timeout=5000)
+              form.locator('input[name="name"]').fill(name)
+              form.locator('select[name="role"]').select_option(label='Менеджер')
+              form.locator('input[name="telegram"]').fill('@qa_save_test')
+              save=form.locator('[data-director-save]')
+              assert save.count()==1
+              save.click()
+              page.wait_for_timeout(500)
+              modal=page.locator('.director-modal')
+              assert modal.count()==1
+              assert name in modal.inner_text()
+              assert page.locator('#directorTeamForm').count()==0
+              browser.close()
+          print('AUTO_SALE_EMPLOYEE_SAVE_UI_OK',name)
+          PY
+
+      - name: Verify YDB persistence and clean test employee
+        run: |
+          set -euo pipefail
+          NAME=$(cat /tmp/qa-name)
+          for attempt in $(seq 1 20); do
+            curl -fsS "$DEMO_URL/api/auto-sale/state" -o /tmp/state.json
+            if jq -e --arg name "$NAME" '.team[]? | select(.name==$name)' /tmp/state.json >/dev/null; then
+              echo "AUTO_SALE_EMPLOYEE_SAVE_YDB_OK $NAME"
+              break
+            fi
+            test "$attempt" -lt 20 || { echo "Employee did not reach YDB"; exit 1; }
+            sleep 1
+          done
+
+          for attempt in $(seq 1 10); do
+            curl -fsS "$DEMO_URL/api/auto-sale/state" -o /tmp/latest.json
+            REV=$(jq -r '.revision' /tmp/latest.json)
+            jq --arg name "$NAME" --argjson rev "$REV" '
+              {baseRevision:$rev,leads,quotes,orders,notes,team:[.team[] | select(.name!=$name)]}
+            ' /tmp/latest.json > /tmp/cleanup.json
+            CODE=$(curl -sS -o /tmp/cleanup-response.json -w '%{http_code}' \
+              -X PUT -H 'content-type: application/json' --data-binary @/tmp/cleanup.json \
+              "$DEMO_URL/api/auto-sale/state")
+            if [ "$CODE" = "200" ]; then
+              echo "AUTO_SALE_EMPLOYEE_SAVE_CLEANUP_OK"
+              exit 0
+            fi
+            test "$CODE" = "409" || { cat /tmp/cleanup-response.json; exit 1; }
+            sleep 1
+          done
+          exit 1
