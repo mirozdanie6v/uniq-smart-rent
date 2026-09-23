@@ -27,19 +27,59 @@ const currentGallery=car=>{
   const photos=[currentPhoto(car),...(Array.isArray(managed?.interiorPhotos)?managed.interiorPhotos:[]),...(Array.isArray(managed?.otherPhotos)?managed.otherPhotos:[])].filter(Boolean);
   return [...new Set(photos)];
 };
+const currentCar=id=>{
+  const base=byId.get(id),managed=managedCar(id);
+  if(!base&&!managed)return null;
+  return {
+    body:'Автомобиль из каталога',
+    power:'—',
+    engine:managed?.engine||'—',
+    transmission:'—',
+    drive:managed?.drive||'—',
+    seats:'—',
+    efficiency:'—',
+    highlights:[],
+    safety:[],
+    bestFor:'Точные характеристики конкретного автомобиля подтверждаются по VIN и данным лота.',
+    ...(base||{}),
+    ...(managed||{})
+  };
+};
 
-function list(items){return `<ul class="auto-car-detail-list">${items.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`}
-function spec(label,value){return `<div class="auto-car-detail-spec"><span>${esc(label)}</span><b>${esc(value)}</b></div>`}
+function list(items){const rows=Array.isArray(items)?items:[];return rows.length?`<ul class="auto-car-detail-list">${rows.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`:'<p class="auto-car-detail-empty">Данные уточняются по конкретному лоту.</p>'}
+function spec(label,value){return `<div class="auto-car-detail-spec"><span>${esc(label)}</span><b>${esc(value||'—')}</b></div>`}
+function renderSlider(car){
+  const gallery=currentGallery(car);
+  if(!gallery.length)return'';
+  return `<div class="auto-car-slider" data-car-slider data-index="0">
+    <div class="auto-car-slider-viewport" data-car-slider-viewport>
+      <div class="auto-car-slider-track" data-car-slider-track>
+        ${gallery.map((src,i)=>`<div class="auto-car-slide" data-car-slide="${i}" aria-hidden="${i?'true':'false'}"><img src="${esc(src)}" alt="${esc(car.brand+' '+car.model)} · фото ${i+1}" draggable="false"></div>`).join('')}
+      </div>
+      ${gallery.length>1?`<button class="auto-car-slider-arrow prev" type="button" data-car-slide-prev aria-label="Предыдущее фото">‹</button><button class="auto-car-slider-arrow next" type="button" data-car-slide-next aria-label="Следующее фото">›</button><div class="auto-car-slider-count" data-car-slide-count>1 / ${gallery.length}</div>`:''}
+    </div>
+    ${gallery.length>1?`<div class="auto-car-slider-thumbs" aria-label="Фотографии автомобиля">${gallery.map((src,i)=>`<button type="button" class="${i?'':'active'}" data-car-slide-thumb="${i}" aria-label="Показать фото ${i+1}"><img src="${esc(src)}" alt=""></button>`).join('')}</div>`:''}
+  </div>`;
+}
+function setSliderIndex(slider,nextIndex){
+  if(!slider)return;
+  const slides=[...slider.querySelectorAll('[data-car-slide]')];
+  if(!slides.length)return;
+  const index=(Number(nextIndex)+slides.length)%slides.length;
+  slider.dataset.index=String(index);
+  const track=slider.querySelector('[data-car-slider-track]');
+  if(track)track.style.transform=`translate3d(-${index*100}%,0,0)`;
+  slides.forEach((slide,i)=>slide.setAttribute('aria-hidden',i===index?'false':'true'));
+  slider.querySelectorAll('[data-car-slide-thumb]').forEach((button,i)=>button.classList.toggle('active',i===index));
+  const count=slider.querySelector('[data-car-slide-count]');if(count)count.textContent=`${index+1} / ${slides.length}`;
+}
 
 function closeDetail(){document.querySelector('.auto-car-detail-bg')?.remove();document.body.classList.remove('auto-car-detail-open')}
 
 function openDetail(id){
-  const base=byId.get(id);if(!base)return;
-  const edited=managedCar(id);
-  const car=edited?{...base,...edited}:base;
+  const car=currentCar(id);if(!car)return;
   closeDetail();
-  const photo=currentPhoto(car),gallery=currentGallery(car);
-  document.body.insertAdjacentHTML('beforeend',`<div class="auto-car-detail-bg" data-car-detail-bg><div class="auto-modal auto-modal-wide auto-car-detail-modal" role="dialog" aria-modal="true" aria-labelledby="car-detail-title"><div class="auto-modal-head"><div><span class="auto-eyebrow">${esc(car.auction)} · ${car.year} · пример автомобиля</span><h2 id="car-detail-title">${esc(car.brand+' '+car.model)}</h2><p class="auto-modal-sub">Ориентир под ключ от ${money(car.price)} · поставка ${esc(car.delivery)}</p></div><button class="auto-close" type="button" data-car-detail-close aria-label="Закрыть">×</button></div>${photo?`<div class="auto-car-media auto-detail-media auto-car-detail-photo"><img src="${photo}" alt="${esc(car.brand+' '+car.model)}"></div>`:''}${gallery.length>1?`<div class="auto-car-detail-gallery">${gallery.map((src,i)=>`<img src="${esc(src)}" alt="${esc(car.brand+' '+car.model)} · фото ${i+1}">`).join('')}</div>`:''}<div class="auto-car-detail-primary">${spec('Кузов',car.body)}${spec('Пробег примера',car.mileage)}${spec('Двигатель',car.engine)}${spec('Мощность',car.power)}${spec('Коробка',car.transmission)}${spec('Привод',car.drive)}${spec('Салон',car.seats)}${spec('Расход / запас хода',car.efficiency)}</div><div class="auto-car-detail-columns"><section><h3>Ключевое оснащение</h3>${list(car.highlights)}</section><section><h3>Безопасность</h3>${list(car.safety)}</section></div><section class="auto-car-detail-best"><span>Кому подойдёт</span><p>${esc(car.bestFor)}</p></section><p class="auto-car-detail-note">Характеристики указаны для типичной американской спецификации модели и года. Точная комплектация, состояние, история, пробег и опции конкретного автомобиля подтверждаются по VIN и аукционному лоту до покупки.</p><div class="auto-actions"><button class="auto-btn primary" type="button" data-car-detail-request="${esc(car.id)}">Получить расчёт</button><button class="auto-btn ghost" type="button" data-car-detail-close>Закрыть</button></div></div></div>`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="auto-car-detail-bg" data-car-detail-bg><div class="auto-modal auto-modal-wide auto-car-detail-modal" role="dialog" aria-modal="true" aria-labelledby="car-detail-title"><div class="auto-modal-head"><div><span class="auto-eyebrow">${esc(car.auction)} · ${car.year} · пример автомобиля</span><h2 id="car-detail-title">${esc(car.brand+' '+car.model)}</h2><p class="auto-modal-sub">Ориентир под ключ от ${money(car.price)} · поставка ${esc(car.delivery)}</p></div><button class="auto-close" type="button" data-car-detail-close aria-label="Закрыть">×</button></div>${renderSlider(car)}<div class="auto-car-detail-primary">${spec('Кузов',car.body)}${spec('Пробег примера',car.mileage)}${spec('Двигатель',car.engine)}${spec('Мощность',car.power)}${spec('Коробка',car.transmission)}${spec('Привод',car.drive)}${spec('Салон',car.seats)}${spec('Расход / запас хода',car.efficiency)}</div><div class="auto-car-detail-columns"><section><h3>Ключевое оснащение</h3>${list(car.highlights)}</section><section><h3>Безопасность</h3>${list(car.safety)}</section></div><section class="auto-car-detail-best"><span>Кому подойдёт</span><p>${esc(car.bestFor)}</p></section><p class="auto-car-detail-note">Характеристики указаны для типичной американской спецификации модели и года. Точная комплектация, состояние, история, пробег и опции конкретного автомобиля подтверждаются по VIN и аукционному лоту до покупки.</p><div class="auto-actions"><button class="auto-btn primary" type="button" data-car-detail-request="${esc(car.id)}">Получить расчёт</button><button class="auto-btn ghost" type="button" data-car-detail-close>Закрыть</button></div></div></div>`);
   document.body.classList.add('auto-car-detail-open');
   document.querySelector('.auto-car-detail-modal .auto-close')?.focus();
 }
@@ -47,7 +87,7 @@ function openDetail(id){
 function cardId(card){return card?.dataset.extraCar||card?.querySelector('[data-detail]')?.dataset.detail||''}
 function decorate(scope=document){
   for(const card of scope.querySelectorAll?.('.auto-car')||[]){
-    const id=cardId(card),base=byId.get(id),edited=managedCar(id),car=edited?{...base,...edited}:base,media=card.querySelector('.auto-car-media');
+    const id=cardId(card),car=currentCar(id),media=card.querySelector('.auto-car-media');
     if(!car||!media||media.dataset.carPhotoDetail===id)continue;
     media.dataset.carPhotoDetail=id;media.setAttribute('role','button');media.tabIndex=0;media.setAttribute('aria-label',`Подробнее о ${car.brand} ${car.model}`);media.title='Открыть подробности';
   }
@@ -56,11 +96,28 @@ function decorate(scope=document){
 document.addEventListener('click',event=>{
   const close=event.target.closest('[data-car-detail-close]');if(close){closeDetail();return}
   if(event.target.matches('[data-car-detail-bg]')){closeDetail();return}
+  const prev=event.target.closest('[data-car-slide-prev]');if(prev){const slider=prev.closest('[data-car-slider]');setSliderIndex(slider,Number(slider?.dataset.index||0)-1);return}
+  const next=event.target.closest('[data-car-slide-next]');if(next){const slider=next.closest('[data-car-slider]');setSliderIndex(slider,Number(slider?.dataset.index||0)+1);return}
+  const thumb=event.target.closest('[data-car-slide-thumb]');if(thumb){setSliderIndex(thumb.closest('[data-car-slider]'),Number(thumb.dataset.carSlideThumb));return}
   const request=event.target.closest('[data-car-detail-request]');if(request){const id=request.dataset.carDetailRequest;closeDetail();const base=document.querySelector(`[data-request-car="${CSS.escape(id)}"]`);if(base){base.click();return}const extra=document.querySelector(`[data-extra-car="${CSS.escape(id)}"] [data-extra-model]`);extra?.click();return}
   const trigger=event.target.closest('[data-detail],[data-extra-detail],.auto-car .auto-car-media');if(!trigger)return;
-  const card=trigger.closest('.auto-car'),id=trigger.dataset.detail||trigger.dataset.extraDetail||cardId(card);if(!byId.has(id))return;
+  const card=trigger.closest('.auto-car'),id=trigger.dataset.detail||trigger.dataset.extraDetail||cardId(card);if(!currentCar(id))return;
   event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();openDetail(id);
 },true);
+
+let sliderTouchStartX=null;
+document.addEventListener('touchstart',event=>{
+  const viewport=event.target.closest?.('[data-car-slider-viewport]');if(!viewport)return;
+  sliderTouchStartX=event.touches?.[0]?.clientX??null;
+},{passive:true});
+document.addEventListener('touchend',event=>{
+  const viewport=event.target.closest?.('[data-car-slider-viewport]');if(!viewport||sliderTouchStartX===null)return;
+  const endX=event.changedTouches?.[0]?.clientX??sliderTouchStartX;
+  const delta=endX-sliderTouchStartX;sliderTouchStartX=null;
+  if(Math.abs(delta)<45)return;
+  const slider=viewport.closest('[data-car-slider]'),index=Number(slider?.dataset.index||0);
+  setSliderIndex(slider,index+(delta<0?1:-1));
+},{passive:true});
 
 document.addEventListener('keydown',event=>{
   if(event.key==='Escape'&&document.querySelector('.auto-car-detail-bg')){closeDetail();return}
