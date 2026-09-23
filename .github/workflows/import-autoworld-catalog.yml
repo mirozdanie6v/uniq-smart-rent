@@ -1,10 +1,7 @@
 name: Import AutoWorld Georgia into AUTO SALE catalog
 
 on:
-  push:
-    branches: [prototype/auto-sale-usa]
-    paths:
-      - '.import-autoworld-catalog'
+  workflow_dispatch:
 
 permissions:
   contents: write
