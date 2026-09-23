@@ -75,3 +75,31 @@ test('YDB sync rejects incomplete catalog cars',async()=>{
   assert.equal(result.status,400);
   assert.equal(result.data.error,'invalid_catalog_car');
 });
+
+
+test('YDB sync accepts compressed local catalog photos',async()=>{
+  const store=fakeStore(base());
+  const input=base();
+  input.baseRevision=7;
+  input.catalog[0]={
+    ...input.catalog[0],
+    image:'data:image/jpeg;base64,MAIN',
+    interiorPhotos:['data:image/jpeg;base64,INT1','data:image/webp;base64,INT2'],
+    otherPhotos:['data:image/png;base64,OTHER']
+  };
+  const result=await syncYdbState(store,input);
+  assert.equal(result.status,200);
+  const stored=await store.loadState();
+  assert.equal(stored.catalog[0].interiorPhotos.length,2);
+  assert.equal(stored.catalog[0].otherPhotos.length,1);
+});
+
+test('YDB sync rejects too many catalog photos',async()=>{
+  const store=fakeStore(base());
+  const input=base();
+  input.baseRevision=7;
+  input.catalog[0].interiorPhotos=Array.from({length:5},(_,i)=>'data:image/jpeg;base64,'+i);
+  const result=await syncYdbState(store,input);
+  assert.equal(result.status,400);
+  assert.equal(result.data.error,'invalid_catalog_photos');
+});
