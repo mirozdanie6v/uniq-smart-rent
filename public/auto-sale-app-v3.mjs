@@ -47,8 +47,8 @@ let leads=parse(localStorage,KEYS.leads,null)||seedLeads();
 let quotes=parse(localStorage,KEYS.quotes,null)||seedQuotes();
 let orders=parse(localStorage,KEYS.orders,null)||seedOrders();
 let notes=parse(localStorage,KEYS.notes,{});
-let cars=parse(localStorage,KEYS.catalog,null)||defaultCars.map(car=>({...car}));
-cars=Array.isArray(cars)?cars.map(car=>({...car,active:car.active!==false})):defaultCars.map(car=>({...car}));
+const storedCatalog=parse(localStorage,KEYS.catalog,null);
+let cars=Array.isArray(storedCatalog)&&storedCatalog.length?storedCatalog.map(car=>({...car,active:car.active!==false})):defaultCars.map(car=>({...car}));
 const legacy=parse(localStorage,KEYS.legacy,[]);
 if(Array.isArray(legacy))for(const req of legacy){const sig=`${req.name||''}|${req.contact||''}|${req.model||''}`;if(!leads.some(x=>`${x.name||''}|${x.contact||''}|${x.model||''}`===sig))leads.push({id:nextId('L',leads),name:req.name||'Клиент',contact:req.contact||'',model:req.model||'Автомобиль под заказ',budget:Number(req.budget)||0,source:'Mini App',manager:'Дмитрий',status:'Новый',priority:'Средний',createdAt:req.createdAt||new Date().toISOString(),nextAction:today,note:req.note||'',clientCreated:true});}
 leads=leads.map(x=>({...x,yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
