@@ -77,15 +77,18 @@ test('YDB sync rejects incomplete catalog cars',async()=>{
 });
 
 
-test('YDB sync accepts compressed local catalog photos',async()=>{
+test('YDB sync accepts Object Storage catalog photo URLs',async()=>{
   const store=fakeStore(base());
   const input=base();
   input.baseRevision=7;
   input.catalog[0]={
     ...input.catalog[0],
-    image:'data:image/jpeg;base64,MAIN',
-    interiorPhotos:['data:image/jpeg;base64,INT1','data:image/webp;base64,INT2'],
-    otherPhotos:['data:image/png;base64,OTHER']
+    image:'https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/CAR-1/main.jpg',
+    interiorPhotos:[
+      'https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/CAR-1/interior-1.jpg',
+      'https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/CAR-1/interior-2.jpg'
+    ],
+    otherPhotos:['https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/CAR-1/other-1.jpg']
   };
   const result=await syncYdbState(store,input);
   assert.equal(result.status,200);
@@ -94,11 +97,21 @@ test('YDB sync accepts compressed local catalog photos',async()=>{
   assert.equal(stored.catalog[0].otherPhotos.length,1);
 });
 
+test('YDB sync rejects embedded base64 photos',async()=>{
+  const store=fakeStore(base());
+  const input=base();
+  input.baseRevision=7;
+  input.catalog[0].image='data:image/jpeg;base64,MAIN';
+  const result=await syncYdbState(store,input);
+  assert.equal(result.status,400);
+  assert.equal(result.data.error,'invalid_catalog_car');
+});
+
 test('YDB sync rejects too many catalog photos',async()=>{
   const store=fakeStore(base());
   const input=base();
   input.baseRevision=7;
-  input.catalog[0].interiorPhotos=Array.from({length:5},(_,i)=>'data:image/jpeg;base64,'+i);
+  input.catalog[0].interiorPhotos=Array.from({length:5},(_,i)=>`https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/CAR-1/interior-${i}.jpg`);
   const result=await syncYdbState(store,input);
   assert.equal(result.status,400);
   assert.equal(result.data.error,'invalid_catalog_photos');
