@@ -5,3 +5,11 @@ html,body{max-width:100%;overflow-x:clip}.auto-shell,.auto-main,.auto-section,.a
 @media(max-width:380px){.auto-shell{padding-inline:8px}.auto-role-switch button{font-size:10px;padding-inline:3px}.auto-hero{padding:15px}.auto-hero h1{font-size:32px}.auto-stat,.auto-kpi{padding:10px}.auto-stat b,.auto-kpi b{font-size:18px}.auto-panel{padding:13px}.auto-bottom{left:5px;right:5px}.auto-bottom button{font-size:8px}}
 @media(max-width:340px){.auto-hero-stats,.auto-kpis,.auto-kpis-admin,.auto-specs{grid-template-columns:1fr}}
 @media(orientation:landscape) and (max-height:520px){.auto-topbar{position:static}.auto-modal,.auto-modal-wide{max-height:96dvh}}
+
+@media (max-width:700px){
+  .catalog-photo-preview{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .catalog-photo-preview.main{grid-template-columns:minmax(0,1fr)}
+  .catalog-photo-title{align-items:flex-start;flex-direction:column;gap:3px}
+  .catalog-photo-upload{width:100%!important}
+  .auto-detail-gallery,.auto-car-detail-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
