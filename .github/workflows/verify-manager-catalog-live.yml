@@ -32,6 +32,21 @@ jobs:
               browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
               page=browser.new_page(viewport={'width':1440,'height':1000},locale='ru-RU')
               page.goto(base,wait_until='networkidle',timeout=60000)
+              cleanup=page.evaluate("""async()=>{
+                for(let i=0;i<8;i++){
+                  const state=await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json();
+                  const catalog=(state.catalog||[]).filter(x=>!String(x.model||'').startsWith('QA Catalog '));
+                  if(catalog.length===(state.catalog||[]).length)return true;
+                  const payload={baseRevision:Number(state.revision)||0,leads:state.leads||[],quotes:state.quotes||[],orders:state.orders||[],notes:state.notes||{},team:state.team||[],catalog};
+                  const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+                  if(response.ok)return true;
+                  if(response.status!==409)return false;
+                  await new Promise(r=>setTimeout(r,200));
+                }
+                return false;
+              }""")
+              assert cleanup
+              page.reload(wait_until='networkidle')
               page.locator('[data-role="manager"]').click()
               page.locator('[data-go="catalogAdmin"]').click()
               page.locator('[data-catalog-add]').click()
@@ -72,7 +87,7 @@ jobs:
               print('AUTO_SALE_MANAGER_CATALOG_EDIT_OK',car_id)
 
               page.locator('[data-role="client"]').click()
-              page.locator('[data-go="catalog"]').click()
+              page.locator('.auto-bottom [data-go="catalog"]').click()
               page.wait_for_timeout(300)
               assert page.get_by_text('Kia '+unique,exact=False).count()==0
               print('AUTO_SALE_MANAGER_CATALOG_HIDE_OK',car_id)
