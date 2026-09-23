@@ -1,0 +1,92 @@
+name: Refresh AUTO SALE body types
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths: ['.refresh-auto-sale-body-types']
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate importer
+        run: node --check scripts/import-autoworld-catalog.mjs
+
+      - name: Generate body types without importing
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: /tmp/catalog-body-types.json
+          AUDIT_PATH: /tmp/catalog-body-types-audit.json
+          DRY_RUN: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Patch only AutoWorld body field in live state
+        env:
+          STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          (async()=>{
+            const fs=require('fs');
+            const generated=JSON.parse(fs.readFileSync('/tmp/catalog-body-types.json','utf8'));
+            const byId=new Map(generated.map(x=>[String(x.id||''),String(x.body||'')]));
+            const arr=x=>Array.isArray(x)?x:[];
+            const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+            async function getState(){
+              const r=await fetch(process.env.STATE_URL,{headers:{accept:'application/json','cache-control':'no-cache'}});
+              if(!r.ok)throw new Error('state_read_failed_'+r.status);
+              return r.json();
+            }
+
+            let writeRevision=null;
+            for(let attempt=1;attempt<=12;attempt++){
+              const s=await getState();
+              const catalog=arr(s.catalog).map(car=>{
+                if(car.source!=='AutoWorld_Georgia')return car;
+                const body=byId.get(String(car.id||''));
+                return body?{...car,body}:car;
+              });
+              const payload={
+                baseRevision:Number(s.revision)||0,
+                leads:arr(s.leads),quotes:arr(s.quotes),orders:arr(s.orders),
+                notes:s.notes&&typeof s.notes==='object'?s.notes:{},
+                team:arr(s.team),catalog
+              };
+              const r=await fetch(process.env.STATE_URL,{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+              if(r.status===409){
+                console.log('AUTO_SALE_BODY_RETRY '+JSON.stringify({attempt,baseRevision:s.revision}));
+                await sleep(300);
+                continue;
+              }
+              const body=await r.text();
+              if(!r.ok)throw new Error('state_write_failed_'+r.status+'_'+body.slice(0,500));
+              writeRevision=JSON.parse(body).revision;
+              break;
+            }
+            if(writeRevision===null)throw new Error('state_write_conflict_exhausted');
+
+            const after=await getState();
+            const awg=arr(after.catalog).filter(x=>x.source==='AutoWorld_Georgia');
+            const bad=awg.filter(x=>!x.body||x.body==='Автомобиль из каталога');
+            if(bad.length)throw new Error('body_types_missing_'+bad.map(x=>x.id).join(','));
+            console.log('AUTO_SALE_BODY_TYPES_OK '+JSON.stringify({
+              revision:after.revision,
+              autoWorld:awg.length,
+              generatedMatches:awg.filter(x=>byId.has(String(x.id||''))).length,
+              bodyCounts:awg.reduce((m,x)=>(m[x.body]=(m[x.body]||0)+1,m),{}),
+              sample:awg.slice(0,6).map(x=>({id:x.id,brand:x.brand,model:x.model,body:x.body}))
+            }));
+          })().catch(error=>{console.error(error);process.exit(1)})
+          NODE
