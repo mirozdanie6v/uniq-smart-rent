@@ -20,7 +20,8 @@ const carDetails=[
 const byId=new Map(carDetails.map(car=>[car.id,car]));
 const money=value=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(value)||0);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const currentPhoto=car=>window.__AUTO_SALE_VERIFIED_PHOTOS__?.find(item=>item.id===car.id)?.image||'';
+const managedCar=id=>{try{const value=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')||'null');return Array.isArray(value)?value.find(car=>car.id===id)||null:null}catch{return null}};
+const currentPhoto=car=>managedCar(car.id)?.image||window.__AUTO_SALE_VERIFIED_PHOTOS__?.find(item=>item.id===car.id)?.image||'';
 
 function list(items){return `<ul class="auto-car-detail-list">${items.map(item=>`<li>${esc(item)}</li>`).join('')}</ul>`}
 function spec(label,value){return `<div class="auto-car-detail-spec"><span>${esc(label)}</span><b>${esc(value)}</b></div>`}
@@ -28,7 +29,9 @@ function spec(label,value){return `<div class="auto-car-detail-spec"><span>${esc
 function closeDetail(){document.querySelector('.auto-car-detail-bg')?.remove();document.body.classList.remove('auto-car-detail-open')}
 
 function openDetail(id){
-  const car=byId.get(id);if(!car)return;
+  const base=byId.get(id);if(!base)return;
+  const edited=managedCar(id);
+  const car=edited?{...base,...edited}:base;
   closeDetail();
   const photo=currentPhoto(car);
   document.body.insertAdjacentHTML('beforeend',`<div class="auto-car-detail-bg" data-car-detail-bg><div class="auto-modal auto-modal-wide auto-car-detail-modal" role="dialog" aria-modal="true" aria-labelledby="car-detail-title"><div class="auto-modal-head"><div><span class="auto-eyebrow">${esc(car.auction)} · ${car.year} · пример автомобиля</span><h2 id="car-detail-title">${esc(car.brand+' '+car.model)}</h2><p class="auto-modal-sub">Ориентир под ключ от ${money(car.price)} · поставка ${esc(car.delivery)}</p></div><button class="auto-close" type="button" data-car-detail-close aria-label="Закрыть">×</button></div>${photo?`<div class="auto-car-media auto-detail-media auto-car-detail-photo"><img src="${photo}" alt="${esc(car.brand+' '+car.model)}"></div>`:''}<div class="auto-car-detail-primary">${spec('Кузов',car.body)}${spec('Пробег примера',car.mileage)}${spec('Двигатель',car.engine)}${spec('Мощность',car.power)}${spec('Коробка',car.transmission)}${spec('Привод',car.drive)}${spec('Салон',car.seats)}${spec('Расход / запас хода',car.efficiency)}</div><div class="auto-car-detail-columns"><section><h3>Ключевое оснащение</h3>${list(car.highlights)}</section><section><h3>Безопасность</h3>${list(car.safety)}</section></div><section class="auto-car-detail-best"><span>Кому подойдёт</span><p>${esc(car.bestFor)}</p></section><p class="auto-car-detail-note">Характеристики указаны для типичной американской спецификации модели и года. Точная комплектация, состояние, история, пробег и опции конкретного автомобиля подтверждаются по VIN и аукционному лоту до покупки.</p><div class="auto-actions"><button class="auto-btn primary" type="button" data-car-detail-request="${esc(car.id)}">Получить расчёт</button><button class="auto-btn ghost" type="button" data-car-detail-close>Закрыть</button></div></div></div>`);
@@ -39,7 +42,7 @@ function openDetail(id){
 function cardId(card){return card?.dataset.extraCar||card?.querySelector('[data-detail]')?.dataset.detail||''}
 function decorate(scope=document){
   for(const card of scope.querySelectorAll?.('.auto-car')||[]){
-    const id=cardId(card),car=byId.get(id),media=card.querySelector('.auto-car-media');
+    const id=cardId(card),base=byId.get(id),edited=managedCar(id),car=edited?{...base,...edited}:base,media=card.querySelector('.auto-car-media');
     if(!car||!media||media.dataset.carPhotoDetail===id)continue;
     media.dataset.carPhotoDetail=id;media.setAttribute('role','button');media.tabIndex=0;media.setAttribute('aria-label',`Подробнее о ${car.brand} ${car.model}`);media.title='Открыть подробности';
   }
