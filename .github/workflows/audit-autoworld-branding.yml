@@ -25,4 +25,6 @@ jobs:
             printf 'analytics='; if printf '%s' "$HTML" | grep -Fq 'data-project="AUTO SALE"'; then echo yes; else echo no; fi
             printf 'legacy_brand='; if printf '%s' "$APP" | grep -Fq "<b>AUTO SALE</b>"; then echo yes; else echo no; fi
             echo "app_bytes=${#APP} html_bytes=${#HTML}"
+            printf '%s\n' "$APP" | grep -F "function brand()" | head -n 1 || true
+            printf '%s\n' "$APP" | grep -F "АВТОМИР ГРУЗИЯ" | head -n 2 || true
           done
