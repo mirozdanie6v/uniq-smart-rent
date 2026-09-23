@@ -116,3 +116,25 @@ test('YDB sync rejects too many catalog photos',async()=>{
   assert.equal(result.status,400);
   assert.equal(result.data.error,'invalid_catalog_photos');
 });
+
+
+test('YDB sync accepts catalog cars whose price is supplied by source metadata or calculated later',async()=>{
+  const store=fakeStore(base());
+  const input=base();
+  input.baseRevision=7;
+  input.catalog=[{
+    id:'AWG-1',brand:'Kia',model:'K4',year:2026,price:0,priceRub:2970000,
+    image:'https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/AWG-1/main.jpg',
+    source:'AutoWorld_Georgia'
+  },{
+    id:'AWG-2',brand:'BMW',model:'228',year:2025,price:0,
+    image:'https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/AWG-2/main.jpg',
+    source:'AutoWorld_Georgia'
+  }];
+  const result=await syncYdbState(store,input);
+  assert.equal(result.status,200);
+  const stored=await store.loadState();
+  assert.equal(stored.catalog.length,2);
+  assert.equal(stored.catalog[0].priceRub,2970000);
+  assert.equal(stored.catalog[1].price,0);
+});
