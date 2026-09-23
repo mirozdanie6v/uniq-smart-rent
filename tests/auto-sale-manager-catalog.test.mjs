@@ -93,3 +93,40 @@ test('empty server catalog is seeded with existing cars and each row opens edit 
   assert.equal(form.elements.price.value,'46800');
   dom.window.close();
 });
+
+
+test('manager catalog form supports local main, interior and other photo sets',async()=>{
+  const {dom,root}=await setup('photos');
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  root.querySelector('[data-catalog-add]').click();await tick();
+  const form=root.querySelector('#catalogCarForm');assert.ok(form);
+  assert.equal(form.querySelectorAll('[data-catalog-photo-upload]').length,3);
+  assert.ok(form.querySelector('[data-catalog-photo-upload="main"]'));
+  assert.ok(form.querySelector('[data-catalog-photo-upload="interior"][multiple]'));
+  assert.ok(form.querySelector('[data-catalog-photo-upload="other"][multiple]'));
+
+  form.elements.brand.value='Ford';
+  form.elements.model.value='Bronco Photo Demo';
+  form.elements.year.value='2024';
+  form.elements.mileage.value='9 000 км';
+  form.elements.engine.value='2.7 бензин';
+  form.elements.drive.value='4WD';
+  form.elements.auction.value='Manheim';
+  form.elements.price.value='45000';
+  form.elements.delivery.value='8–11 недель';
+  form.elements.tag.value='Photo demo';
+  form.elements.image.value='data:image/jpeg;base64,MAIN';
+  form.elements.interiorPhotos.value=JSON.stringify(['data:image/jpeg;base64,INT1','data:image/jpeg;base64,INT2']);
+  form.elements.otherPhotos.value=JSON.stringify(['data:image/jpeg;base64,OTH1']);
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+
+  const catalog=JSON.parse(localStorage.getItem('auto-sale-catalog-v1'));
+  const car=catalog.find(x=>x.model==='Bronco Photo Demo');
+  assert.ok(car);
+  assert.equal(car.image,'data:image/jpeg;base64,MAIN');
+  assert.deepEqual(car.interiorPhotos,['data:image/jpeg;base64,INT1','data:image/jpeg;base64,INT2']);
+  assert.deepEqual(car.otherPhotos,['data:image/jpeg;base64,OTH1']);
+  dom.window.close();
+});
