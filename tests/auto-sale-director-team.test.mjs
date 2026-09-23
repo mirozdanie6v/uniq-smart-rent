@@ -31,7 +31,7 @@ test('director can edit team member and assignments follow renamed manager',asyn
   const {dom,root}=await setup('edit');
   root.querySelector('[data-director-member="TM-DMITRY"]').click();await tick();
   root.querySelector('[data-director-edit="TM-DMITRY"]').click();await tick();
-  const form=root.querySelector('#directorTeamForm');assert.ok(form);form.elements.name.value='Дмитрий Тест';form.elements.telegram.value='@dmitry_test';form.querySelector('button[type="submit"]').click();await tick();await tick();
+  const form=root.querySelector('#directorTeamForm');assert.ok(form);form.elements.name.value='Дмитрий Тест';form.elements.telegram.value='@dmitry_test';form.querySelector('[data-director-save]').click();await tick();await tick();
   const member=JSON.parse(localStorage.getItem('auto-sale-team-v1')).find(x=>x.id==='TM-DMITRY');assert.equal(member.name,'Дмитрий Тест');assert.equal(member.telegram,'@dmitry_test');
   assert.ok(JSON.parse(localStorage.getItem('auto-sale-leads-v2')).filter(x=>x.manager==='Дмитрий Тест').length>0);
   assert.ok(JSON.parse(localStorage.getItem('auto-sale-orders-v2')).filter(x=>x.manager==='Дмитрий Тест').length>0);
@@ -44,5 +44,20 @@ test('director KPI source and funnel information tiles are actionable',async()=>
   root.querySelector('[data-go="overview"]').click();await tick();await tick();
   assert.ok(root.querySelector('[data-director-source]'));assert.ok(root.querySelector('[data-director-funnel]'));
   root.querySelector('[data-director-source]').click();await tick();assert.ok(root.querySelector('.director-modal'));
+  dom.window.close();
+});
+
+
+test('director employee save button is an explicit action and persists changes',async()=>{
+  const {dom,root}=await setup('save-button');
+  root.querySelector('[data-director-member="TM-ANNA"]').click();await tick();
+  root.querySelector('[data-director-edit="TM-ANNA"]').click();await tick();
+  const form=root.querySelector('#directorTeamForm');assert.ok(form);
+  const save=form.querySelector('[data-director-save]');assert.ok(save);assert.equal(save.getAttribute('type'),'button');
+  form.elements.phone.value='+79990001122';
+  save.click();await tick();await tick();
+  const member=JSON.parse(localStorage.getItem('auto-sale-team-v1')).find(x=>x.id==='TM-ANNA');
+  assert.equal(member.phone,'+79990001122');
+  assert.ok(root.querySelector('[data-director-edit="TM-ANNA"]'));
   dom.window.close();
 });
