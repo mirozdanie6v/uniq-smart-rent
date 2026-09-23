@@ -44,4 +44,5 @@ jobs:
             exit 0
           fi
           git commit -m "Import AutoWorld Georgia public catalog dataset"
+          git pull --rebase origin prototype/auto-sale-usa
           git push origin HEAD:prototype/auto-sale-usa
