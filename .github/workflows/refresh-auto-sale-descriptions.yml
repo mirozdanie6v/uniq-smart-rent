@@ -37,6 +37,7 @@ jobs:
         run: |
           set -euo pipefail
           node <<'NODE'
+          (async()=>{
           const fs=require('fs');
           const generated=JSON.parse(fs.readFileSync('/tmp/catalog-descriptions.json','utf8'));
           const byId=new Map(generated.map(x=>[String(x.id||''),String(x.bestFor||'')]));
@@ -119,4 +120,5 @@ jobs:
             fallback:awg.filter(x=>!byId.has(String(x.id||''))).length,
             sample:awg.slice(0,3).map(x=>({id:x.id,bestFor:x.bestFor}))
           }));
+          })().catch(error=>{console.error(error);process.exit(1)})
           NODE
