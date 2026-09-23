@@ -9,10 +9,7 @@ const bad=(error,data={})=>({status:400,data:{error,...data}});
 const photoList=v=>Array.isArray(v)?v.filter(Boolean):[];
 const validPhoto=value=>{
   const src=text(value);
-  if(!src)return false;
-  if(/^https?:\/\//i.test(src))return src.length<=4000;
-  if(/^data:image\/(jpeg|png|webp);base64,/i.test(src))return src.length<=220000;
-  return false;
+  return /^https?:\/\//i.test(src)&&src.length<=4000;
 };
 
 export async function syncYdbState(store,input){
