@@ -1,0 +1,101 @@
+name: Recover AutoWorld full dataset
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.recover-autoworld-full'
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  MEDIA_BUCKET: viiversion-auto-sale-media
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY"; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Recover existing AutoWorld media index
+        env:
+          MEDIA_INDEX_OUT: data/autoworld-georgia/media-index.json
+        run: python scripts/list-autoworld-media.py
+
+      - name: Re-scrape full public archive without duplicate uploads
+        env:
+          OUT_DIR: data/autoworld-georgia
+          MAX_PAGES: '260'
+          MAX_PHOTOS_PER_CAR: '10'
+          REQUEST_DELAY: '0.15'
+          MEDIA_INDEX_PATH: data/autoworld-georgia/media-index.json
+          UPLOAD_MISSING_PHOTOS: 'false'
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Normalize full dataset only
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: data/autoworld-georgia/catalog-import.json
+          DRY_RUN: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Summarize recovery
+        run: |
+          cat data/autoworld-georgia/media-index-report.json
+          cat data/autoworld-georgia/report.json
+          node -e "const x=require('./data/autoworld-georgia/catalog-import.json'); console.log('AUTOWORLD_FULL_NORMALIZED',x.length)"
+
+      - name: Commit recovered full dataset
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/autoworld-georgia
+          if git diff --cached --quiet; then
+            echo "No recovery changes"
+            exit 0
+          fi
+          git commit -m "Recover full AutoWorld Georgia dataset"
+          git pull --rebase origin prototype/auto-sale-usa
+          git push origin HEAD:prototype/auto-sale-usa
