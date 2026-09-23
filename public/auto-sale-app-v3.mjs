@@ -114,37 +114,87 @@ function compressCatalogPhoto(file){
     img.src=raw;
   });
 }
+function ensureCatalogCarId(form){
+  let id=String(form.elements.id?.value||'').trim();
+  if(!id){
+    id=`CAR-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`;
+    if(form.elements.id)form.elements.id.value=id;
+  }
+  return id;
+}
+async function uploadCatalogPhoto(dataUrl,file,carId,kind){
+  const response=await fetch('/api/auto-sale/media',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body:JSON.stringify({carId,category:kind,dataUrl,fileName:file?.name||`${kind}.jpg`})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error==='media_storage_not_configured'?'Файловое хранилище ещё не подключено.':'Не удалось загрузить фото в хранилище.');
+  if(!data.url)throw new Error('Хранилище не вернуло адрес изображения.');
+  return data.url;
+}
+async function deleteCatalogPhoto(url){
+  if(!/^https:\/\/storage\.yandexcloud\.net\//i.test(String(url||'')))return;
+  try{
+    await fetch('/api/auto-sale/media',{
+      method:'DELETE',
+      headers:{'content-type':'application/json'},
+      body:JSON.stringify({url})
+    });
+  }catch{}
+}
 async function handleCatalogPhotoUpload(input){
   const form=input.closest('#catalogCarForm');if(!form)return;
   const kind=input.dataset.catalogPhotoUpload,files=[...(input.files||[])];if(!files.length)return;
+  const carId=ensureCatalogCarId(form);
   input.disabled=true;
+  const uploadLabel=input.closest('.catalog-photo-upload');
+  const originalText=uploadLabel?.childNodes?.[0]?.textContent||'';
+  if(uploadLabel?.childNodes?.[0])uploadLabel.childNodes[0].textContent='Загрузка…';
   try{
-    const converted=[];
-    for(const file of files)converted.push(await compressCatalogPhoto(file));
+    const uploaded=[];
+    for(const file of files){
+      const converted=await compressCatalogPhoto(file);
+      uploaded.push(await uploadCatalogPhoto(converted,file,carId,kind));
+    }
     if(kind==='main'){
-      form.elements.image.value=converted[0]||'';
+      const previous=String(form.elements.image.value||'');
+      form.elements.image.value=uploaded[0]||'';
       if(form.elements.imageUrl)form.elements.imageUrl.value='';
+      if(previous&&previous!==form.elements.image.value)deleteCatalogPhoto(previous);
     }else{
       const field=kind==='interior'?form.elements.interiorPhotos:form.elements.otherPhotos;
       const limit=kind==='interior'?MAX_INTERIOR_PHOTOS:MAX_OTHER_PHOTOS;
-      const next=[...parsePhotoList(field.value),...converted].slice(0,limit);
-      field.value=JSON.stringify(next);
+      const current=parsePhotoList(field.value);
+      const allowed=Math.max(0,limit-current.length);
+      const accepted=uploaded.slice(0,allowed);
+      const rejected=uploaded.slice(allowed);
+      field.value=JSON.stringify([...current,...accepted]);
+      for(const url of rejected)deleteCatalogPhoto(url);
     }
     updateCatalogPhotoPreviews(form);
   }catch(error){showErrors(form,[error?.message||'Не удалось загрузить фото.'])}
-  finally{input.value='';input.disabled=false}
+  finally{
+    input.value='';input.disabled=false;
+    if(uploadLabel?.childNodes?.[0])uploadLabel.childNodes[0].textContent=originalText||'Загрузить фото';
+  }
 }
-function removeCatalogPhoto(button){
+async function removeCatalogPhoto(button){
   const form=button.closest('#catalogCarForm');if(!form)return;
   const kind=button.dataset.catalogPhotoRemove,index=Number(button.dataset.photoIndex)||0;
+  let removed='';
   if(kind==='main'){
+    removed=String(form.elements.image.value||'');
     form.elements.image.value='';
     if(form.elements.imageUrl)form.elements.imageUrl.value='';
   }else{
     const field=kind==='interior'?form.elements.interiorPhotos:form.elements.otherPhotos;
-    const list=parsePhotoList(field.value);list.splice(index,1);field.value=JSON.stringify(list);
+    const list=parsePhotoList(field.value);
+    removed=String(list[index]||'');
+    list.splice(index,1);field.value=JSON.stringify(list);
   }
   updateCatalogPhotoPreviews(form);
+  if(removed)await deleteCatalogPhoto(removed);
 }
 
 
@@ -236,7 +286,7 @@ function quoteAction(id,status){const q=quotes.find(x=>x.id===id);if(!q)return;c
 function cloneQuote(id){const old=quotes.find(x=>x.id===id);if(!old)return;const q={...old,id:nextId('Q',quotes),version:(old.version||1)+1,status:'Черновик',validUntil:addDays(today,7),updatedAt:new Date().toISOString(),revisionOf:old.id};delete q.sentAt;delete q.agreedAt;quotes.push(q);saveAll();state.modal={type:'quote',id:q.id};render()}
 function convertLeadToOrder(leadId){const lead=leads.find(x=>x.id===leadId);if(!lead)return;const existing=orders.find(x=>x.leadId===leadId);if(existing){state.modal={type:'order',id:existing.id};render();return}const q=quotes.filter(x=>x.leadId===leadId).sort((a,b)=>b.version-a.version)[0],eligibility=canCreateOrder({quote:q,deposit:lead.deposit});if(!eligibility.ok){state.modal={type:'lead',id:leadId};render();return}const payments=lead.deposit?[{id:'PAY-1',amount:Number(lead.deposit),date:lead.depositDate||today,method:lead.paymentMethod||'Банк',note:'Депозит до создания заказа'}]:[];const order={id:nextId('O',orders),leadId:lead.id,customer:lead.name,model:q.model,manager:lead.manager,source:lead.source,total:q.total,cost:quoteCost(q),paid:paymentsTotal(payments),payments,stage:'Выкуп',eta:'',lot:'',vin:'',location:'',riskType:'Нет',riskNote:'',risk:'Нет',updatedAt:new Date().toISOString()};orders.push(order);lead.status='Сделка';notes[lead.id]=notes[lead.id]||[];notes[lead.id].push({at:new Date().toISOString(),text:`После согласования расчёта и депозита создан заказ ${order.id}.`});saveAll();state.modal={type:'order',id:order.id};render()}
 
-root.addEventListener('click',event=>{const t=event.target.closest('button,[data-modal-bg]');if(!t)return;if(t.dataset.catalogPhotoRemove){removeCatalogPhoto(t);return}if(t.dataset.modalBg!==undefined&&event.target===t){state.modal=null;render();return}if(t.dataset.close!==undefined){state.modal=null;render();return}if(t.dataset.role){state.role=t.dataset.role;sessionStorage.setItem(KEYS.role,state.role);state.route=nav[state.role][0][0];state.modal=null;render();return}if(t.dataset.go){state.route=t.dataset.go;state.modal=null;render();return}if(t.dataset.openRequest!==undefined){state.modal={type:'request',prefill:'',managerMode:false};render();return}if(t.dataset.managerNew!==undefined){state.modal={type:'request',prefill:'',managerMode:true};render();return}if(t.dataset.catalogAdd!==undefined){state.modal={type:'catalogCar',id:''};render();return}if(t.dataset.catalogEdit){state.modal={type:'catalogCar',id:t.dataset.catalogEdit};render();return}if(t.dataset.requestCar){const c=cars.find(x=>x.id===t.dataset.requestCar);state.modal={type:'request',prefill:c?`${c.brand} ${c.model}`:'',managerMode:false};render();return}if(t.dataset.detail){state.modal={type:'detail',id:t.dataset.detail};render();return}if(t.dataset.lead){state.modal={type:'lead',id:t.dataset.lead};render();return}if(t.dataset.quote){state.modal={type:'quote',id:t.dataset.quote};render();return}if(t.dataset.order){state.modal={type:'order',id:t.dataset.order};render();return}if(t.dataset.newQuote!==undefined){const lead=leads.find(x=>!['Отказ','Сделка'].includes(x.status));state.modal={type:'quote',leadId:lead?.id||''};render();return}if(t.dataset.createQuote){const existing=quotes.filter(x=>x.leadId===t.dataset.createQuote).sort((a,b)=>b.version-a.version)[0];state.modal={type:'quote',id:existing?.id||'',leadId:t.dataset.createQuote};render();return}if(t.dataset.convertOrder&&!t.disabled){convertLeadToOrder(t.dataset.convertOrder);return}if(t.dataset.quoteAction){quoteAction(t.dataset.id,t.dataset.quoteAction);return}if(t.dataset.cloneQuote){cloneQuote(t.dataset.cloneQuote);return}if(t.dataset.orderNext){const order=orders.find(x=>x.id===t.dataset.orderNext);if(!order)return;const form=root.querySelector('#orderForm'),next=nextOrderStage(order.stage);if(!form)return;form.elements.stage.value=next;const data=Object.fromEntries(new FormData(form).entries()),errors=validateOrderUpdate(data,order.stage,[order.stage,next]);if(errors.length){showErrors(form,errors);return}submitOrder(form);return}});
+root.addEventListener('click',async event=>{const t=event.target.closest('button,[data-modal-bg]');if(!t)return;if(t.dataset.catalogPhotoRemove){await removeCatalogPhoto(t);return}if(t.dataset.modalBg!==undefined&&event.target===t){state.modal=null;render();return}if(t.dataset.close!==undefined){state.modal=null;render();return}if(t.dataset.role){state.role=t.dataset.role;sessionStorage.setItem(KEYS.role,state.role);state.route=nav[state.role][0][0];state.modal=null;render();return}if(t.dataset.go){state.route=t.dataset.go;state.modal=null;render();return}if(t.dataset.openRequest!==undefined){state.modal={type:'request',prefill:'',managerMode:false};render();return}if(t.dataset.managerNew!==undefined){state.modal={type:'request',prefill:'',managerMode:true};render();return}if(t.dataset.catalogAdd!==undefined){state.modal={type:'catalogCar',id:''};render();return}if(t.dataset.catalogEdit){state.modal={type:'catalogCar',id:t.dataset.catalogEdit};render();return}if(t.dataset.requestCar){const c=cars.find(x=>x.id===t.dataset.requestCar);state.modal={type:'request',prefill:c?`${c.brand} ${c.model}`:'',managerMode:false};render();return}if(t.dataset.detail){state.modal={type:'detail',id:t.dataset.detail};render();return}if(t.dataset.lead){state.modal={type:'lead',id:t.dataset.lead};render();return}if(t.dataset.quote){state.modal={type:'quote',id:t.dataset.quote};render();return}if(t.dataset.order){state.modal={type:'order',id:t.dataset.order};render();return}if(t.dataset.newQuote!==undefined){const lead=leads.find(x=>!['Отказ','Сделка'].includes(x.status));state.modal={type:'quote',leadId:lead?.id||''};render();return}if(t.dataset.createQuote){const existing=quotes.filter(x=>x.leadId===t.dataset.createQuote).sort((a,b)=>b.version-a.version)[0];state.modal={type:'quote',id:existing?.id||'',leadId:t.dataset.createQuote};render();return}if(t.dataset.convertOrder&&!t.disabled){convertLeadToOrder(t.dataset.convertOrder);return}if(t.dataset.quoteAction){quoteAction(t.dataset.id,t.dataset.quoteAction);return}if(t.dataset.cloneQuote){cloneQuote(t.dataset.cloneQuote);return}if(t.dataset.orderNext){const order=orders.find(x=>x.id===t.dataset.orderNext);if(!order)return;const form=root.querySelector('#orderForm'),next=nextOrderStage(order.stage);if(!form)return;form.elements.stage.value=next;const data=Object.fromEntries(new FormData(form).entries()),errors=validateOrderUpdate(data,order.stage,[order.stage,next]);if(errors.length){showErrors(form,errors);return}submitOrder(form);return}});
 root.addEventListener('change',async event=>{const t=event.target;if(t.dataset.catalogPhotoUpload){await handleCatalogPhotoUpload(t);return}if(t.name==='imageUrl'&&t.closest('#catalogCarForm')&&t.value.trim()){t.closest('#catalogCarForm').elements.image.value=t.value.trim();updateCatalogPhotoPreviews(t.closest('#catalogCarForm'));return}if(t.id==='brandFilter'){state.brand=t.value;render()}if(t.id==='budgetFilter'){state.budget=t.value;render()}if(t.id==='leadStatusFilter'){state.leadStatus=t.value;render()}if(t.id==='leadSourceFilter'){state.leadSource=t.value;render()}if(t.id==='leadManagerFilter'){state.leadManager=t.value;render()}if(t.id==='orderStageFilter'){state.orderStage=t.value;render()}if(t.id==='orderManagerFilter'){state.orderManager=t.value;render()}if(t.id==='orderRiskFilter'){state.orderRisk=t.value;render()}if(t.id==='leadStatus'){const field=root.querySelector('#lostReasonField');if(field)field.classList.toggle('auto-conditional-hidden',t.value!=='Отказ')}if(t.id==='riskType'){const field=root.querySelector('#riskNoteField');if(field)field.classList.toggle('auto-conditional-hidden',t.value==='Нет')}});
 root.addEventListener('input',event=>{const t=event.target;if(t.id==='autoSearch'){state.query=t.value;focusAfterRender('autoSearch')}if(t.id==='leadSearch'){state.leadQuery=t.value;focusAfterRender('leadSearch')}if(t.id==='orderSearch'){state.orderQuery=t.value;focusAfterRender('orderSearch')}if(t.closest('#quoteForm')&&['lot','auction','inland','ocean','customs','repair','service'].includes(t.name)){const data=Object.fromEntries(new FormData(t.closest('form')).entries()),el=document.getElementById('quoteTotal');if(el)el.textContent=money(calculateQuote(data))}});
 root.addEventListener('submit',event=>{event.preventDefault();const form=event.target,formId=form?.getAttribute?.('id')||'';if(formId==='requestForm')submitRequest(form);if(formId==='leadEditForm')submitLead(form);if(formId==='quoteForm')submitQuote(form);if(formId==='orderForm')submitOrder(form);if(formId==='catalogCarForm')submitCatalogCar(form)});
