@@ -3,7 +3,7 @@ import {query} from '@ydbjs/query';
 import {MetadataCredentialsProvider} from '@ydbjs/auth/metadata';
 import {Uint64} from '@ydbjs/value/primitive';
 
-const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[]};
+const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
 const STATE_ID=new Uint64(1n);
 
 export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider()}){
@@ -60,7 +60,8 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         quotes:Array.isArray(state.quotes)?state.quotes:[],
         orders:Array.isArray(state.orders)?state.orders:[],
         notes:state.notes&&typeof state.notes==='object'?state.notes:{},
-        team:Array.isArray(state.team)?state.team:[]
+        team:Array.isArray(state.team)?state.team:[],
+        catalog:Array.isArray(state.catalog)?state.catalog:[]
       };
       await tx`
         UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
