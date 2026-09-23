@@ -14,6 +14,7 @@ env:
   YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
   YC_CONTAINER_NAME: ${{ vars.YC_CONTAINER_NAME }}
   YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
+  AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
 
 jobs:
   deploy:
@@ -29,7 +30,7 @@ jobs:
       - name: Validate Yandex configuration
         run: |
           set -euo pipefail
-          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YC_CONTAINER_NAME YDB_CONNECTION_STRING; do
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YC_CONTAINER_NAME YDB_CONNECTION_STRING AUTO_SALE_MEDIA_BUCKET; do
             test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
           done
 
@@ -107,7 +108,8 @@ jobs:
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
-            --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true"
+            --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true" \
+            --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET"
 
       - name: Verify public demo read/write boundary
         run: |
@@ -116,7 +118,7 @@ jobs:
           test -n "$URL" && test "$URL" != "null"
           echo "STAGING_URL=$URL" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo"' >/dev/null; then
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET' >/dev/null; then
               break
             fi
             test "$attempt" -lt 20 || exit 1
