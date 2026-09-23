@@ -38,7 +38,15 @@ const KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto
 const parse=(storage,key,fallback)=>{try{const x=JSON.parse(storage.getItem(key)||'null');return x??fallback}catch{return fallback}};
 const persist=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const money=v=>'
+const money=v=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(v)||0);
+const rubMoney=v=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(v)||0)+' ₽';
+const catalogPriceText=car=>{
+  if(Number(car?.price)>0)return 'от '+money(car.price);
+  if(Number(car?.priceRub)>0)return '≈ '+rubMoney(car.priceRub);
+  if(Number(car?.estimatedBidUsd)>0)return 'ставка ≈ '+money(car.estimatedBidUsd);
+  return 'по расчёту';
+};
+const catalogPriceSub=car=>Number(car?.price)>0?'ориентир под ключ':Number(car?.priceRub)>0?'цена источника':Number(car?.estimatedBidUsd)>0?'расчётная ставка':'стоимость уточняется';
 const dateRu=v=>{if(!v)return'—';const d=new Date(`${v}T00:00:00`);return Number.isNaN(d.getTime())?esc(v):d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'})};
 const dateTimeRu=v=>{const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('ru-RU',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})};
 const showErrors=(form,errors)=>{let box=form.querySelector('.auto-form-error');if(!box){box=document.createElement('div');box.className='auto-form-error full';form.prepend(box)}box.innerHTML=errors.map(x=>`<span>${esc(x)}</span>`).join('')};
