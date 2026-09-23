@@ -1,0 +1,347 @@
+{
+  "sourceCount": 169,
+  "normalizedCount": 117,
+  "skippedCount": 45,
+  "pricedRub": 58,
+  "pricedBid": 48,
+  "noPrice": 59,
+  "withPhotos": 117,
+  "brandCounts": {
+    "Kia": 13,
+    "BMW": 9,
+    "Hyundai": 16,
+    "Toyota": 7,
+    "GMC": 2,
+    "RAM": 2,
+    "Subaru": 7,
+    "Chevrolet": 11,
+    "Buick": 2,
+    "Nissan": 5,
+    "Honda": 5,
+    "Mercedes-Benz": 13,
+    "Volkswagen": 8,
+    "Porsche": 3,
+    "Mitsubishi": 4,
+    "Ford": 4,
+    "Audi": 4,
+    "Acura": 1,
+    "Land Rover": 1
+  },
+  "skipped": [
+    {
+      "sourcePostId": "65",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/65",
+      "title": "Volkswagen Tiguan 2021",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "138",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/138",
+      "title": "KIA K5 GT Line 2022",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "177",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/177",
+      "title": "2021 INFINITI QX50, LUXE AWD",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "531",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/531",
+      "title": "Audi Q5 04/2022",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1010",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1010",
+      "title": "KIA K4 02/2025",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1011",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1011",
+      "title": "Hyundai Elantra 11/2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1022",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1022",
+      "title": "Hyundai Kona 2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1068",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1068",
+      "title": "Honda H-RV 07/2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1069",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1069",
+      "title": "Mercedes-Benz GLB-250 03/2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1353",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1353",
+      "title": "",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1393",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1393",
+      "title": "",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1401",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1401",
+      "title": "",
+      "vin": "KNDJ23AU5P7853089",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1409",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1409",
+      "title": "",
+      "vin": "JTNKHMBX4M1125260",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1418",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1418",
+      "title": "на 11.02.",
+      "vin": "WBA53FJ09TCW39573",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1447",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1447",
+      "title": "",
+      "vin": "NMTKHMBX4NR145385",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1605",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1605",
+      "title": "",
+      "vin": "3KPF24AD8PE505363",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1625",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1625",
+      "title": "",
+      "vin": "KMHLS4AG2PU553600",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1636",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1636",
+      "title": "Atlas 09/21г.",
+      "vin": "1V2SC2CA4NC201890",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1646",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1646",
+      "title": "Atlas 09/21г.",
+      "vin": "1V2BP2CA2NC503179",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1657",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1657",
+      "title": "Tiguan 08/22г.",
+      "vin": "3VV2B7AX0NM161011",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1665",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1665",
+      "title": "",
+      "vin": "KL77LFE21RC002920",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1675",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1675",
+      "title": "",
+      "vin": "3VWC57BUXMM082276",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1707",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1707",
+      "title": "",
+      "vin": "KMHLS4AG3PU561351",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "1838",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1838",
+      "title": "Peugeot 2008 2022г.",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1921",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1921",
+      "title": "Nissan Kicks 11/2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "1922",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/1922",
+      "title": "BMW 530I 04/2024",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "2295",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2295",
+      "title": "на 12.05",
+      "vin": "KL79MUSL3PB110952",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "2326",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2326",
+      "title": "на 12.05",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "2617",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2617",
+      "title": "Ford EcoSport 2021",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "2724",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2724",
+      "title": "FORD F350 Super Duty 05/2025",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "2725",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2725",
+      "title": "Toyota Prius 11/2022",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "2971",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/2971",
+      "title": "Subaru Impreza 02/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3262",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3262",
+      "title": "Chevrolet Trailblazer 01/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3282",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3282",
+      "title": "Hyundai Venue 03/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3290",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3290",
+      "title": "Hyundai Tucson 2026",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3310",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3310",
+      "title": "KIA Sportage 2026",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3357",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3357",
+      "title": "Opel Astra 06/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3373",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3373",
+      "title": "Chevrolet TRAX 05/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3395",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3395",
+      "title": "K1500 11/23г.",
+      "vin": "1GCUDGE80RZ204593",
+      "reason": "missing_vehicle_title"
+    },
+    {
+      "sourcePostId": "3723",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3723",
+      "title": "Volkswagen T-Cross 2022",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3733",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3733",
+      "title": "Hyundai Elantra 12/2023",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3734",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3734",
+      "title": "RAM 2500 09/2025",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3735",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3735",
+      "title": "KIA K4 03/2026",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3736",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3736",
+      "title": "BMW 228 10/2025",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    },
+    {
+      "sourcePostId": "3828",
+      "sourceUrl": "https://t.me/AutoWorld_Georgia/3828",
+      "title": "BMW 228 10/2025",
+      "vin": "",
+      "reason": "invalid_or_missing_vin"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 [
   {
     "id": "AWG-3752",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Soul",
     "year": 2023,
     "mileage": "21 300 mi",
@@ -51,7 +51,7 @@
   },
   {
     "id": "AWG-3747",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Soul",
     "year": 2022,
     "mileage": "75 000 mi",
@@ -101,7 +101,7 @@
   },
   {
     "id": "AWG-3737",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Seltos",
     "year": 2022,
     "mileage": "44 100 mi",
@@ -206,7 +206,7 @@
   },
   {
     "id": "AWG-3703",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "K4",
     "year": 2026,
     "mileage": "393 mi",
@@ -260,7 +260,7 @@
   },
   {
     "id": "AWG-3695",
-    "brand": "HYUNDAI",
+    "brand": "Hyundai",
     "model": "Venue",
     "year": 2023,
     "mileage": "20 000 mi",
@@ -362,7 +362,7 @@
   },
   {
     "id": "AWG-3677",
-    "brand": "TOYOTA",
+    "brand": "Toyota",
     "model": "Prius",
     "year": 2022,
     "mileage": "39 400 mi",
@@ -680,8 +680,8 @@
   },
   {
     "id": "AWG-3617",
-    "brand": "HYUNDAI",
-    "model": "ELANTRA",
+    "brand": "Hyundai",
+    "model": "Elantra",
     "year": 2021,
     "mileage": "86 600 mi",
     "engine": "1.6 hybrid, на 139HP",
@@ -889,8 +889,8 @@
   },
   {
     "id": "AWG-3577",
-    "brand": "HYUNDAI",
-    "model": "ELANTRA",
+    "brand": "Hyundai",
+    "model": "Elantra",
     "year": 2022,
     "mileage": "70 000 км",
     "engine": "2.0l на 147HP",
@@ -991,7 +991,7 @@
   },
   {
     "id": "AWG-3561",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "K4",
     "year": 2026,
     "mileage": "3 000 км",
@@ -1042,7 +1042,7 @@
   },
   {
     "id": "AWG-3553",
-    "brand": "NISSAN",
+    "brand": "Nissan",
     "model": "Rogue Sport (Qashqai)",
     "year": 2023,
     "mileage": "41 000 км",
@@ -1195,8 +1195,8 @@
   },
   {
     "id": "AWG-3405",
-    "brand": "пришел",
-    "model": "мой аукционный SUBARU Crosstrek",
+    "brand": "Subaru",
+    "model": "Crosstrek",
     "year": 2024,
     "mileage": "22 300 mi",
     "engine": "2.0l, на 152HP",
@@ -1447,8 +1447,8 @@
   },
   {
     "id": "AWG-3272",
-    "brand": "KIA",
-    "model": "SOUL",
+    "brand": "Kia",
+    "model": "Soul",
     "year": 2021,
     "mileage": "103 500 км",
     "engine": "2.0l на 147HP",
@@ -1498,7 +1498,7 @@
   },
   {
     "id": "AWG-3049",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Seltos",
     "year": 2023,
     "mileage": "67 000 км",
@@ -1867,7 +1867,7 @@
   },
   {
     "id": "AWG-2961",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Seltos",
     "year": 2023,
     "mileage": "41 300 mi",
@@ -2655,7 +2655,7 @@
   },
   {
     "id": "AWG-2685",
-    "brand": "FORD",
+    "brand": "Ford",
     "model": "F350 Super Duty",
     "year": 2025,
     "mileage": "30 400 mi",
@@ -2971,7 +2971,7 @@
   },
   {
     "id": "AWG-2627",
-    "brand": "FORD",
+    "brand": "Ford",
     "model": "EcoSport",
     "year": 2021,
     "mileage": "61 700 mi",
@@ -3175,7 +3175,7 @@
   },
   {
     "id": "AWG-2574",
-    "brand": "FORD",
+    "brand": "Ford",
     "model": "F-150",
     "year": 2025,
     "mileage": "10 700 mi",
@@ -3228,7 +3228,7 @@
   },
   {
     "id": "AWG-2555",
-    "brand": "MB",
+    "brand": "Mercedes-Benz",
     "model": "GLE AMG 53",
     "year": 2021,
     "mileage": "15 300 mi",
@@ -3385,7 +3385,7 @@
   },
   {
     "id": "AWG-2525",
-    "brand": "MB",
+    "brand": "Mercedes-Benz",
     "model": "GLE AMG 53",
     "year": 2022,
     "mileage": "32 000 mi",
@@ -3437,8 +3437,8 @@
   },
   {
     "id": "AWG-2515",
-    "brand": "KIA",
-    "model": "SOUL",
+    "brand": "Kia",
+    "model": "Soul",
     "year": 2025,
     "mileage": "Н/Д",
     "engine": "2,0l, на 147HP",
@@ -3490,7 +3490,7 @@
   },
   {
     "id": "AWG-2505",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "K4",
     "year": 2025,
     "mileage": "6 045 mi",
@@ -3701,7 +3701,7 @@
   },
   {
     "id": "AWG-2305",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "Seltos",
     "year": 2024,
     "mileage": "8 200 mi",
@@ -3754,8 +3754,8 @@
   },
   {
     "id": "AWG-2285",
-    "brand": "Trailblazer",
-    "model": "2024",
+    "brand": "Chevrolet",
+    "model": "Trailblazer",
     "year": 2023,
     "mileage": "25 900 mi",
     "engine": "1.3l, на 155HP",
@@ -4015,8 +4015,8 @@
   },
   {
     "id": "AWG-2205",
-    "brand": "Trailblazer",
-    "model": "2024",
+    "brand": "Chevrolet",
+    "model": "Trailblazer",
     "year": 2023,
     "mileage": "35 800 mi",
     "engine": "1.3l, на 155HP",
@@ -4225,7 +4225,7 @@
   },
   {
     "id": "AWG-2145",
-    "brand": "AUDI",
+    "brand": "Audi",
     "model": "Q5",
     "year": 2023,
     "mileage": "31 800 mi",
@@ -4331,7 +4331,7 @@
   },
   {
     "id": "AWG-2125",
-    "brand": "Mersedes",
+    "brand": "Mercedes-Benz",
     "model": "GLA",
     "year": 2025,
     "mileage": "4 100 mi",
@@ -4855,7 +4855,7 @@
   },
   {
     "id": "AWG-1614",
-    "brand": "HONDA",
+    "brand": "Honda",
     "model": "HR-V",
     "year": 2021,
     "mileage": "40 600 mi",
@@ -4906,8 +4906,8 @@
   },
   {
     "id": "AWG-1457",
-    "brand": "Eclipse",
-    "model": "Cross",
+    "brand": "Mitsubishi",
+    "model": "Eclipse Cross",
     "year": 2023,
     "mileage": "34 500 км",
     "engine": "1.5l на 152HP",
@@ -4957,7 +4957,7 @@
   },
   {
     "id": "AWG-1437",
-    "brand": "ACURA",
+    "brand": "Acura",
     "model": "TLX",
     "year": 2025,
     "mileage": "949 mi",
@@ -5010,8 +5010,8 @@
   },
   {
     "id": "AWG-1427",
-    "brand": "X1",
-    "model": "M35I",
+    "brand": "BMW",
+    "model": "X1 M35I",
     "year": 2024,
     "mileage": "11 200мl",
     "engine": "бензин",
@@ -5063,7 +5063,7 @@
   },
   {
     "id": "AWG-1383",
-    "brand": "MB",
+    "brand": "Mercedes-Benz",
     "model": "GLE",
     "year": 2023,
     "mileage": "65 300 км",
@@ -5116,8 +5116,8 @@
   },
   {
     "id": "AWG-1373",
-    "brand": "GLB",
-    "model": "250",
+    "brand": "Mercedes-Benz",
+    "model": "GLB 250",
     "year": 2023,
     "mileage": "35 000 км",
     "engine": "2,0-turbo на 221HP",
@@ -5167,8 +5167,8 @@
   },
   {
     "id": "AWG-1363",
-    "brand": "Range",
-    "model": "Rover Evoque",
+    "brand": "Land Rover",
+    "model": "Range Rover Evoque",
     "year": 2023,
     "mileage": "24 500 км",
     "engine": "бензин",
@@ -5220,7 +5220,7 @@
   },
   {
     "id": "AWG-1303",
-    "brand": "AUDI",
+    "brand": "Audi",
     "model": "A6",
     "year": 2024,
     "mileage": "5 200 км",
@@ -5742,7 +5742,7 @@
   },
   {
     "id": "AWG-979",
-    "brand": "KIA",
+    "brand": "Kia",
     "model": "K4",
     "year": 2025,
     "mileage": "20 000 км",
@@ -5953,7 +5953,7 @@
   },
   {
     "id": "AWG-824",
-    "brand": "VW",
+    "brand": "Volkswagen",
     "model": "Tiguan",
     "year": 2023,
     "mileage": "45 000 mi",
@@ -6054,7 +6054,7 @@
   },
   {
     "id": "AWG-803",
-    "brand": "VW",
+    "brand": "Volkswagen",
     "model": "Tiguan",
     "year": 2023,
     "mileage": "31 000 mi",
