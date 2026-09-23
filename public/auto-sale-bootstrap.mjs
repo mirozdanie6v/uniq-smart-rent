@@ -33,24 +33,30 @@ async function pushState(){
   if(syncing){pending=true;return}
   syncing=true;
   try{
-    const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
-    const data=await response.json().catch(()=>({}));
-    if(response.status===409){
-      const currentRevision=Number(data.currentRevision||data.state?.revision||revision);
-      window.__AUTO_SALE_SERVER__={online:true,revision,conflict:true,currentRevision};
-      window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision,currentRevision,state:data.state||null}}));
+    for(let attempt=0;attempt<2;attempt++){
+      const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
+      const data=await response.json().catch(()=>({}));
+      if(response.status===409){
+        const currentRevision=Number(data.currentRevision||data.state?.revision||revision);
+        revision=currentRevision;
+        sessionStorage.setItem(REVISION_KEY,String(revision));
+        window.__AUTO_SALE_SERVER__={online:true,revision,conflict:true,currentRevision,retrying:attempt===0};
+        window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision,currentRevision,state:data.state||null,retrying:attempt===0}}));
+        if(attempt===0)continue;
+        return;
+      }
+      if(!response.ok){
+        console.warn('AUTO SALE state rejected by server',data);
+        window.__AUTO_SALE_SERVER__={online:true,revision,error:data.error||`http_${response.status}`};
+        window.dispatchEvent(new CustomEvent('auto-sale-server-rejected',{detail:data}));
+        return;
+      }
+      revision=Number(data.revision||revision);
+      sessionStorage.setItem(REVISION_KEY,String(revision));
+      window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};
+      window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));
       return;
     }
-    if(!response.ok){
-      console.warn('AUTO SALE state rejected by server',data);
-      window.__AUTO_SALE_SERVER__={online:true,revision,error:data.error||`http_${response.status}`};
-      window.dispatchEvent(new CustomEvent('auto-sale-server-rejected',{detail:data}));
-      return;
-    }
-    revision=Number(data.revision||revision);
-    sessionStorage.setItem(REVISION_KEY,String(revision));
-    window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};
-    window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));
   }catch(error){
     console.warn('AUTO SALE server sync deferred',error);
     window.__AUTO_SALE_SERVER__={online:false,revision};
