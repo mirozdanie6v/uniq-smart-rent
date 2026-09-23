@@ -19,6 +19,8 @@ MEDIA_API = os.environ.get("AUTO_SALE_MEDIA_API", "https://auto-sale-demo.viiver
 OUT_DIR = Path(os.environ.get("OUT_DIR", "data/autoworld-georgia"))
 MAX_PAGES = int(os.environ.get("MAX_PAGES", "260"))
 REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "0.20"))
+MEDIA_INDEX_PATH = os.environ.get("MEDIA_INDEX_PATH", "").strip()
+UPLOAD_MISSING_PHOTOS = os.environ.get("UPLOAD_MISSING_PHOTOS", "true").lower() in {"1","true","yes"}
 TIMEOUT = 40
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"
 
@@ -273,16 +275,44 @@ def upload_photo(post_id, index, url):
     data = r.json()
     return data.get("url", "")
 
+def media_index():
+    if not MEDIA_INDEX_PATH:
+        return {}
+    p = Path(MEDIA_INDEX_PATH)
+    if not p.exists():
+        return {}
+    try:
+        data = json.loads(p.read_text("utf-8"))
+        return {str(k): [x for x in v if str(x).startswith("https://storage.yandexcloud.net/")] for k, v in data.items()}
+    except Exception:
+        return {}
+
 def enrich_photos(cars):
     existing = existing_manifest()
+    recovered = media_index()
     uploaded_count = 0
+    reused_count = 0
+    recovered_cars = 0
     failed = []
     limit = int(os.environ.get("MAX_PHOTOS_PER_CAR", "10"))
     for n, car in enumerate(cars, 1):
         old = existing.get(car["sourcePostId"], {})
         old_photos = [x for x in old.get("photos", []) if str(x).startswith("https://storage.yandexcloud.net/")]
+        indexed_photos = recovered.get(car["sourcePostId"], [])[:limit]
         if old_photos:
-            car["photos"] = old_photos
+            car["photos"] = old_photos[:limit]
+            reused_count += len(car["photos"])
+            recovered_cars += 1
+            continue
+        if indexed_photos:
+            car["photos"] = indexed_photos
+            reused_count += len(indexed_photos)
+            recovered_cars += 1
+            print(f"photos {n}/{len(cars)} post={car['sourcePostId']} reused={len(indexed_photos)}", flush=True)
+            continue
+        if not UPLOAD_MISSING_PHOTOS:
+            car["photos"] = []
+            failed.append({"post": car["sourcePostId"], "photo": None, "url": "", "error": "no_recovered_media"})
             continue
         urls = car.get("sourcePhotos", [])[:limit]
         photos = []
@@ -296,9 +326,9 @@ def enrich_photos(cars):
                 failed.append({"post": car["sourcePostId"], "photo": i, "url": url, "error": str(e)})
         car["photos"] = photos
         print(f"photos {n}/{len(cars)} post={car['sourcePostId']} uploaded={len(photos)}", flush=True)
-    return uploaded_count, failed
+    return uploaded_count, reused_count, recovered_cars, failed
 
-def write_outputs(cars, pages, uploaded_count, failed):
+def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "cars.json").write_text(json.dumps(cars, ensure_ascii=False, indent=2), "utf-8")
     fields = [
@@ -323,6 +353,8 @@ def write_outputs(cars, pages, uploaded_count, failed):
         "pagesScraped": pages,
         "carsFound": len(cars),
         "photosUploaded": uploaded_count,
+        "photosReused": reused_count,
+        "carsWithRecoveredPhotos": recovered_cars,
         "photoFailures": len(failed),
         "failures": failed[:100],
     }
@@ -331,8 +363,8 @@ def write_outputs(cars, pages, uploaded_count, failed):
 
 def main():
     cars, pages = scrape_all()
-    uploaded_count, failed = enrich_photos(cars)
-    write_outputs(cars, pages, uploaded_count, failed)
+    uploaded_count, reused_count, recovered_cars, failed = enrich_photos(cars)
+    write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed)
     if not cars:
         print("No car posts found", file=sys.stderr)
         sys.exit(2)
