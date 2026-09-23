@@ -1,0 +1,50 @@
+name: Import AutoWorld Georgia public channel
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.import-autoworld-georgia'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install scraper dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Scrape public Telegram archive and upload photos
+        env:
+          AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
+          MAX_PAGES: '260'
+          MAX_PHOTOS_PER_CAR: '10'
+          REQUEST_DELAY: '0.20'
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Show import report
+        run: cat data/autoworld-georgia/report.json
+
+      - name: Commit import dataset
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/autoworld-georgia
+          if git diff --cached --quiet; then
+            echo "No import changes"
+            exit 0
+          fi
+          git commit -m "Import AutoWorld Georgia public catalog dataset"
+          git push origin HEAD:prototype/auto-sale-usa
