@@ -20,66 +20,66 @@ jobs:
           python -m pip install --quiet playwright
           python -m playwright install --with-deps chromium >/dev/null
 
-      - name: Edit existing BMW and restore it
+      - name: Diagnose existing BMW edit persistence
         run: |
           python - <<'PY'
-          import os
+          import os,json
           from playwright.sync_api import sync_playwright
 
           base=os.environ['DEMO_URL']
           with sync_playwright() as p:
               browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
               page=browser.new_page(viewport={'width':1440,'height':1000},locale='ru-RU')
+              page.on('console',lambda msg: print('BROWSER_CONSOLE',msg.type,msg.text))
+              page.on('response',lambda response: print('STATE_RESPONSE',response.request.method,response.status,response.url) if '/api/auto-sale/state' in response.url else None)
               page.goto(base,wait_until='networkidle',timeout=60000)
-              page.wait_for_timeout(1200)
+              page.wait_for_timeout(1800)
+
+              initial=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
+              server_bmw=next((x for x in initial.get('catalog',[]) if x.get('id')=='bmw-x5-22'),None)
+              print('INITIAL_SERVER_BMW',json.dumps(server_bmw,ensure_ascii=False))
+              print('INITIAL_SERVER_STATUS',page.evaluate("window.__AUTO_SALE_SERVER__"))
 
               page.locator('[data-role="manager"]').click()
               page.locator('[data-go="catalogAdmin"]').click()
-              page.wait_for_timeout(200)
-
               rows=page.locator('[data-catalog-edit]')
-              assert rows.count() >= 16, f"expected existing catalog, got {rows.count()} rows"
-              bmw=page.locator('[data-catalog-edit="bmw-x5-22"]')
-              assert bmw.count()==1
-
-              bmw.click()
-              form=page.locator('#catalogCarForm')
-              form.wait_for(state='visible',timeout=5000)
-              assert form.locator('[name="brand"]').input_value()=='BMW'
-              assert form.locator('[name="model"]').input_value()=='X5 xDrive40i'
-              original=int(form.locator('[name="price"]').input_value())
-              temporary=original+111
-
-              form.locator('[name="price"]').fill(str(temporary))
-              form.locator('button[type="submit"]').click()
-              page.wait_for_timeout(1200)
-
-              state=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
-              server_car=next((x for x in state.get('catalog',[]) if x.get('id')=='bmw-x5-22'),None)
-              assert server_car and int(server_car['price'])==temporary, server_car
-              print('AUTO_SALE_EXISTING_CATALOG_EDIT_YDB_OK',temporary)
-
-              page.locator('[data-role="client"]').click()
-              page.locator('.auto-bottom [data-go="catalog"]').click()
-              page.wait_for_timeout(200)
-              card=page.locator('[data-detail="bmw-x5-22"]').locator('xpath=ancestor::article[contains(@class,"auto-car")]')
-              assert card.count()==1
-              expected='$'+format(temporary,',')
-              assert expected in card.inner_text(), card.inner_text()
-              print('AUTO_SALE_EXISTING_CATALOG_EDIT_CLIENT_OK',temporary)
-
-              page.locator('[data-role="manager"]').click()
-              page.locator('[data-go="catalogAdmin"]').click()
+              print('EDIT_ROWS',rows.count())
+              assert rows.count()>=16
               page.locator('[data-catalog-edit="bmw-x5-22"]').click()
               form=page.locator('#catalogCarForm')
-              form.locator('[name="price"]').fill(str(original))
+              form.wait_for(state='visible',timeout=5000)
+              original=int(form.locator('[name="price"]').input_value())
+              temporary=original+111
+              form.locator('[name="price"]').fill(str(temporary))
               form.locator('button[type="submit"]').click()
-              page.wait_for_timeout(1200)
+              page.wait_for_timeout(400)
 
-              state=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
-              restored=next((x for x in state.get('catalog',[]) if x.get('id')=='bmw-x5-22'),None)
-              assert restored and int(restored['price'])==original, restored
-              assert len(state.get('catalog',[])) >= 16
-              print('AUTO_SALE_EXISTING_CATALOG_RESTORE_OK',original,len(state.get('catalog',[])))
+              local=page.evaluate("""()=>JSON.parse(localStorage.getItem('auto-sale-catalog-v1')||'[]').find(x=>x.id==='bmw-x5-22')""")
+              print('LOCAL_AFTER_SAVE',json.dumps(local,ensure_ascii=False))
+              print('SYNC_STATUS_400MS',page.evaluate("window.__AUTO_SALE_SERVER__"))
+              page.wait_for_timeout(3500)
+              print('SYNC_STATUS_3900MS',page.evaluate("window.__AUTO_SALE_SERVER__"))
+              after=page.evaluate("""async()=>await (await fetch('/api/auto-sale/state',{cache:'no-store'})).json()""")
+              persisted=next((x for x in after.get('catalog',[]) if x.get('id')=='bmw-x5-22'),None)
+              print('SERVER_AFTER_SAVE',json.dumps(persisted,ensure_ascii=False))
+
+              # Always restore canonical BMW price on the server if the diagnostic write landed.
+              if persisted and int(persisted.get('price',0))!=46800:
+                  payload={
+                    'baseRevision':int(after.get('revision',0)),
+                    'leads':after.get('leads',[]),'quotes':after.get('quotes',[]),'orders':after.get('orders',[]),
+                    'notes':after.get('notes',{}),'team':after.get('team',[]),'catalog':after.get('catalog',[])
+                  }
+                  for car in payload['catalog']:
+                      if car.get('id')=='bmw-x5-22': car['price']=46800
+                  result=page.evaluate("""async(payload)=>{
+                    const r=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+                    return {status:r.status,body:await r.json()};
+                  }""",payload)
+                  print('CLEANUP',result)
+
+              assert local and int(local['price'])==temporary, local
+              assert persisted and int(persisted['price'])==temporary, persisted
+              print('AUTO_SALE_EXISTING_CATALOG_DIAGNOSTIC_OK',temporary)
               browser.close()
           PY
