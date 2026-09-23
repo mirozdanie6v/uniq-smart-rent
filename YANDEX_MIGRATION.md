@@ -1,98 +1,164 @@
 # AUTO SALE → Yandex Cloud migration
 
-## Current phase
+## Current state
 
-Cloudflare production stays unchanged. Yandex staging is deployed as a public Serverless Container with YDB Serverless persistence. The application UI is publicly reachable, while the CRM state API is protected by an ephemeral staging API credential generated at deploy time. GitHub OIDC authenticates deployments to Yandex Cloud without permanent cloud keys.
+Cloudflare production remains unchanged. The public demo runs on Yandex Cloud at:
 
-## Resource names
+- `https://auto-sale-demo.viiversion.com`
+- API Gateway: `auto-sale-demo` / `d5d7e3tivcgnbe167btb`
+- Serverless Container: `auto-sale-staging` / `bba01u6g86lg2q49p34d`
+- YDB Serverless persistence
+- Yandex Object Storage for catalog media
 
+The demo currently uses public read/write mode for application data because it is a demonstration environment. Durable staff authentication is still a later production-hardening step.
+
+## Yandex Cloud resources
+
+- Cloud: `cloud-monsoon-954`
 - Folder: `auto-sale`
-- Network: `auto-sale-net`
-- PostgreSQL cluster: `auto-sale-pg`
-- Database: `autosale`
-- Database user: `autosale_app`
+- Folder ID: `b1g8u8vqkgehvtbj8n13`
 - Container Registry: `auto-sale-registry`
+- Registry ID: `crptu0l7jn0iui8b8laa`
 - Serverless Container: `auto-sale-staging`
-- GitHub deploy service account: `auto-sale-github`
+- Container ID: `bba01u6g86lg2q49p34d`
+- API Gateway: `auto-sale-demo`
+- API Gateway ID: `d5d7e3tivcgnbe167btb`
+- Managed certificate: `auto-sale-demo-viiversion`
+- Certificate ID: `fpqca11j683rem8j8jfn`
+- Object Storage bucket: `viiversion-auto-sale-media`
 - Runtime service account: `auto-sale-runtime`
-- Lockbox secret: `auto-sale-db`
+- Runtime SA ID: `aje8o9ric0d20k11521r`
+- GitHub deploy service account: `auto-sale-github`
+- Deploy SA ID: `aje775bcl6hgp40eu8of`
 - Workload identity federation: `auto-sale-github`
 
-## GitHub repository variables
+## Persistence
 
-Create these under Settings → Secrets and variables → Actions → Variables:
+Application state is stored in YDB Serverless via `YDB_CONNECTION_STRING`.
+
+YDB stores structured data only:
+- leads;
+- quotes;
+- orders;
+- notes;
+- team;
+- catalog metadata;
+- media URLs.
+
+Catalog image binaries are not stored in YDB.
+
+## Catalog media
+
+Local catalog images are uploaded through the application backend:
+
+`POST /api/auto-sale/media`
+
+The backend:
+1. receives the compressed image from the browser;
+2. authenticates to Yandex Cloud through the runtime service-account metadata token;
+3. writes the object into `viiversion-auto-sale-media`;
+4. returns the public object URL;
+5. saves only that URL in YDB.
+
+Object layout:
+
+`cars/<car-id>/<category>-<timestamp>-<name>-<suffix>.<ext>`
+
+Supported categories:
+- `main`;
+- `interior`;
+- `other`.
+
+The bucket allows public object reads for the demo catalog. Uploads and deletes go only through the AUTO SALE backend/runtime identity. Anonymous bucket listing is disabled.
+
+Validated live flow:
+- local main photo upload;
+- multiple interior photo uploads;
+- other photo upload;
+- public object read;
+- URL-only persistence in YDB;
+- client gallery rendering;
+- object deletion and test-state cleanup.
+
+## GitHub repository variables
 
 - `YC_FOLDER_ID`
 - `YC_DEPLOY_SA_ID`
 - `YC_RUNTIME_SA_ID`
 - `YC_REGISTRY_ID`
-- `YC_NETWORK_ID`
-- `YC_DB_SECRET_ID`
-- `YC_DB_SECRET_VERSION_ID`
-- `YC_CONTAINER_NAME` = `auto-sale-staging`
+- `YC_CONTAINER_NAME = auto-sale-staging`
+- `YDB_CONNECTION_STRING`
 
-No permanent Yandex access key is required in GitHub. Deployment uses GitHub OIDC → Yandex workload identity federation.
+The media bucket name is currently fixed in the deploy workflow as:
 
-## Federation binding
+`AUTO_SALE_MEDIA_BUCKET=viiversion-auto-sale-media`
 
-Issuer: `https://token.actions.githubusercontent.com`
+No permanent Yandex access key is stored in GitHub. Deployment uses GitHub OIDC → Yandex workload identity federation.
 
-JWKS: `https://token.actions.githubusercontent.com/.well-known/jwks`
-
-Audience: `https://github.com/mirozdanie6v`
-
-Subject:
-
-`repo:mirozdanie6v/uniq-smart-rent:ref:refs/heads/prototype/auto-sale-usa`
-
-## Service account roles
+## Service-account access
 
 ### auto-sale-github
 
-- `container-registry.images.pusher`
-- `serverless-containers.editor`
-- `iam.serviceAccounts.user`
-- `vpc.user`
+Deployment/provisioning access includes:
+- `iam.serviceAccounts.user`;
+- `container-registry.images.pusher`;
+- `vpc.user`;
+- `serverless-containers.editor`;
+- `ydb.editor`;
+- `api-gateway.editor`;
+- `certificate-manager.editor`;
+- `storage.admin` for Object Storage provisioning.
 
 ### auto-sale-runtime
 
-- `container-registry.images.puller`
-- `lockbox.payloadViewer`
-
-## Database
-
-AUTO SALE staging uses YDB Serverless through `YDB_CONNECTION_STRING`. The runtime service account authenticates to YDB through Yandex metadata credentials. No database password is committed to GitHub.
+Runtime access includes:
+- `container-registry.images.puller`;
+- `ydb.editor`;
+- `lockbox.payloadViewer`;
+- full control on the AUTO SALE media bucket through the bucket ACL.
 
 ## Deployment
 
-Run GitHub Actions workflow `Deploy AUTO SALE to Yandex staging` manually from branch `prototype/auto-sale-usa` after all repository variables are configured.
+Workflow: `Deploy AUTO SALE to Yandex staging`
 
-Each deploy:
+Branch: `prototype/auto-sale-usa`
 
-1. Validates the application and Yandex image.
-2. Exchanges GitHub OIDC for a Yandex IAM token.
-3. Pushes the Docker image to Container Registry.
-4. Imports the current Cloudflare AUTO SALE state into YDB.
-5. Generates an ephemeral staging API credential.
-6. Deploys a Serverless Container revision with authenticated state reads/writes.
-7. Verifies that unauthenticated CRM state access returns `401`.
-8. Runs a reversible Yandex E2E flow from lead creation through quote, deposit, order, logistics and handoff.
-9. Restores the pre-test state and verifies record counts.
+The workflow is manual-only after release cleanup.
 
-Validated staging URL: `https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/`.
+Each deployment:
+1. validates the application;
+2. exchanges GitHub OIDC for a Yandex IAM token;
+3. builds and pushes the container image;
+4. generates the staging API credential;
+5. deploys a Serverless Container revision;
+6. enables public demo state read/write;
+7. configures `AUTO_SALE_MEDIA_BUCKET`;
+8. verifies YDB and Object Storage health;
+9. runs the reversible lead → quote → deposit → order → logistics → handoff E2E;
+10. restores the pre-test application state.
 
-## Cutover order
+Deployments no longer re-import Cloudflare state automatically, so Yandex demo changes are not overwritten on every deploy.
 
-1. Yandex infrastructure. ✅
-2. YDB Serverless persistence. ✅
-3. Snapshot current Cloudflare state to YDB and reconcile counts. ✅
-4. Authenticated YDB state API. ✅
-5. Reversible client → manager → quote → deposit → order → logistics → handoff E2E. ✅
-6. Add durable staff authentication for browser UI and public client-intake API.
-7. Run browser E2E against Yandex staging.
-8. Move frontend to Object Storage + CDN if retained in the final topology.
-9. Issue certificate and configure custom domain.
-10. Final delta migration.
-11. Switch DNS.
-12. Keep Cloudflare rollback path temporarily.
-13. Remove Cloudflare Worker/D1 only after stable operation.
+## Verified public endpoints
+
+- Demo: `https://auto-sale-demo.viiversion.com`
+- Health: `https://auto-sale-demo.viiversion.com/api/health`
+- Gateway default domain: `https://d5d7e3tivcgnbe167btb.nnekmrav.apigw.yandexcloud.net/`
+
+Expected health includes:
+
+- `persistence: "ydb-serverless"`
+- `writeMode: "public-demo"`
+- `mediaStorage: "object-storage"`
+- `mediaBucket: "viiversion-auto-sale-media"`
+
+## Remaining production-hardening work
+
+Before treating the demo as production:
+1. add durable staff authentication and authorization;
+2. restrict state writes by role;
+3. decide whether catalog media should remain public or move to signed/private delivery;
+4. optionally add CDN/custom media domain;
+5. add backup/retention policy for catalog media;
+6. run final security and browser E2E audit;
+7. only then plan any Cloudflare production cutover or decommissioning.
