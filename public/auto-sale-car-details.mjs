@@ -18,7 +18,9 @@ const carDetails=[
 ];
 
 const byId=new Map(carDetails.map(car=>[car.id,car]));
-const money=value=>'
+const money=value=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(value)||0);
+const rubMoney=value=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(Number(value)||0)+' ₽';
+const detailPrice=car=>Number(car?.price)>0?`от ${money(car.price)}`:Number(car?.priceRub)>0?`≈ ${rubMoney(car.priceRub)}`:Number(car?.estimatedBidUsd)>0?`ставка ≈ ${money(car.estimatedBidUsd)}`:'по расчёту';
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const managedCar=id=>{try{const value=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')||'null');return Array.isArray(value)?value.find(car=>car.id===id)||null:null}catch{return null}};
 const currentPhoto=car=>managedCar(car.id)?.image||window.__AUTO_SALE_VERIFIED_PHOTOS__?.find(item=>item.id===car.id)?.image||'';
