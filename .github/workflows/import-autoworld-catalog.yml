@@ -1,0 +1,42 @@
+name: Import AutoWorld Georgia into AUTO SALE catalog
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.import-autoworld-catalog'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Import curated AutoWorld cars into YDB catalog
+        env:
+          AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Commit normalized catalog preview
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin prototype/auto-sale-usa
+          git add data/autoworld-georgia-recent/catalog-import.json
+          if git diff --cached --quiet; then
+            echo "No preview changes"
+            exit 0
+          fi
+          git commit -m "Normalize AutoWorld Georgia cars for AUTO SALE catalog"
+          git push origin HEAD:prototype/auto-sale-usa
