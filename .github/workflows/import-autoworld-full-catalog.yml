@@ -1,0 +1,118 @@
+name: Import full AutoWorld catalog to AUTO SALE
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.import-autoworld-full-catalog'
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_URL: https://auto-sale-demo.viiversion.com
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Import normalized full AutoWorld catalog
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: data/autoworld-georgia/catalog-import.json
+          AUDIT_PATH: data/autoworld-georgia/catalog-import-audit.json
+          AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+          REPLACE_SOURCE_ALL: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Persist normalized audit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/autoworld-georgia/catalog-import.json data/autoworld-georgia/catalog-import-audit.json
+          if git diff --cached --quiet; then
+            echo "No normalized dataset changes"
+          else
+            git commit -m "Finalize full AutoWorld catalog normalization"
+            git pull --rebase origin prototype/auto-sale-usa
+            git push origin HEAD:prototype/auto-sale-usa
+          fi
+
+      - name: Install Playwright
+        run: |
+          python -m pip install --quiet playwright requests
+          python -m playwright install --with-deps chromium >/dev/null
+
+      - name: Verify full AutoWorld catalog live
+        run: |
+          python - <<'PY'
+          import os,requests
+          from playwright.sync_api import sync_playwright
+
+          base=os.environ['DEMO_URL'].rstrip('/')
+          state=requests.get(base+'/api/auto-sale/state',timeout=30).json()
+          catalog=state.get('catalog',[])
+          imported=[x for x in catalog if x.get('source')=='AutoWorld_Georgia']
+          vins=[x.get('vin') for x in imported]
+
+          assert len(imported)==117,len(imported)
+          assert len(vins)==len(set(vins)),(len(vins),len(set(vins)))
+          assert all(x.get('image','').startswith('https://storage.yandexcloud.net/') for x in imported)
+          assert all(x.get('brand') not in {'пришел','Trailblazer','Eclipse','X1','GLB','Range','MB','VW','Mersedes'} for x in imported)
+          assert any(x.get('brand')=='Land Rover' and x.get('model')=='Range Rover Evoque' for x in imported)
+          assert any(x.get('brand')=='Mercedes-Benz' and x.get('model')=='GLB 250' for x in imported)
+          assert any(x.get('brand')=='Mitsubishi' and x.get('model')=='Eclipse Cross' for x in imported)
+          print('AUTO_SALE_AUTOWORLD_FULL_YDB_OK',len(imported),len(catalog))
+
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True,args=['--no-sandbox'])
+              page=browser.new_page(viewport={'width':1440,'height':1000},locale='ru-RU')
+              page.goto(base,wait_until='networkidle',timeout=60000)
+              page.wait_for_timeout(1400)
+              page.locator('[data-role="client"]').click()
+              page.locator('.auto-bottom [data-go="catalog"]').click()
+
+              search=page.locator('#autoSearch')
+              search.fill('Land Rover')
+              search.dispatch_event('input')
+              page.wait_for_timeout(350)
+              assert page.locator('[data-detail="AWG-1363"]').count()==1
+              assert 'Range Rover Evoque' in page.locator('[data-detail="AWG-1363"]').locator('xpath=ancestor::article[contains(@class,"auto-car")]').inner_text()
+              page.locator('[data-detail="AWG-1363"]').click()
+              page.locator('[data-car-slider]').wait_for(state='visible',timeout=5000)
+              assert page.locator('[data-car-slide]').count()>=1
+              page.locator('[data-car-detail-close]').first.click()
+              print('AUTO_SALE_AUTOWORLD_FULL_CLIENT_OK')
+
+              search.fill('BMW 228')
+              search.dispatch_event('input')
+              page.wait_for_timeout(350)
+              card=page.locator('[data-detail="AWG-3713"]').locator('xpath=ancestor::article[contains(@class,"auto-car")]')
+              assert card.count()==1
+              text=card.inner_text().replace('\u00a0',' ').replace('\u202f',' ')
+              assert '4 300 000' in text,text
+              assert 'от $0' not in text,text
+              print('AUTO_SALE_AUTOWORLD_FULL_PRICE_OK')
+
+              page.locator('[data-role="manager"]').click()
+              page.locator('[data-go="catalogAdmin"]').click()
+              row=page.locator('[data-catalog-edit="AWG-1363"]')
+              assert row.count()==1
+              row.click()
+              form=page.locator('#catalogCarForm')
+              form.wait_for(state='visible',timeout=5000)
+              assert form.locator('[name="brand"]').input_value()=='Land Rover'
+              assert form.locator('[name="model"]').input_value()=='Range Rover Evoque'
+              assert form.locator('[name="image"]').input_value().startswith('https://storage.yandexcloud.net/')
+              print('AUTO_SALE_AUTOWORLD_FULL_MANAGER_OK')
+              browser.close()
+          PY
