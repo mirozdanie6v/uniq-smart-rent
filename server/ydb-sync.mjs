@@ -19,6 +19,7 @@ export async function syncYdbState(store,input){
   const quotes=arr(input?.quotes);
   const orders=arr(input?.orders);
   const team=arr(input?.team);
+  const catalog=arr(input?.catalog);
   const notes=input?.notes&&typeof input.notes==='object'?input.notes:{};
   const previousLeads=new Map(arr(previous.leads).map(x=>[text(x.id),x]));
   const previousQuotes=new Map(arr(previous.quotes).map(x=>[text(x.id),x]));
@@ -28,6 +29,16 @@ export async function syncYdbState(store,input){
   for(const member of team){
     if(!text(member.id)||!text(member.name))return bad('invalid_team_member',{id:member.id||'',details:['Укажите имя сотрудника.']});
     if(!['Директор','Менеджер','Логист','Администратор'].includes(text(member.role)))return bad('invalid_team_role',{id:member.id,role:member.role});
+  }
+
+  const catalogIds=new Set();
+  for(const car of catalog){
+    const id=text(car.id);
+    if(!id||!text(car.brand)||!text(car.model))return bad('invalid_catalog_car',{id,details:['Укажите ID, марку и модель автомобиля.']});
+    if(catalogIds.has(id))return bad('duplicate_catalog_car',{id});
+    catalogIds.add(id);
+    if(num(car.price)<=0)return bad('invalid_catalog_car',{id,details:['Цена автомобиля должна быть больше нуля.']});
+    if(!text(car.image))return bad('invalid_catalog_car',{id,details:['Укажите изображение автомобиля.']});
   }
 
   for(const lead of leads){
@@ -84,5 +95,5 @@ export async function syncYdbState(store,input){
     }
   }
 
-  return store.replaceState({leads,quotes,orders,notes,team},{expectedRevision:current});
+  return store.replaceState({leads,quotes,orders,notes,team,catalog},{expectedRevision:current});
 }
