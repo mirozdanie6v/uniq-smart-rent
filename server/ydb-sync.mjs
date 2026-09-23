@@ -42,7 +42,6 @@ export async function syncYdbState(store,input){
     if(!id||!text(car.brand)||!text(car.model))return bad('invalid_catalog_car',{id,details:['Укажите ID, марку и модель автомобиля.']});
     if(catalogIds.has(id))return bad('duplicate_catalog_car',{id});
     catalogIds.add(id);
-    if(num(car.price)<=0)return bad('invalid_catalog_car',{id,details:['Цена автомобиля должна быть больше нуля.']});
     if(!validPhoto(car.image))return bad('invalid_catalog_car',{id,details:['Укажите корректное главное фото автомобиля.']});
     const interior=photoList(car.interiorPhotos),other=photoList(car.otherPhotos);
     if(interior.length>4)return bad('invalid_catalog_photos',{id,details:['Допускается не более 4 фото салона.']});
