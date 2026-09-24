@@ -7,19 +7,14 @@ const money=v=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).form
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
 const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
-const defaults=[
-  {id:'TM-DMITRY',name:'Дмитрий',role:'Менеджер',phone:'',telegram:'',active:true,planDeals:4,note:''},
-  {id:'TM-ANNA',name:'Анна',role:'Менеджер',phone:'',telegram:'',active:true,planDeals:4,note:''},
-  {id:'TM-MAKSIM',name:'Максим',role:'Менеджер',phone:'',telegram:'',active:true,planDeals:4,note:''}
-];
-function team(){const rows=read(TEAM_KEY,[]);return Array.isArray(rows)&&rows.length?rows:defaults}
+function team(){const rows=read(TEAM_KEY,[]);return Array.isArray(rows)?rows:[]}
 function leads(){const rows=read(LEADS_KEY,[]);return Array.isArray(rows)?rows:[]}
 function orders(){const rows=read(ORDERS_KEY,[]);return Array.isArray(rows)?rows:[]}
 function isOwner(){return sessionStorage.getItem(ROLE_KEY)==='owner'||document.querySelector('.auto-role-switch button[data-role="owner"].active')}
 function memberStats(name){const ls=leads().filter(x=>x.manager===name),os=orders().filter(x=>x.manager===name);return{leads:ls.length,active:ls.filter(x=>!['Сделка','Отказ'].includes(x.status)).length,deals:os.length,revenue:os.reduce((s,x)=>s+Number(x.total||0),0),margin:os.reduce((s,x)=>s+Number(x.total||0)-Number(x.cost||0),0)}}
 function findTeamMember(id){return team().find(x=>x.id===id)}
 function activeManagerNames(){return[...new Set(team().filter(x=>x.active!==false&&x.role==='Менеджер').map(x=>x.name).filter(Boolean))]}
-function ensureTeam(){if(!read(TEAM_KEY,null))write(TEAM_KEY,defaults)}
+function ensureTeam(){}
 function route(name){document.querySelector(`.auto-bottom [data-go="${name}"]`)?.click()}
 function modal(html){closeModal();const el=document.createElement('div');el.className='director-modal-bg';el.dataset.directorModal='1';el.innerHTML=`<div class="director-modal">${html}</div>`;(root||document.body).append(el)}
 function closeModal(){document.querySelector('.director-modal-bg')?.remove()}
