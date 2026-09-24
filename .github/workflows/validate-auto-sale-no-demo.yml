@@ -1,5 +1,5 @@
 name: Validate AUTO SALE no-demo cleanup
-# rerun 2
+# rerun 3
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
       - name: Full application check
         run: npm run check
       - name: Validate D1 migration chain
-        run: npx wrangler d1 migrations apply uniq-smart-rent-db --local
+        run: npx wrangler d1 migrations apply auto-sale-db --local
       - name: Validate Yandex runtime syntax
         run: |
           node --check server/auto-sale-rules.mjs
@@ -43,6 +43,7 @@ jobs:
             public/auto-sale-app.mjs
             public/auto-sale-app.js
             src/auto-sale/demo-business.ts
+            public/auto-sale-api-audit.js
           )
           if grep -En 'L-101|Q-501|O-2301|bmw-x5-22|tesla-y-23|rav4-22|L-DEMO|Q-DEMO|O-DEMO|Demo Delivery|Demo Handoff|Демо-данные|пример автомобиля|images\.unsplash\.com' "${FILES[@]}"; then
             echo "Demo fallback residue found in active production files" >&2
