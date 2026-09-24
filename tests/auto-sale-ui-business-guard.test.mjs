@@ -1,13 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+import {seedLeads,seedQuotes,seedOrders,seedTeam} from './fixtures/auto-sale-business.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 async function setup(tag,{custom=false,clientStatus='',orderDelivery=false}={}){
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
   globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;globalThis.MutationObserver=dom.window.MutationObserver;globalThis.HTMLFormElement=dom.window.HTMLFormElement;
   const ls=dom.window.localStorage;
+  ls.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
+  ls.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
+  ls.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  ls.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
   if(custom){
     const l=seedLeads();l.push({id:'L-999',name:'Guard Test',contact:'demo',model:'Audi Q5',budget:40000,source:'Сайт',manager:'Анна',status:'Ожидает клиента',priority:'Средний',createdAt:'2026-09-12T00:00:00Z',nextAction:'2026-09-13',note:'',deposit:0});
     const q=seedQuotes();q.push({id:'Q-999',leadId:'L-999',model:'Audi Q5',lot:25000,auction:1000,inland:800,ocean:2500,customs:6000,repair:1000,service:1500,total:37800,status:'Согласован',version:1,validUntil:'2026-09-20',updatedAt:'2026-09-12T00:00:00Z'});
