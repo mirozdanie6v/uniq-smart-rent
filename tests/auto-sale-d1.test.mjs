@@ -7,6 +7,7 @@ const migration6=await readFile(new URL('../migrations/0006_auto_sale_demo_clean
 const migration7=await readFile(new URL('../migrations/0007_auto_sale_legacy_backfill.sql',import.meta.url),'utf8');
 const migration8=await readFile(new URL('../migrations/0008_auto_sale_persistent_demo_cards.sql',import.meta.url),'utf8');
 const migration9=await readFile(new URL('../migrations/0009_auto_sale_team.sql',import.meta.url),'utf8');
+const migration10=await readFile(new URL('../migrations/0010_auto_sale_remove_demo_cards.sql',import.meta.url),'utf8');
 const worker=await readFile(new URL('../src/auto-sale-worker.ts',import.meta.url),'utf8');
 const stateApi=await readFile(new URL('../src/auto-sale/state-api.ts',import.meta.url),'utf8');
 const storage=await readFile(new URL('../src/auto-sale/storage.ts',import.meta.url),'utf8');
@@ -15,21 +16,23 @@ const bootstrap=await readFile(new URL('../public/auto-sale-bootstrap.mjs',impor
 const apiAudit=await readFile(new URL('../public/auto-sale-api-audit.js',import.meta.url),'utf8');
 const wrangler=await readFile(new URL('../wrangler.jsonc',import.meta.url),'utf8');
 
-test('AUTO SALE has isolated D1 tables, persistent demo cards and director team in schema 9',()=>{
+test('AUTO SALE migration chain ends with demo cleanup and director team in schema 10',()=>{
   for(const table of ['auto_sale_leads','auto_sale_quotes','auto_sale_orders','auto_sale_payments','auto_sale_notes','auto_sale_state_meta']) assert.ok(migration5.includes(table),table);
   assert.match(migration6,/O-DEMO-%/);assert.match(migration6,/Q-DEMO-%/);assert.match(migration6,/L-DEMO-%/);assert.match(migration6,/schema_meta \(version\) VALUES \(6\)/);
   assert.match(migration7,/validUntil/);assert.match(migration7,/riskType/);assert.match(migration7,/riskNote/);assert.match(migration7,/PAY-LEGACY/);assert.match(migration7,/schema_meta \(version\) VALUES \(7\)/);
   for(const id of ['L-DEMO-205','L-DEMO-206','Q-DEMO-205','Q-DEMO-206','O-DEMO-205','O-DEMO-206'])assert.ok(migration8.includes(id),id);
   assert.match(migration8,/auto_sale_payments/);assert.match(migration8,/auto_sale_notes/);assert.match(migration8,/schema_meta \(version\) VALUES \(8\)/);
-  assert.match(migration9,/auto_sale_team/);assert.match(migration9,/TM-DMITRY/);assert.match(migration9,/TM-ANNA/);assert.match(migration9,/TM-MAKSIM/);assert.match(migration9,/schema_meta \(version\) VALUES \(9\)/);
+  assert.match(migration9,/auto_sale_team/);assert.match(migration9,/schema_meta \(version\) VALUES \(9\)/);
+  for(const token of ['L-DEMO-%','Q-DEMO-%','O-DEMO-%'])assert.ok(migration10.includes(token),token);
+  assert.match(migration10,/schema_meta \(version\) VALUES \(10\)/);
 });
 
 test('AUTO SALE branch deploys its own Worker entry',()=>{
   assert.match(wrangler,/src\/auto-sale-worker\.ts/);assert.match(wrangler,/auto-sale-db/);assert.match(wrangler,/AUTO_SALE_DEMO_MODE/);
 });
 
-test('Worker exposes schema 9 D1 state API with director team management',()=>{
-  assert.match(worker,/\/api\/auto-sale\/state/);assert.match(worker,/schemaVersion:9/);assert.match(worker,/demoCardsPersistent:true/);assert.match(worker,/teamManagement:true/);assert.doesNotMatch(worker,/withDemoBusiness/);assert.match(worker,/syncState/);
+test('Worker exposes schema 10 D1 state API without persistent demo cards',()=>{
+  assert.match(worker,/\/api\/auto-sale\/state/);assert.match(worker,/schemaVersion:10/);assert.match(worker,/demoCardsPersistent:false/);assert.match(worker,/teamManagement:true/);assert.doesNotMatch(worker,/withDemoBusiness/);assert.match(worker,/syncState/);
   assert.match(storage,/auto_sale_team/);assert.match(storage,/putTeamMember/);assert.match(storage,/teamR/);
   assert.match(stateApi,/const team=arr\(input\.team\)/);assert.match(stateApi,/invalid_team_member/);assert.match(stateApi,/putTeamMember/);
 });
@@ -59,6 +62,8 @@ test('browser hydrates team from D1 and keeps later saves reload-free',()=>{
   assert.doesNotMatch(bootstrap,/reloadPending|refreshUiWhenSafe|mergeDemoRows/);
 });
 
-test('live API audit checks schema 9 persistent team and logistics stages',()=>{
-  assert.match(apiAudit,/api-audit-result/);assert.match(apiAudit,/API_AUDIT_OK/);assert.match(apiAudit,/schemaVersion\)!==9/);assert.match(apiAudit,/teamManagement/);assert.match(apiAudit,/state\.team/);assert.match(apiAudit,/L-DEMO-/);assert.match(apiAudit,/Q-DEMO-/);assert.match(apiAudit,/O-DEMO-/);assert.match(apiAudit,/x\.stage==='Доставка'/);assert.match(apiAudit,/x\.stage==='Выдача'/);assert.match(apiAudit,/demo-payments-missing/);
+test('live API audit accepts empty business state and rejects demo record residue',()=>{
+  assert.match(apiAudit,/api-audit-result/);assert.match(apiAudit,/API_AUDIT_OK/);
+  assert.match(apiAudit,/demoCardsPersistent/);assert.match(apiAudit,/demo-record-residue/);
+  assert.doesNotMatch(apiAudit,/demo-leads-missing|demo-quotes-missing|demo-delivery-missing|demo-handoff-missing|demo-payments-missing/);
 });
