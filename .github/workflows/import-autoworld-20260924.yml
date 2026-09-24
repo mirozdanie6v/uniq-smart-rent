@@ -74,10 +74,18 @@ jobs:
                       car['photos']=old_photos[:10]
                   else:
                       uploaded=[]
+                      failures=[]
                       for i,purl in enumerate(source_photos[:10]):
-                          u=awg.upload_photo(pid,i,purl)
-                          if u: uploaded.append(u)
+                          try:
+                              u=awg.upload_photo(pid,i,purl)
+                              if u: uploaded.append(u)
+                          except Exception as e:
+                              failures.append({'index':i,'url':purl,'error':str(e)})
+                              print('AUTOWORLD_PHOTO_WARNING '+json.dumps({'post':pid,'index':i,'error':str(e)},ensure_ascii=False),flush=True)
+                      if not uploaded:
+                          raise RuntimeError('no_photos_uploaded_'+pid)
                       car['photos']=uploaded
+                      car['photoFailures']=failures
                   found[pid]=car
               if targets.issubset(found): break
               prev=soup.select_one('link[rel="prev"]') or soup.select_one(".tme_messages_more[href*='before=']")
