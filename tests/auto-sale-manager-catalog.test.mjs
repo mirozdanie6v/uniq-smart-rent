@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {readFile} from 'node:fs/promises';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
@@ -13,6 +14,8 @@ async function setup(tag,{emptyCatalog=false,catalogSeed=null}={}){
   globalThis.FormData=dom.window.FormData;
   globalThis.Event=dom.window.Event;
   globalThis.CustomEvent=dom.window.CustomEvent;
+  globalThis.confirm=()=>true;
+  dom.window.confirm=()=>true;
   if(emptyCatalog)localStorage.setItem('auto-sale-catalog-v1','[]');
   if(Array.isArray(catalogSeed))localStorage.setItem('auto-sale-catalog-v1',JSON.stringify(catalogSeed));
   await import(`../public/auto-sale-app-v3.mjs?manager-catalog=${tag}-${Date.now()}-${Math.random()}`);
@@ -35,6 +38,7 @@ test('manager navigation exposes catalog and can add a published vehicle',async(
   form.elements.engine.value='3.8 бензин';
   form.elements.drive.value='AWD';
   form.elements.auction.value='Manheim';
+  form.elements.auctionDate.value='30.09.2026';
   form.elements.price.value='42000';
   form.elements.delivery.value='8–11 недель';
   form.elements.tag.value='Family SUV';
@@ -47,6 +51,7 @@ test('manager navigation exposes catalog and can add a published vehicle',async(
   assert.ok(car);
   assert.equal(car.active,true);
   assert.equal(car.price,42000);
+  assert.equal(car.auctionDate,'30.09.2026');
 
   root.querySelector('[data-role="client"]').click();await tick();
   root.querySelector('[data-go="catalog"]').click();await tick();
@@ -156,4 +161,48 @@ test('manager can edit an imported source-priced car without losing source metad
   assert.equal(updated.sourcePostId,'999');
   assert.equal(updated.vin,'VINTEST1234567890');
   dom.window.close();
+});
+
+
+test('catalog sorts by the closest auction date and shows it on client cards',async()=>{
+  const fmt=days=>{
+    const d=new Date();d.setDate(d.getDate()+days);
+    return [String(d.getDate()).padStart(2,'0'),String(d.getMonth()+1).padStart(2,'0'),d.getFullYear()].join('.');
+  };
+  const near=fmt(2),far=fmt(8);
+  const seed=[
+    {id:'FAR',brand:'Kia',model:'Far',year:2024,mileage:'1 км',engine:'2.0',drive:'FWD',auction:'Copart',auctionDate:far,price:10000,delivery:'8 недель',tag:'Test',image:'https://example.com/far.jpg',active:true},
+    {id:'NONE',brand:'Kia',model:'No Date',year:2023,mileage:'2 км',engine:'2.0',drive:'FWD',auction:'Copart',auctionDate:'',price:10000,delivery:'8 недель',tag:'Test',image:'https://example.com/none.jpg',active:true},
+    {id:'NEAR',brand:'Kia',model:'Near',year:2025,mileage:'3 км',engine:'2.0',drive:'FWD',auction:'IAAI',auctionDate:near,price:10000,delivery:'8 недель',tag:'Test',image:'https://example.com/near.jpg',active:true}
+  ];
+  const {dom,root}=await setup('auction-sort',{catalogSeed:seed});
+  root.querySelector('[data-role="client"]').click();await tick();
+  root.querySelector('[data-go="catalog"]').click();await tick();
+  const ids=[...root.querySelectorAll('[data-detail]')].map(x=>x.dataset.detail);
+  assert.deepEqual(ids,['NEAR','FAR','NONE']);
+  const nearCard=root.querySelector('[data-detail="NEAR"]').closest('.auto-car');
+  assert.match(nearCard.textContent,/Дата аукциона/);
+  assert.match(nearCard.textContent,new RegExp(near.replaceAll('.','\\.')));
+  dom.window.close();
+});
+
+test('manager can permanently delete a vehicle from the catalog',async()=>{
+  const seed=[{id:'DELETE-ME',brand:'Ford',model:'Escape',year:2022,mileage:'10 км',engine:'2.0',drive:'AWD',auction:'Copart',auctionDate:'01.10.2026',price:18000,delivery:'8 недель',tag:'Test',image:'https://example.com/delete.jpg',active:true}];
+  const {dom,root}=await setup('delete',{catalogSeed:seed});
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  root.querySelector('[data-catalog-edit="DELETE-ME"]').click();await tick();
+  const deleteButton=root.querySelector('[data-catalog-delete="DELETE-ME"]');assert.ok(deleteButton);
+  deleteButton.click();await tick();
+  const catalog=JSON.parse(localStorage.getItem('auto-sale-catalog-v1'));
+  assert.equal(catalog.some(x=>x.id==='DELETE-ME'),false);
+  assert.equal(root.querySelector('[data-catalog-edit="DELETE-ME"]'),null);
+  dom.window.close();
+});
+
+test('mobile manager catalog labels year instead of lead budget',async()=>{
+  const css=await readFile(new URL('../public/auto-sale-mobile-admin.css',import.meta.url),'utf8');
+  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(2\)::before\{content:'Год выпуска'\}/);
+  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(5\)::before\{content:'Дата аукциона'\}/);
+  assert.match(css,/:not\(\.catalog\)/);
 });
