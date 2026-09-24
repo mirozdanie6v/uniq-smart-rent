@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
+import {seedLeads,seedQuotes,seedOrders,seedTeam} from './fixtures/auto-sale-business.mjs';
 
 test('manager save card button persists edited lead data',async()=>{
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/'});
@@ -17,6 +17,7 @@ test('manager save card button persists edited lead data',async()=>{
   localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
   localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
   await import('../public/auto-sale-app-v3.mjs?lead-save-action');
   const root=document.querySelector('#app');
   root.querySelector('[data-role="manager"]').click();
