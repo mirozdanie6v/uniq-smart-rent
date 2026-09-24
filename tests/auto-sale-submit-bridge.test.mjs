@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
+import {seedLeads,seedQuotes,seedOrders,seedTeam} from './fixtures/auto-sale-business.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
@@ -21,6 +21,7 @@ test('direct submit bridge reaches the core quote saver and persists a draft',as
   localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
   localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
 
   await import(`../public/auto-sale-submit-bridge.mjs?bridge=${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-app-v3.mjs?app=${Date.now()}-${Math.random()}`);
