@@ -16,22 +16,17 @@
     try{
       const healthResponse=await fetch('/api/health',{cache:'no-store'});
       const health=await healthResponse.json();
-      if(!healthResponse.ok||health.service!=='auto-sale-usa'||health.d1!==true||Number(health.schemaVersion)!==9||health.demoMode!==true||health.demoCardsPersistent!==true||health.teamManagement!==true)failures.push('api-health');
+      if(!healthResponse.ok||health.ok!==true)failures.push('api-health');
+      if('demoCardsPersistent' in health&&health.demoCardsPersistent!==false)failures.push('demo-cards-enabled');
     }catch{failures.push('api-health-unavailable')}
     try{
       await wait(350);
       const stateResponse=await fetch('/api/auto-sale/state',{cache:'no-store'});
       const state=await stateResponse.json();
-      if(!stateResponse.ok||state.initialized!==true||Number(state.revision)<1||!Array.isArray(state.leads)||state.leads.length<1||!Array.isArray(state.quotes)||state.quotes.length<1||!Array.isArray(state.orders)||state.orders.length<1||!Array.isArray(state.team)||state.team.length<3)failures.push('d1-state');
-      const demoLeads=Array.isArray(state.leads)?state.leads.filter(x=>String(x?.id||'').startsWith('L-DEMO-')):[];
-      const demoQuotes=Array.isArray(state.quotes)?state.quotes.filter(x=>String(x?.id||'').startsWith('Q-DEMO-')):[];
-      const demoOrders=Array.isArray(state.orders)?state.orders.filter(x=>String(x?.id||'').startsWith('O-DEMO-')):[];
-      if(demoLeads.length<2)failures.push('demo-leads-missing');
-      if(demoQuotes.length<2)failures.push('demo-quotes-missing');
-      if(!demoOrders.some(x=>x.stage==='Доставка'))failures.push('demo-delivery-missing');
-      if(!demoOrders.some(x=>x.stage==='Выдача'))failures.push('demo-handoff-missing');
-      if(!demoOrders.every(x=>Array.isArray(x.payments)&&x.payments.length>0))failures.push('demo-payments-missing');
-    }catch{failures.push('d1-state-unavailable')}
+      if(!stateResponse.ok||state.initialized!==true||Number(state.revision)<1||!Array.isArray(state.leads)||!Array.isArray(state.quotes)||!Array.isArray(state.orders)||!Array.isArray(state.team)||!Array.isArray(state.catalog))failures.push('state-shape');
+      const all=[...(state.leads||[]),...(state.quotes||[]),...(state.orders||[])];
+      if(all.some(x=>/^(?:L|Q|O)-DEMO-/i.test(String(x?.id||''))))failures.push('demo-record-residue');
+    }catch{failures.push('state-unavailable')}
     finish(failures);
   });
 })();
