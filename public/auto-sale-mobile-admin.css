@@ -2,3 +2,66 @@
 @media(max-width:480px){.auto-panel-title small{max-width:none}.auto-finance-bars>div{grid-template-columns:1fr auto;gap:5px 10px}.auto-finance-bars i{grid-column:1/-1}.auto-data-table.mini .auto-data-row{grid-template-columns:1fr auto}.auto-data-table.mini .auto-data-row>*:nth-child(4){display:none}}
 @media(max-width:380px){.auto-data-row,.auto-data-table.orders .auto-data-row,.auto-data-table.finance .auto-data-row{grid-template-columns:1fr;padding-right:34px}.auto-data-row>span:first-child,.auto-data-table.orders .auto-data-row>span:nth-child(2){grid-column:1}.auto-inline-fields{grid-template-columns:1fr}}
 .auto-form-error{display:grid;gap:5px;padding:11px 12px;border:1px solid rgba(255,179,71,.35);border-radius:12px;background:rgba(255,179,71,.08);color:var(--warn);font-size:11px;line-height:1.4}.auto-conditional-hidden{display:none!important}.auto-inline-fields{display:grid;gap:7px}.auto-rule-hint{display:block;color:var(--muted);font-size:9px;line-height:1.4}.auto-rule-hint.good{color:var(--good)}.auto-btn:disabled{opacity:.42;cursor:not-allowed}.auto-form-divider{padding-top:8px;border-top:1px solid var(--line);color:var(--accent2);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.auto-payment-list{display:grid;gap:7px}.auto-payment-list>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:9px;border-radius:10px;background:#080d12}.auto-payment-list span,.auto-payment-list strong,.auto-payment-list small{min-width:0}.auto-payment-list span{color:var(--muted);font-size:9px}.auto-payment-list span b{display:block;margin-bottom:3px;color:var(--text);font-size:10px}.auto-payment-list strong{color:var(--accent2);font-size:11px}.auto-payment-list small{grid-column:1/-1;color:var(--muted);font-size:8px;overflow-wrap:anywhere}
+
+/* Manager catalog: mobile card layout.
+   Keep this selector more specific than the desktop catalog grid so 7 columns
+   cannot collapse into unreadable vertical text on narrow screens. */
+@media(max-width:720px){
+  .auto-data-table.catalog{
+    width:100%;
+    max-width:100%;
+    display:grid;
+    gap:10px;
+    overflow:visible!important
+  }
+  .auto-data-table.catalog .auto-data-head{display:none!important}
+  .auto-data-table.catalog .auto-data-row{
+    width:100%;
+    max-width:100%;
+    min-width:0!important;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    gap:10px 12px;
+    align-items:start;
+    padding:14px 40px 14px 14px
+  }
+  .auto-data-table.catalog .auto-data-row>span{
+    min-width:0;
+    width:auto;
+    max-width:100%;
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+    overflow-wrap:anywhere;
+    word-break:normal
+  }
+  .auto-data-table.catalog .auto-data-row>span:first-child{grid-column:1/-1}
+  .auto-data-table.catalog .auto-data-row>span:first-child b,
+  .auto-data-table.catalog .auto-data-row>span:first-child small{
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+    overflow-wrap:anywhere
+  }
+  .auto-data-table.catalog .auto-data-row>span:not(:first-child):not(.auto-row-action){
+    display:grid;
+    gap:3px;
+    align-content:start
+  }
+  .auto-data-table.catalog .auto-status{
+    justify-self:start;
+    max-width:100%;
+    white-space:normal
+  }
+  .auto-data-table.catalog .auto-row-action{
+    position:absolute;
+    top:14px;
+    right:14px
+  }
+}
+@media(max-width:380px){
+  .auto-data-table.catalog .auto-data-row{
+    grid-template-columns:1fr!important;
+    padding-right:36px
+  }
+  .auto-data-table.catalog .auto-data-row>span{grid-column:1}
+}
