@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {seedTeam} from './fixtures/auto-sale-business.mjs';
 
 const set=(root,selector,value)=>{const el=root.querySelector(selector);assert.ok(el,`missing ${selector}`);el.value=value;return el;};
 const submit=(dom,form)=>form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
@@ -8,6 +9,7 @@ const submit=(dom,form)=>form.dispatchEvent(new dom.window.Event('submit',{bubbl
 test('validated client to handoff workflow preserves all business rules',async()=>{
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
   globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
   await import(`../public/auto-sale-app-v3.mjs?scenario=${Date.now()}`);
   const root=document.querySelector('#app');
 
