@@ -92,14 +92,15 @@ function normalizeSettledPaymentField(){
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
-await import('./auto-sale-app-v3.mjs?v=20260923-autoworld-import-1');
+await import('./auto-sale-app-v3.mjs?v=20260924-no-demo-1');
 await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-lead-serialization.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
-await import('./auto-sale-director-team.mjs?v=20260923-team-save-1');
-await import('./auto-sale-catalog-extra.mjs');
+await import('./auto-sale-director-team.mjs?v=20260924-no-demo-1');
+await import('./auto-sale-telegram.mjs?v=20260924-no-demo-1');
+await import('./auto-sale-telegram-id.mjs?v=20260924-no-demo-1');
 await import('./auto-sale-client-quote.mjs');
 normalizeSettledPaymentField();
 const appRoot=document.querySelector('#app');
