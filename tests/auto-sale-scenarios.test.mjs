@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
+import {seedBusinessStorage} from './fixtures/auto-sale-business.mjs';
 
 async function setup(tag){
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://auto-sale.viiversion.com/'});
   globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.localStorage=dom.window.localStorage;globalThis.sessionStorage=dom.window.sessionStorage;globalThis.FormData=dom.window.FormData;globalThis.Event=dom.window.Event;globalThis.CustomEvent=dom.window.CustomEvent;
+  seedBusinessStorage(localStorage);
   await import(`../public/auto-sale-app-v3.mjs?${tag}=${Date.now()}-${Math.random()}`);
   return{dom,root:document.querySelector('#app')};
 }
