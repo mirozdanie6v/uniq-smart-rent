@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 env:
-  DEPLOY_SHA: bd856392b8f684b5724823399e8977daec483921
+  DEPLOY_SHA: c073926620b55eb557dd8bf4730e441aff9a191c
   YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
   YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
   YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
