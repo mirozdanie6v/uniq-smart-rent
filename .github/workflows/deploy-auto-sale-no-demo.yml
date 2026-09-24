@@ -124,6 +124,7 @@ jobs:
           URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
           echo "STAGING_URL=$URL" >> "$GITHUB_ENV"
+          export STAGING_URL="$URL"
           for attempt in $(seq 1 20); do
             if curl -fsS "${URL%/}/api/health" >/dev/null; then break; fi
             test "$attempt" -lt 20 || exit 1
