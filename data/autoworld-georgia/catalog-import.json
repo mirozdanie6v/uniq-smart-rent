@@ -4,6 +4,7 @@
     "brand": "Kia",
     "model": "Soul",
     "year": 2023,
+    "body": "Компактный кроссовер",
     "mileage": "21 300 mi",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -48,14 +49,14 @@
       "VIN: KNDJ23AU3P7894711",
       "Расчёт источника: 10.09.2026"
     ],
-    "bestFor": "Kia Soul: 2023 год, привод FWD, двигатель 2,0l на 147HP, комплектация EX, пробег 21 300 mi. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах.",
-    "body": "Компактный кроссовер"
+    "bestFor": "Kia Soul: 2023 год, привод FWD, двигатель 2,0l на 147HP, комплектация EX, пробег 21 300 mi. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах."
   },
   {
     "id": "AWG-3747",
     "brand": "Kia",
     "model": "Soul",
     "year": 2022,
+    "body": "Компактный кроссовер",
     "mileage": "75 000 mi",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -100,14 +101,14 @@
       "VIN: KNDJ53AU2P7840145",
       "Расчёт источника: 10.09.2026"
     ],
-    "bestFor": "Kia Soul: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация GT-Line, пробег 75 000 mi. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах.",
-    "body": "Компактный кроссовер"
+    "bestFor": "Kia Soul: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация GT-Line, пробег 75 000 mi. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах."
   },
   {
     "id": "AWG-3737",
     "brand": "Kia",
     "model": "Seltos",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "44 100 mi",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -153,14 +154,66 @@
       "VIN: KNDEU2AA8P7432432",
       "Расчёт источника: 10.09.2026"
     ],
-    "bestFor": "Kia Seltos: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация S, пробег 44 100 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Kia Seltos: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация S, пробег 44 100 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
+  },
+  {
+    "id": "AWG-3723",
+    "brand": "Volkswagen",
+    "model": "T-Cross",
+    "year": 2022,
+    "body": "Кроссовер / SUV",
+    "mileage": "32 000 км",
+    "engine": "1,0l на 110HP",
+    "drive": "FWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "R-Line",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/main-1790169072180-main-1-16aa3848.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169073090-other-2-0ec6a477.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169073836-other-3-828a59d7.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169074377-other-4-4cb2d52a.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169074777-other-5-c08b8fef.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169075569-other-6-8d185f0d.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3723/other-1790169076342-other-7-1c313d86.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3723",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3723",
+    "publishedAt": "2026-09-10T01:30:42+00:00",
+    "vin": "",
+    "trim": "R-Line",
+    "transmission": "DSG",
+    "interior": "текстиль",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "10.09.2026",
+    "rawSourceTitle": "Volkswagen T-Cross 2022",
+    "power": "110 л.с.",
+    "seats": "текстиль",
+    "efficiency": "—",
+    "highlights": [
+      "Комплектация: R-Line",
+      "Расчёт источника: 10.09.2026"
+    ],
+    "bestFor": "Volkswagen T-Cross: 2022 год, привод FWD, двигатель 1,0l на 110HP, комплектация R-Line, пробег 32 000 км. Сбалансированный вариант для повседневных поездок и загородных маршрутов."
   },
   {
     "id": "AWG-3713",
     "brand": "BMW",
     "model": "228",
     "year": 2025,
+    "body": "4-дверное купе",
     "mileage": "15 500 mi",
     "engine": "2.0L на 241HP",
     "drive": "FWD",
@@ -189,9 +242,9 @@
     "trim": "GRAN COUPE",
     "transmission": "АКПП-8",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "08.09.2026",
@@ -209,14 +262,14 @@
       "Торги: 08.09.2026",
       "Расчёт источника: 08.09.2026"
     ],
-    "bestFor": "BMW 228: 2025 год, привод FWD, двигатель 2.0L на 241HP, комплектация GRAN COUPE, пробег 15 500 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "4-дверное купе"
+    "bestFor": "BMW 228: 2025 год, привод FWD, двигатель 2.0L на 241HP, комплектация GRAN COUPE, пробег 15 500 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-3703",
     "brand": "Kia",
     "model": "K4",
     "year": 2026,
+    "body": "Седан",
     "mileage": "393 mi",
     "engine": "2.0L на 147HP",
     "drive": "FWD",
@@ -245,9 +298,9 @@
     "trim": "EX",
     "transmission": "IVT",
     "interior": "кожа",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: спереди"
     ],
     "auctionDate": "09.09.2026",
@@ -265,14 +318,14 @@
       "Торги: 09.09.2026",
       "Расчёт источника: 08.09.2026"
     ],
-    "bestFor": "Kia K4: 2026 год, привод FWD, двигатель 2.0L на 147HP, комплектация EX, пробег 393 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Kia K4: 2026 год, привод FWD, двигатель 2.0L на 147HP, комплектация EX, пробег 393 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3695",
     "brand": "Hyundai",
     "model": "Venue",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "20 000 mi",
     "engine": "1.6l на 122HP",
     "drive": "FWD",
@@ -318,14 +371,14 @@
       "VIN: KMHRC8A3XPU265027",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "Hyundai Venue: 2023 год, привод FWD, двигатель 1.6l на 122HP, комплектация SEL, пробег 20 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Venue: 2023 год, привод FWD, двигатель 1.6l на 122HP, комплектация SEL, пробег 20 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3685",
     "brand": "Hyundai",
     "model": "Kona",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "26 000 mi",
     "engine": "2,0l на 147HP",
     "drive": "AWD",
@@ -371,14 +424,14 @@
       "VIN: KM8K3CAB0NU898919",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "Hyundai Kona: 2022 год, привод AWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 26 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Kona: 2022 год, привод AWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 26 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3677",
     "brand": "Toyota",
     "model": "Prius",
     "year": 2022,
+    "body": "Лифтбек",
     "mileage": "39 400 mi",
     "engine": "HYBRID 1.8l на 148HP",
     "drive": "FWD",
@@ -424,14 +477,14 @@
       "VIN: JTDKAMFU7N3190201",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель HYBRID 1.8l на 148HP, комплектация XLE, пробег 39 400 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность.",
-    "body": "Лифтбек"
+    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель HYBRID 1.8l на 148HP, комплектация XLE, пробег 39 400 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность."
   },
   {
     "id": "AWG-3667",
     "brand": "Kia",
     "model": "Forte",
     "year": 2021,
+    "body": "Седан",
     "mileage": "37 000 mi",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -477,14 +530,14 @@
       "VIN: 3KPF24AD0NE445365",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "Kia Forte: 2021 год, привод FWD, двигатель 2,0l на 147HP, комплектация FE, пробег 37 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Kia Forte: 2021 год, привод FWD, двигатель 2,0l на 147HP, комплектация FE, пробег 37 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3657",
     "brand": "GMC",
     "model": "Sierra 1500",
     "year": 2026,
+    "body": "Пикап",
     "mileage": "303 mi",
     "engine": "ДИЗЕЛЬ 3.0L на 305HP",
     "drive": "AWD",
@@ -513,9 +566,9 @@
     "trim": "DENALI",
     "transmission": "АКПП-10",
     "interior": "кожа",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "08.09.2026",
@@ -533,14 +586,14 @@
       "Торги: 08.09.2026",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "GMC Sierra 1500: 2026 год, привод AWD, двигатель ДИЗЕЛЬ 3.0L на 305HP, комплектация DENALI, пробег 303 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "GMC Sierra 1500: 2026 год, привод AWD, двигатель ДИЗЕЛЬ 3.0L на 305HP, комплектация DENALI, пробег 303 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-3647",
     "brand": "RAM",
     "model": "2500",
     "year": 2025,
+    "body": "Пикап",
     "mileage": "23 300 mi",
     "engine": "ДИЗЕЛЬ 6,7L на 430HP",
     "drive": "AWD",
@@ -569,9 +622,9 @@
     "trim": "Tradesman",
     "transmission": "АКПП",
     "interior": "текстиль",
-    "damage": "\"механическое\"",
+    "damage": "механическое",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: механическое"
     ],
     "auctionDate": "08.09.2026",
@@ -589,14 +642,14 @@
       "Торги: 08.09.2026",
       "Расчёт источника: 06.09.2026"
     ],
-    "bestFor": "RAM 2500: 2025 год, привод AWD, двигатель ДИЗЕЛЬ 6,7L на 430HP, комплектация Tradesman, пробег 23 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "RAM 2500: 2025 год, привод AWD, двигатель ДИЗЕЛЬ 6,7L на 430HP, комплектация Tradesman, пробег 23 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-3637",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2023,
+    "body": "Седан",
     "mileage": "42 400 mi",
     "engine": "HYBRID 1,6L на 139HP",
     "drive": "FWD",
@@ -625,9 +678,9 @@
     "trim": "Limited",
     "transmission": "Робот-6",
     "interior": "кожа",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: спереди"
     ],
     "auctionDate": "08.09.2026",
@@ -645,14 +698,14 @@
       "Торги: 08.09.2026",
       "Расчёт источника: 05.09.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2023 год, привод FWD, двигатель HYBRID 1,6L на 139HP, комплектация Limited, пробег 42 400 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2023 год, привод FWD, двигатель HYBRID 1,6L на 139HP, комплектация Limited, пробег 42 400 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3628",
     "brand": "Subaru",
     "model": "Crosstrek (рест)",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "21 400 mi",
     "engine": "2.0L на 152HP",
     "drive": "AWD",
@@ -681,9 +734,9 @@
     "trim": "Premium",
     "transmission": "CVT",
     "interior": "текстиль",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "10.09.2026",
@@ -701,14 +754,14 @@
       "Торги: 10.09.2026",
       "Расчёт источника: 05.09.2026"
     ],
-    "bestFor": "Subaru Crosstrek (рест): 2023 год, привод AWD, двигатель 2.0L на 152HP, комплектация Premium, пробег 21 400 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Subaru Crosstrek (рест): 2023 год, привод AWD, двигатель 2.0L на 152HP, комплектация Premium, пробег 21 400 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3617",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2021,
+    "body": "Седан",
     "mileage": "86 600 mi",
     "engine": "1.6 hybrid, на 139HP",
     "drive": "FWD",
@@ -754,14 +807,14 @@
       "VIN: KMHLN4AJ2NU017438",
       "Расчёт источника: 03.09.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2021 год, привод FWD, двигатель 1.6 hybrid, на 139HP, комплектация LIMITED, пробег 86 600 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2021 год, привод FWD, двигатель 1.6 hybrid, на 139HP, комплектация LIMITED, пробег 86 600 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3607",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2026,
+    "body": "Седан",
     "mileage": "1 500 mi",
     "engine": "1.6 hybrid , на 139HP",
     "drive": "FWD",
@@ -790,9 +843,9 @@
     "trim": "BLUE",
     "transmission": "Робот-6",
     "interior": "текстиль",
-    "damage": "\"сзади справа\"",
+    "damage": "сзади справа",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади справа"
     ],
     "auctionDate": "03.09.2026",
@@ -810,14 +863,14 @@
       "Торги: 03.09.2026",
       "Расчёт источника: 02.09.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2026 год, привод FWD, двигатель 1.6 hybrid , на 139HP, комплектация BLUE, пробег 1 500 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2026 год, привод FWD, двигатель 1.6 hybrid , на 139HP, комплектация BLUE, пробег 1 500 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3597",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2025,
+    "body": "Кроссовер / SUV",
     "mileage": "7 800 mi",
     "engine": "1.3l на 155HP",
     "drive": "AWD",
@@ -846,7 +899,7 @@
     "trim": "LT",
     "transmission": "АКПП -9",
     "interior": "текстиль",
-    "damage": "\"сзади слева\"",
+    "damage": "сзади слева",
     "safety": [
       "Повреждения: сзади слева"
     ],
@@ -865,14 +918,14 @@
       "Торги: 03.09.2026",
       "Расчёт источника: 02.09.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2025 год, привод AWD, двигатель 1.3l на 155HP, комплектация LT, пробег 7 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2025 год, привод AWD, двигатель 1.3l на 155HP, комплектация LT, пробег 7 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3586",
     "brand": "Buick",
     "model": "Envista",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "53 500 км",
     "engine": "1,2l на 139HP",
     "drive": "FWD",
@@ -918,14 +971,14 @@
       "VIN: KL47LAE2XRB021326",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Buick Envista: 2023 год, привод FWD, двигатель 1,2l на 139HP, комплектация Preferred, пробег 53 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Buick Envista: 2023 год, привод FWD, двигатель 1,2l на 139HP, комплектация Preferred, пробег 53 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3577",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2022,
+    "body": "Седан",
     "mileage": "70 000 км",
     "engine": "2.0l на 147HP",
     "drive": "FWD",
@@ -971,14 +1024,14 @@
       "VIN: KMHLP4AG7NU333089",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2.0l на 147HP, комплектация LIMITED, пробег 70 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2.0l на 147HP, комплектация LIMITED, пробег 70 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3569",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "72 000 км",
     "engine": "1,3l на 155HP",
     "drive": "AWD",
@@ -1024,14 +1077,14 @@
       "VIN: KL79MSSL4PB207923",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2023 год, привод AWD, двигатель 1,3l на 155HP, комплектация ACTIVE, пробег 72 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2023 год, привод AWD, двигатель 1,3l на 155HP, комплектация ACTIVE, пробег 72 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3561",
     "brand": "Kia",
     "model": "K4",
     "year": 2026,
+    "body": "Седан",
     "mileage": "3 000 км",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -1077,14 +1130,14 @@
       "VIN: 3KPFT4DE8TE274511",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Kia K4: 2026 год, привод FWD, двигатель 2,0l на 147HP, комплектация LXS, пробег 3 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Kia K4: 2026 год, привод FWD, двигатель 2,0l на 147HP, комплектация LXS, пробег 3 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3553",
     "brand": "Nissan",
     "model": "Rogue Sport (Qashqai)",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "41 000 км",
     "engine": "2,0l на 141HP",
     "drive": "AWD",
@@ -1130,14 +1183,14 @@
       "VIN: JN1BJ1BW3PW106871",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Nissan Rogue Sport (Qashqai): 2023 год, привод AWD, двигатель 2,0l на 141HP, комплектация SV, пробег 41 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Nissan Rogue Sport (Qashqai): 2023 год, привод AWD, двигатель 2,0l на 141HP, комплектация SV, пробег 41 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3543",
     "brand": "Honda",
     "model": "HR-V",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "39 000 км",
     "engine": "1,8l на 141HP",
     "drive": "AWD",
@@ -1183,14 +1236,14 @@
       "VIN: 3CZRU6H13NM770526",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Honda HR-V: 2022 год, привод AWD, двигатель 1,8l на 141HP, комплектация SPORT, пробег 39 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Honda HR-V: 2022 год, привод AWD, двигатель 1,8l на 141HP, комплектация SPORT, пробег 39 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3533",
     "brand": "Chevrolet",
     "model": "Trax",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "62 000 км",
     "engine": "1,2l на 139HP",
     "drive": "FWD",
@@ -1236,14 +1289,14 @@
       "VIN: KL77LFE22RC081143",
       "Расчёт источника: 01.09.2026"
     ],
-    "bestFor": "Chevrolet Trax: 2023 год, привод FWD, двигатель 1,2l на 139HP, комплектация SP, пробег 62 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trax: 2023 год, привод FWD, двигатель 1,2l на 139HP, комплектация SP, пробег 62 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3405",
     "brand": "Subaru",
     "model": "Crosstrek",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "22 300 mi",
     "engine": "2.0l, на 152HP",
     "drive": "AWD",
@@ -1267,7 +1320,7 @@
     "interior": "",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1281,14 +1334,14 @@
       "Комплектация: Premium",
       "VIN: JF2GUADC1R8888478"
     ],
-    "bestFor": "Subaru Crosstrek: 2024 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Premium, пробег 22 300 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Subaru Crosstrek: 2024 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Premium, пробег 22 300 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3385",
     "brand": "Mercedes-Benz",
     "model": "GLE",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "67 800 mi",
     "engine": "гибрид 2.0l, на 381HP",
     "drive": "4Matic",
@@ -1317,9 +1370,9 @@
     "trim": "450E",
     "transmission": "АКПП-9",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "13.08.2026",
@@ -1337,14 +1390,118 @@
       "Торги: 13.08.2026",
       "Расчёт источника: 12.08.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE: 2023 год, привод 4Matic, двигатель гибрид 2.0l, на 381HP, комплектация 450E, пробег 67 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE: 2023 год, привод 4Matic, двигатель гибрид 2.0l, на 381HP, комплектация 450E, пробег 67 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
+  },
+  {
+    "id": "AWG-3373",
+    "brand": "Chevrolet",
+    "model": "TRAX",
+    "year": 2023,
+    "body": "Кроссовер / SUV",
+    "mileage": "109 400 км",
+    "engine": "1.2l на 139HP",
+    "drive": "FWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "2RS",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/main-1790168913030-main-1-87e15136.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168913999-other-2-e5080c7b.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168914589-other-3-36738cb7.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168915395-other-4-a3984b81.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168916195-other-5-e3f12a5c.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168916976-other-6-9ae6a56e.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3373/other-1790168917455-other-7-ebadee14.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3373",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3373",
+    "publishedAt": "2026-08-04T12:53:31+00:00",
+    "vin": "",
+    "trim": "2RS",
+    "transmission": "АКПП-6",
+    "interior": "кожа",
+    "damage": "без повреждений",
+    "safety": [
+      "Безопасность: завод",
+      "Повреждения: без повреждений"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "04.08.2026",
+    "rawSourceTitle": "Chevrolet TRAX 05/2023",
+    "power": "139 л.с.",
+    "seats": "кожа",
+    "efficiency": "—",
+    "highlights": [
+      "Комплектация: 2RS",
+      "Расчёт источника: 04.08.2026"
+    ],
+    "bestFor": "Chevrolet TRAX: 2023 год, привод FWD, двигатель 1.2l на 139HP, комплектация 2RS, пробег 109 400 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
+  },
+  {
+    "id": "AWG-3357",
+    "brand": "Opel",
+    "model": "Astra",
+    "year": 2023,
+    "body": "Компактный автомобиль",
+    "mileage": "10 000 км",
+    "engine": "1.2l на 130HP",
+    "drive": "AWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "AutoWorld",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/main-1790168908485-main-1-9d8c99bb.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168909249-other-2-03256350.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168910029-other-3-8b81ce2e.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168910614-other-4-b7964fe6.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168911032-other-5-d08d8bca.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168911449-other-6-11380e22.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3357/other-1790168911931-other-7-33ae942e.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3357",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3357",
+    "publishedAt": "2026-08-04T03:30:36+00:00",
+    "vin": "",
+    "trim": "",
+    "transmission": "CVT",
+    "interior": "текстиль",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "04.08.2026",
+    "rawSourceTitle": "Opel Astra 06/2023",
+    "power": "130 л.с.",
+    "seats": "текстиль",
+    "efficiency": "—",
+    "highlights": [
+      "Расчёт источника: 04.08.2026"
+    ],
+    "bestFor": "Opel Astra: 2023 год, привод AWD, двигатель 1.2l на 130HP, пробег 10 000 км. Сбалансированный вариант для повседневных поездок и загородных маршрутов."
   },
   {
     "id": "AWG-3353",
     "brand": "Subaru",
     "model": "Crosstrek",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "68 500 км",
     "engine": "2.0l на 152HP",
     "drive": "AWD",
@@ -1373,7 +1530,7 @@
     "interior": "текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1388,14 +1545,14 @@
       "VIN: JF2GTAEC3N8250759",
       "Расчёт источника: 04.08.2026"
     ],
-    "bestFor": "Subaru Crosstrek: 2022 год, привод AWD, двигатель 2.0l на 152HP, комплектация Premium, пробег 68 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Subaru Crosstrek: 2022 год, привод AWD, двигатель 2.0l на 152HP, комплектация Premium, пробег 68 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3326",
     "brand": "Volkswagen",
     "model": "Jetta",
     "year": 2019,
+    "body": "Седан",
     "mileage": "71 200 mi",
     "engine": "1,4l на 147HP",
     "drive": "FWD",
@@ -1441,14 +1598,14 @@
       "VIN: 3VWG57BU0KM207784",
       "Расчёт источника: 03.08.2026"
     ],
-    "bestFor": "Volkswagen Jetta: 2019 год, привод FWD, двигатель 1,4l на 147HP, комплектация SEL PREMIUM, пробег 71 200 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Volkswagen Jetta: 2019 год, привод FWD, двигатель 1,4l на 147HP, комплектация SEL PREMIUM, пробег 71 200 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3316",
     "brand": "Subaru",
     "model": "Impreza",
     "year": 2025,
+    "body": "Компактный автомобиль",
     "mileage": "9 900 mi",
     "engine": "2.0l, на 152HP",
     "drive": "AWD",
@@ -1477,9 +1634,9 @@
     "trim": "Base 5-Door",
     "transmission": "CVT",
     "interior": "текстиль",
-    "damage": "\"кража, стекло\"",
+    "damage": "кража, стекло",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: кража, стекло"
     ],
     "auctionDate": "04.08.2026",
@@ -1497,14 +1654,169 @@
       "Торги: 04.08.2026",
       "Расчёт источника: 02.08.2026"
     ],
-    "bestFor": "Subaru Impreza: 2025 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Base 5-Door, пробег 9 900 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Компактный автомобиль"
+    "bestFor": "Subaru Impreza: 2025 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Base 5-Door, пробег 9 900 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
+  },
+  {
+    "id": "AWG-3310",
+    "brand": "Kia",
+    "model": "Sportage",
+    "year": 2026,
+    "body": "Кроссовер / SUV",
+    "mileage": "0 км",
+    "engine": "2.0l на 156HP",
+    "drive": "AWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "GT-LINE PREMIUM",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/main-1790168886747-main-1-c091a40d.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168887195-other-2-ad5960e4.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168887623-other-3-a5f00c67.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168888077-other-4-891248d4.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168888503-other-5-789dca99.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168889280-other-6-e436ad97.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3310/other-1790168889755-other-7-66e1cc9a.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3310",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3310",
+    "publishedAt": "2026-08-01T12:44:53+00:00",
+    "vin": "",
+    "trim": "GT-LINE PREMIUM",
+    "transmission": "АКПП-8",
+    "interior": "кожа, алькантара",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "01.07.2026",
+    "rawSourceTitle": "KIA Sportage 2026",
+    "power": "156 л.с.",
+    "seats": "кожа, алькантара",
+    "efficiency": "—",
+    "highlights": [
+      "Комплектация: GT-LINE PREMIUM",
+      "Расчёт источника: 01.07.2026"
+    ],
+    "bestFor": "Kia Sportage: 2026 год, привод AWD, двигатель 2.0l на 156HP, комплектация GT-LINE PREMIUM, пробег 0 км. Сбалансированный вариант для повседневных поездок и загородных маршрутов."
+  },
+  {
+    "id": "AWG-3290",
+    "brand": "Hyundai",
+    "model": "Tucson",
+    "year": 2026,
+    "body": "Кроссовер / SUV",
+    "mileage": "0 км",
+    "engine": "2.0l на 150HP",
+    "drive": "AWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "PRIME",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/main-1790168877857-main-1-c93ebf4c.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168878862-other-2-5812d8ba.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168880022-other-3-46e39560.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168880977-other-4-86da0476.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168881781-other-5-78c35fd4.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168882676-other-6-bf951b52.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3290/other-1790168883621-other-7-e4917e68.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3290",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3290",
+    "publishedAt": "2026-08-01T12:08:39+00:00",
+    "vin": "",
+    "trim": "PRIME",
+    "transmission": "АКПП-6",
+    "interior": "Кожаный руль",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "01.07.2026",
+    "rawSourceTitle": "Hyundai Tucson 2026",
+    "power": "150 л.с.",
+    "seats": "Кожаный руль",
+    "efficiency": "—",
+    "highlights": [
+      "Комплектация: PRIME",
+      "Расчёт источника: 01.07.2026"
+    ],
+    "bestFor": "Hyundai Tucson: 2026 год, привод AWD, двигатель 2.0l на 150HP, комплектация PRIME, пробег 0 км. Сбалансированный вариант для повседневных поездок и загородных маршрутов."
+  },
+  {
+    "id": "AWG-3282",
+    "brand": "Hyundai",
+    "model": "Venue",
+    "year": 2023,
+    "body": "Кроссовер / SUV",
+    "mileage": "0 км",
+    "engine": "1.0l на 120HP",
+    "drive": "FWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "AutoWorld",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/main-1790168870804-main-1-5578a01d.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168871575-other-2-a4cf71b5.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168872349-other-3-8c628ce8.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168873104-other-4-e4dd248c.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168873880-other-5-8a3745e7.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168874656-other-6-c1f9126d.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3282/other-1790168875420-other-7-47f088dc.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3282",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3282",
+    "publishedAt": "2026-08-01T10:19:12+00:00",
+    "vin": "",
+    "trim": "",
+    "transmission": "CVT",
+    "interior": "комбинированный",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "01.07.2026",
+    "rawSourceTitle": "Hyundai Venue 03/2023",
+    "power": "120 л.с.",
+    "seats": "комбинированный",
+    "efficiency": "—",
+    "highlights": [
+      "Расчёт источника: 01.07.2026"
+    ],
+    "bestFor": "Hyundai Venue: 2023 год, привод FWD, двигатель 1.0l на 120HP, пробег 0 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3272",
     "brand": "Kia",
     "model": "Soul",
     "year": 2021,
+    "body": "Компактный кроссовер",
     "mileage": "103 500 км",
     "engine": "2.0l на 147HP",
     "drive": "FWD",
@@ -1535,7 +1847,7 @@
     "interior": "текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1550,14 +1862,66 @@
       "VIN: KNDJ23AUXN7813393",
       "Расчёт источника: 01.07.2026"
     ],
-    "bestFor": "Kia Soul: 2021 год, привод FWD, двигатель 2.0l на 147HP, комплектация LX, пробег 103 500 км. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах.",
-    "body": "Компактный кроссовер"
+    "bestFor": "Kia Soul: 2021 год, привод FWD, двигатель 2.0l на 147HP, комплектация LX, пробег 103 500 км. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах."
+  },
+  {
+    "id": "AWG-3262",
+    "brand": "Chevrolet",
+    "model": "Trailblazer",
+    "year": 2023,
+    "body": "Кроссовер / SUV",
+    "mileage": "56 000 км",
+    "engine": "1,3l на 155HP",
+    "drive": "FWD",
+    "auction": "AutoWorld Georgia",
+    "price": 0,
+    "priceRub": 0,
+    "estimatedBidUsd": 0,
+    "delivery": "Срок по запросу",
+    "tag": "Activ",
+    "image": "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/main-1790168857091-main-1-883acb0d.jpg",
+    "interiorPhotos": [],
+    "otherPhotos": [
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168857885-other-2-3305f5bf.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168858654-other-3-9a05b250.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168859320-other-4-0bfdbaba.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168859956-other-5-c7dc7d81.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168860397-other-6-cfb8efb8.jpg",
+      "https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/autoworld-3262/other-1790168861200-other-7-8c311f27.jpg"
+    ],
+    "active": true,
+    "source": "AutoWorld_Georgia",
+    "sourcePostId": "3262",
+    "sourceUrl": "https://t.me/AutoWorld_Georgia/3262",
+    "publishedAt": "2026-08-01T09:00:56+00:00",
+    "vin": "",
+    "trim": "Activ",
+    "transmission": "CVT",
+    "interior": "комбинированный",
+    "damage": "",
+    "safety": [
+      "Безопасность: завод"
+    ],
+    "auctionDate": "",
+    "customsRub": 0,
+    "lot": "",
+    "calculationDate": "01.08.2026",
+    "rawSourceTitle": "Chevrolet Trailblazer 01/2023",
+    "power": "155 л.с.",
+    "seats": "комбинированный",
+    "efficiency": "—",
+    "highlights": [
+      "Комплектация: Activ",
+      "Расчёт источника: 01.08.2026"
+    ],
+    "bestFor": "Chevrolet Trailblazer: 2023 год, привод FWD, двигатель 1,3l на 155HP, комплектация Activ, пробег 56 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3049",
     "brand": "Kia",
     "model": "Seltos",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "67 000 км",
     "engine": "2.0l на 147HP",
     "drive": "AWD",
@@ -1588,7 +1952,7 @@
     "interior": "комбинированный",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1603,14 +1967,14 @@
       "VIN: KNDEUCAA4R7525330",
       "Расчёт источника: 12.07.2026"
     ],
-    "bestFor": "Kia Seltos: 2023 год, привод AWD, двигатель 2.0l на 147HP, комплектация S, пробег 67 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Kia Seltos: 2023 год, привод AWD, двигатель 2.0l на 147HP, комплектация S, пробег 67 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3040",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2023,
+    "body": "Седан",
     "mileage": "65 800 км",
     "engine": "2.0l на 147HP",
     "drive": "FWD",
@@ -1641,7 +2005,7 @@
     "interior": "качественный текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1656,14 +2020,14 @@
       "VIN: 5NPLS4AG6PH113023",
       "Расчёт источника: 12.07.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2023 год, привод FWD, двигатель 2.0l на 147HP, комплектация SEL +, пробег 65 800 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2023 год, привод FWD, двигатель 2.0l на 147HP, комплектация SEL +, пробег 65 800 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-3031",
     "brand": "Chevrolet",
     "model": "Trax",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "53 600 км",
     "engine": "1,2l на 137HP",
     "drive": "FWD",
@@ -1694,7 +2058,7 @@
     "interior": "качественный текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -1709,14 +2073,14 @@
       "VIN: KL77LFE28RC019679",
       "Расчёт источника: 12.07.2026"
     ],
-    "bestFor": "Chevrolet Trax: 2023 год, привод FWD, двигатель 1,2l на 137HP, комплектация SP, пробег 53 600 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trax: 2023 год, привод FWD, двигатель 1,2l на 137HP, комплектация SP, пробег 53 600 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-3011",
     "brand": "Toyota",
     "model": "Tundra",
     "year": 2024,
+    "body": "Пикап",
     "mileage": "8 300 mi",
     "engine": "3.4l, на 389HP",
     "drive": "AWD",
@@ -1745,9 +2109,9 @@
     "trim": "SR5",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"механическое\"",
+    "damage": "механическое",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: механическое"
     ],
     "auctionDate": "14.07.2026",
@@ -1765,14 +2129,14 @@
       "Торги: 14.07.2026",
       "Расчёт источника: 11.07.2026"
     ],
-    "bestFor": "Toyota Tundra: 2024 год, привод AWD, двигатель 3.4l, на 389HP, комплектация SR5, пробег 8 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Toyota Tundra: 2024 год, привод AWD, двигатель 3.4l, на 389HP, комплектация SR5, пробег 8 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-3001",
     "brand": "Toyota",
     "model": "Tacoma",
     "year": 2025,
+    "body": "Пикап",
     "mileage": "9 300 mi",
     "engine": "2.4l, на 278HP",
     "drive": "AWD",
@@ -1801,10 +2165,9 @@
     "trim": "Double Cab Prerunner",
     "transmission": "АКПП",
     "interior": "надежный текстиль",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "13.07.2026",
     "customsRub": 0,
@@ -1821,14 +2184,14 @@
       "Торги: 13.07.2026",
       "Расчёт источника: 11.07.2026"
     ],
-    "bestFor": "Toyota Tacoma: 2025 год, привод AWD, двигатель 2.4l, на 278HP, комплектация Double Cab Prerunner, пробег 9 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Toyota Tacoma: 2025 год, привод AWD, двигатель 2.4l, на 278HP, комплектация Double Cab Prerunner, пробег 9 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2991",
     "brand": "Hyundai",
     "model": "Santa Cruz",
     "year": 2024,
+    "body": "Пикап",
     "mileage": "31 100 mi",
     "engine": "2.5l, на 191HP",
     "drive": "AWD",
@@ -1857,10 +2220,9 @@
     "trim": "Sel Activity",
     "transmission": "АКПП - 8",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "16.07.2026",
     "customsRub": 0,
@@ -1877,14 +2239,14 @@
       "Торги: 16.07.2026",
       "Расчёт источника: 11.07.2026"
     ],
-    "bestFor": "Hyundai Santa Cruz: 2024 год, привод AWD, двигатель 2.5l, на 191HP, комплектация Sel Activity, пробег 31 100 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Hyundai Santa Cruz: 2024 год, привод AWD, двигатель 2.5l, на 191HP, комплектация Sel Activity, пробег 31 100 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2981",
     "brand": "RAM",
     "model": "1500",
     "year": 2025,
+    "body": "Пикап",
     "mileage": "12 300 mi",
     "engine": "3,0l, на 420HP",
     "drive": "AWD",
@@ -1913,10 +2275,9 @@
     "trim": "Rebel 4X4 5'7 Box",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "13.07.2026",
     "customsRub": 0,
@@ -1933,14 +2294,14 @@
       "Торги: 13.07.2026",
       "Расчёт источника: 11.07.2026"
     ],
-    "bestFor": "RAM 1500: 2025 год, привод AWD, двигатель 3,0l, на 420HP, комплектация Rebel 4X4 5'7 Box, пробег 12 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "RAM 1500: 2025 год, привод AWD, двигатель 3,0l, на 420HP, комплектация Rebel 4X4 5'7 Box, пробег 12 300 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2961",
     "brand": "Kia",
     "model": "Seltos",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "41 300 mi",
     "engine": "2,0l на 147HP",
     "drive": "AWD",
@@ -1986,14 +2347,14 @@
       "VIN: KNDERCAA8R7497470",
       "Расчёт источника: 09.07.2026"
     ],
-    "bestFor": "Kia Seltos: 2023 год, привод AWD, двигатель 2,0l на 147HP, комплектация EX, пробег 41 300 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Kia Seltos: 2023 год, привод AWD, двигатель 2,0l на 147HP, комплектация EX, пробег 41 300 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2951",
     "brand": "Honda",
     "model": "CR-V",
     "year": 2026,
+    "body": "Кроссовер / SUV",
     "mileage": "1 000 mi",
     "engine": "1.5l, на 190HP",
     "drive": "AWD",
@@ -2022,10 +2383,9 @@
     "trim": "Exl",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "14.07.2026",
     "customsRub": 0,
@@ -2042,14 +2402,14 @@
       "Торги: 14.07.2026",
       "Расчёт источника: 09.07.2026"
     ],
-    "bestFor": "Honda CR-V: 2026 год, привод AWD, двигатель 1.5l, на 190HP, комплектация Exl, пробег 1 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Honda CR-V: 2026 год, привод AWD, двигатель 1.5l, на 190HP, комплектация Exl, пробег 1 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2941",
     "brand": "Porsche",
     "model": "Macan",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "24 100 mi",
     "engine": "2.0l, на 261HP",
     "drive": "AWD",
@@ -2078,10 +2438,9 @@
     "trim": "T",
     "transmission": "AКПП",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "13.07.2026",
     "customsRub": 0,
@@ -2098,14 +2457,14 @@
       "Торги: 13.07.2026",
       "Расчёт источника: 09.07.2026"
     ],
-    "bestFor": "Porsche Macan: 2023 год, привод AWD, двигатель 2.0l, на 261HP, комплектация T, пробег 24 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Porsche Macan: 2023 год, привод AWD, двигатель 2.0l, на 261HP, комплектация T, пробег 24 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2930",
     "brand": "Nissan",
     "model": "Sentra",
     "year": 2023,
+    "body": "Седан",
     "mileage": "45 300 км",
     "engine": "2,0l на 149HP",
     "drive": "FWD",
@@ -2151,14 +2510,14 @@
       "VIN: 3N1AB8DV9PY244266",
       "Расчёт источника: 05.07.2026"
     ],
-    "bestFor": "Nissan Sentra: 2023 год, привод FWD, двигатель 2,0l на 149HP, комплектация SR Xtronic, пробег 45 300 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Nissan Sentra: 2023 год, привод FWD, двигатель 2,0l на 149HP, комплектация SR Xtronic, пробег 45 300 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2920",
     "brand": "Hyundai",
     "model": "Santa Cruz",
     "year": 2023,
+    "body": "Пикап",
     "mileage": "62 200 mi",
     "engine": "2.5l, на 281HP",
     "drive": "AWD",
@@ -2187,10 +2546,9 @@
     "trim": "Limited",
     "transmission": "РКПП - 8",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "07.07.2026",
     "customsRub": 0,
@@ -2207,14 +2565,14 @@
       "Торги: 07.07.2026",
       "Расчёт источника: 06.07.2026"
     ],
-    "bestFor": "Hyundai Santa Cruz: 2023 год, привод AWD, двигатель 2.5l, на 281HP, комплектация Limited, пробег 62 200 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Hyundai Santa Cruz: 2023 год, привод AWD, двигатель 2.5l, на 281HP, комплектация Limited, пробег 62 200 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2911",
     "brand": "Volkswagen",
     "model": "Jetta",
     "year": 2021,
+    "body": "Седан",
     "mileage": "130 000 км",
     "engine": "1,4l на 147HP",
     "drive": "FWD",
@@ -2261,14 +2619,14 @@
       "Лот: 0670935",
       "Расчёт источника: 06.07.2026"
     ],
-    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1,4l на 147HP, комплектация SEL, пробег 130 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1,4l на 147HP, комплектация SEL, пробег 130 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2903",
     "brand": "Hyundai",
     "model": "Kona",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "29 700 км",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -2315,14 +2673,14 @@
       "Лот: 0572035",
       "Расчёт источника: 06.07.2026"
     ],
-    "bestFor": "Hyundai Kona: 2023 год, привод FWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 29 700 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Kona: 2023 год, привод FWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 29 700 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2766",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "31 100 mi",
     "engine": "1,35l на 155HP",
     "drive": "FWD",
@@ -2351,7 +2709,7 @@
     "trim": "RS",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"град\"",
+    "damage": "град",
     "safety": [
       "Безопасность: завод",
       "Повреждения: град"
@@ -2370,14 +2728,14 @@
       "Торги: 15.06.2026",
       "Расчёт источника: 12.06.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2023 год, привод FWD, двигатель 1,35l на 155HP, комплектация RS, пробег 31 100 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2023 год, привод FWD, двигатель 1,35l на 155HP, комплектация RS, пробег 31 100 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2755",
     "brand": "Toyota",
     "model": "Corolla",
     "year": 2022,
+    "body": "Седан",
     "mileage": "16 600 mi",
     "engine": "1,8l на 139HP",
     "drive": "FWD",
@@ -2406,7 +2764,7 @@
     "trim": "LE",
     "transmission": "CVT",
     "interior": "текстиль",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
       "Безопасность: завод",
       "Повреждения: сзади"
@@ -2425,14 +2783,14 @@
       "Торги: 11.06.2026",
       "Расчёт источника: 11.06.2026"
     ],
-    "bestFor": "Toyota Corolla: 2022 год, привод FWD, двигатель 1,8l на 139HP, комплектация LE, пробег 16 600 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Toyota Corolla: 2022 год, привод FWD, двигатель 1,8l на 139HP, комплектация LE, пробег 16 600 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2745",
     "brand": "Toyota",
     "model": "Prius",
     "year": 2021,
+    "body": "Лифтбек",
     "mileage": "40 200 mi",
     "engine": "Hibrid1,8l на 96HP",
     "drive": "AWD",
@@ -2461,7 +2819,7 @@
     "trim": "XLE AWD-E",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
       "Безопасность: завод",
       "Повреждения: сзади"
@@ -2480,14 +2838,14 @@
       "Торги: 18.06.2026",
       "Расчёт источника: 11.06.2026"
     ],
-    "bestFor": "Toyota Prius: 2021 год, привод AWD, двигатель Hibrid1,8l на 96HP, комплектация XLE AWD-E, пробег 40 200 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность.",
-    "body": "Лифтбек"
+    "bestFor": "Toyota Prius: 2021 год, привод AWD, двигатель Hibrid1,8l на 96HP, комплектация XLE AWD-E, пробег 40 200 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность."
   },
   {
     "id": "AWG-2735",
     "brand": "Toyota",
     "model": "Prius",
     "year": 2022,
+    "body": "Лифтбек",
     "mileage": "23 800 mi",
     "engine": "Hibrid1,8l на 96HP",
     "drive": "FWD",
@@ -2516,7 +2874,7 @@
     "trim": "Nightshade",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
       "Безопасность: завод",
       "Повреждения: сзади"
@@ -2535,14 +2893,14 @@
       "Торги: 15.06.2026",
       "Расчёт источника: 11.06.2026"
     ],
-    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель Hibrid1,8l на 96HP, комплектация Nightshade, пробег 23 800 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность.",
-    "body": "Лифтбек"
+    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель Hibrid1,8l на 96HP, комплектация Nightshade, пробег 23 800 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность."
   },
   {
     "id": "AWG-2726",
     "brand": "Mercedes-Benz",
     "model": "GLE Coupe",
     "year": 2023,
+    "body": "SUV-купе",
     "mileage": "30 900 mi",
     "engine": "3,0l, на 429HP",
     "drive": "AWD",
@@ -2571,10 +2929,9 @@
     "trim": "",
     "transmission": "AКПП-9",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "11.06.2026",
     "customsRub": 0,
@@ -2589,14 +2946,14 @@
       "Торги: 11.06.2026",
       "Расчёт источника: 09.06.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE Coupe: 2023 год, привод AWD, двигатель 3,0l, на 429HP, пробег 30 900 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "SUV-купе"
+    "bestFor": "Mercedes-Benz GLE Coupe: 2023 год, привод AWD, двигатель 3,0l, на 429HP, пробег 30 900 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2713",
     "brand": "Mitsubishi",
     "model": "Eclipse",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "25 400 mi",
     "engine": "1,5L на 152HP",
     "drive": "AWD",
@@ -2625,9 +2982,9 @@
     "trim": "SE",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "09.06.2026",
@@ -2644,14 +3001,14 @@
       "Торги: 09.06.2026",
       "Расчёт источника: 08.06.2026"
     ],
-    "bestFor": "Mitsubishi Eclipse: 2023 год, привод AWD, двигатель 1,5L на 152HP, комплектация SE, пробег 25 400 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mitsubishi Eclipse: 2023 год, привод AWD, двигатель 1,5L на 152HP, комплектация SE, пробег 25 400 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2704",
     "brand": "Buick",
     "model": "Encore GX",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "35 500 mi",
     "engine": "1.3l на 155HP",
     "drive": "FWD",
@@ -2697,14 +3054,14 @@
       "VIN: KL4MMDSL3PB079287",
       "Расчёт источника: 08.06.2026"
     ],
-    "bestFor": "Buick Encore GX: 2022 год, привод FWD, двигатель 1.3l на 155HP, комплектация Select, пробег 35 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Buick Encore GX: 2022 год, привод FWD, двигатель 1.3l на 155HP, комплектация Select, пробег 35 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2695",
     "brand": "Mercedes-Benz",
     "model": "GLE 350",
     "year": 2025,
+    "body": "Кроссовер / SUV",
     "mileage": "28 100 mi",
     "engine": "2,0l, на 255HP",
     "drive": "AWD",
@@ -2733,10 +3090,9 @@
     "trim": "",
     "transmission": "AКПП-9",
     "interior": "кожа",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "08.06.2026",
     "customsRub": 0,
@@ -2751,14 +3107,14 @@
       "Торги: 08.06.2026",
       "Расчёт источника: 07.06.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE 350: 2025 год, привод AWD, двигатель 2,0l, на 255HP, пробег 28 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE 350: 2025 год, привод AWD, двигатель 2,0l, на 255HP, пробег 28 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2685",
     "brand": "Ford",
     "model": "F350 Super Duty",
     "year": 2025,
+    "body": "Пикап",
     "mileage": "30 400 mi",
     "engine": "6.7l, на 475HP",
     "drive": "AWD",
@@ -2787,9 +3143,9 @@
     "trim": "XLT",
     "transmission": "AКПП-10",
     "interior": "надежный текстиль",
-    "damage": "\"механич.\"",
+    "damage": "механич.",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: механич."
     ],
     "auctionDate": "08.06.2026",
@@ -2806,14 +3162,14 @@
       "Торги: 08.06.2026",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Ford F350 Super Duty: 2025 год, привод AWD, двигатель 6.7l, на 475HP, комплектация XLT, пробег 30 400 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Ford F350 Super Duty: 2025 год, привод AWD, двигатель 6.7l, на 475HP, комплектация XLT, пробег 30 400 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2675",
     "brand": "Subaru",
     "model": "Impreza",
     "year": 2022,
+    "body": "Компактный автомобиль",
     "mileage": "30 800 mi",
     "engine": "2.0l, на 152HP",
     "drive": "AWD",
@@ -2842,9 +3198,9 @@
     "trim": "Sport",
     "transmission": "РКПП",
     "interior": "надежный текстиль",
-    "damage": "\"ГРАД\"",
+    "damage": "ГРАД",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: ГРАД"
     ],
     "auctionDate": "10.06.2026",
@@ -2861,14 +3217,14 @@
       "Торги: 10.06.2026",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Subaru Impreza: 2022 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Sport, пробег 30 800 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Компактный автомобиль"
+    "bestFor": "Subaru Impreza: 2022 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Sport, пробег 30 800 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2665",
     "brand": "Subaru",
     "model": "Impreza",
     "year": 2022,
+    "body": "Компактный автомобиль",
     "mileage": "23 500 mi",
     "engine": "2.0l, на 152HP",
     "drive": "AWD",
@@ -2897,9 +3253,9 @@
     "trim": "Base",
     "transmission": "CVT",
     "interior": "надежный текстиль",
-    "damage": "\"ГРАД\"",
+    "damage": "ГРАД",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: ГРАД"
     ],
     "auctionDate": "09.06.2026",
@@ -2916,14 +3272,14 @@
       "Торги: 09.06.2026",
       "Расчёт источника: 07.06.2026"
     ],
-    "bestFor": "Subaru Impreza: 2022 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Base, пробег 23 500 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Компактный автомобиль"
+    "bestFor": "Subaru Impreza: 2022 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Base, пробег 23 500 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2655",
     "brand": "Toyota",
     "model": "Prius",
     "year": 2022,
+    "body": "Лифтбек",
     "mileage": "26 000 mi",
     "engine": "1,8l, на 149HP",
     "drive": "FWD",
@@ -2952,9 +3308,9 @@
     "trim": "LE",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "08.06.2026",
@@ -2971,14 +3327,14 @@
       "Торги: 08.06.2026",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель 1,8l, на 149HP, комплектация LE, пробег 26 000 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность.",
-    "body": "Лифтбек"
+    "bestFor": "Toyota Prius: 2022 год, привод FWD, двигатель 1,8l, на 149HP, комплектация LE, пробег 26 000 mi. Рациональный вариант для ежедневной эксплуатации, города и тех, кому важны экономичность и практичность."
   },
   {
     "id": "AWG-2646",
     "brand": "Chevrolet",
     "model": "Trax",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "35 500 mi",
     "engine": "1.4l на 155HP",
     "drive": "AWD",
@@ -3009,7 +3365,7 @@
     "interior": "комбинированный",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -3024,14 +3380,14 @@
       "VIN: KL7CJPSM6NB561752",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1.4l на 155HP, комплектация 1LT, пробег 35 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1.4l на 155HP, комплектация 1LT, пробег 35 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2636",
     "brand": "Chevrolet",
     "model": "Trax",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "35 200 mi",
     "engine": "1,4l, на 155HP",
     "drive": "AWD",
@@ -3060,9 +3416,9 @@
     "trim": "1LT",
     "transmission": "АКПП-6",
     "interior": "комбинированный",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "10.06.2026",
@@ -3079,14 +3435,14 @@
       "Торги: 10.06.2026",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1,4l, на 155HP, комплектация 1LT, пробег 35 200 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1,4l, на 155HP, комплектация 1LT, пробег 35 200 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2627",
     "brand": "Ford",
     "model": "EcoSport",
     "year": 2021,
+    "body": "Кроссовер / SUV",
     "mileage": "61 700 mi",
     "engine": "1,0l, на 123HP",
     "drive": "FWD",
@@ -3115,9 +3471,9 @@
     "trim": "SE",
     "transmission": "АКПП-6",
     "interior": "надежный текстиль",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "11.06.2026",
@@ -3134,14 +3490,14 @@
       "Торги: 11.06.2026",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Ford EcoSport: 2021 год, привод FWD, двигатель 1,0l, на 123HP, комплектация SE, пробег 61 700 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Ford EcoSport: 2021 год, привод FWD, двигатель 1,0l, на 123HP, комплектация SE, пробег 61 700 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2598",
     "brand": "Ford",
     "model": "EcoSport",
     "year": 2021,
+    "body": "Кроссовер / SUV",
     "mileage": "43 300 км",
     "engine": "1,0l на 123HP",
     "drive": "FWD",
@@ -3187,14 +3543,14 @@
       "VIN: MAJ3S2FE5MC440845",
       "Расчёт источника: 06.06.2026"
     ],
-    "bestFor": "Ford EcoSport: 2021 год, привод FWD, двигатель 1,0l на 123HP, комплектация S, пробег 43 300 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Ford EcoSport: 2021 год, привод FWD, двигатель 1,0l на 123HP, комплектация S, пробег 43 300 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2588",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2022,
+    "body": "Седан",
     "mileage": "33 000 mi",
     "engine": "2,0l на 147HP",
     "drive": "FWD",
@@ -3240,14 +3596,14 @@
       "VIN: KMHLM4AG6PU453333",
       "Расчёт источника: 04.06.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 33 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2,0l на 147HP, комплектация SEL, пробег 33 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2584",
     "brand": "Chevrolet",
     "model": "Trax",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "20 500 mi",
     "engine": "1.4l на 155HP",
     "drive": "AWD",
@@ -3276,7 +3632,7 @@
     "interior": "качественный текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -3291,14 +3647,14 @@
       "VIN: KL7CJNSM5NB549208",
       "Расчёт источника: 04.06.2026"
     ],
-    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1.4l на 155HP, комплектация LT, пробег 20 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trax: 2022 год, привод AWD, двигатель 1.4l на 155HP, комплектация LT, пробег 20 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2574",
     "brand": "Ford",
     "model": "F-150",
     "year": 2025,
+    "body": "Пикап",
     "mileage": "10 700 mi",
     "engine": "3,5l, на 450HP",
     "drive": "AWD",
@@ -3327,9 +3683,9 @@
     "trim": "RAPTOR",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "08.06.2026",
@@ -3346,14 +3702,14 @@
       "Торги: 08.06.2026",
       "Расчёт источника: 04.06.2026"
     ],
-    "bestFor": "Ford F-150: 2025 год, привод AWD, двигатель 3,5l, на 450HP, комплектация RAPTOR, пробег 10 700 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "Ford F-150: 2025 год, привод AWD, двигатель 3,5l, на 450HP, комплектация RAPTOR, пробег 10 700 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2555",
     "brand": "Mercedes-Benz",
     "model": "GLE AMG 53",
     "year": 2021,
+    "body": "Кроссовер / SUV",
     "mileage": "15 300 mi",
     "engine": "3,0l, на 429HP",
     "drive": "AWD",
@@ -3382,9 +3738,9 @@
     "trim": "",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"слева",
+    "damage": "слева",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: слева"
     ],
     "auctionDate": "08.06.2026",
@@ -3400,14 +3756,14 @@
       "Торги: 08.06.2026",
       "Расчёт источника: 03.06.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE AMG 53: 2021 год, привод AWD, двигатель 3,0l, на 429HP, пробег 15 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE AMG 53: 2021 год, привод AWD, двигатель 3,0l, на 429HP, пробег 15 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2545",
     "brand": "Porsche",
     "model": "Cayenne Coupe",
     "year": 2022,
+    "body": "SUV-купе",
     "mileage": "85 000 mi",
     "engine": "3,0l, на 335HP",
     "drive": "AWD",
@@ -3436,9 +3792,9 @@
     "trim": "",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "05.06.2026",
@@ -3454,14 +3810,14 @@
       "Торги: 05.06.2026",
       "Расчёт источника: 03.06.2026"
     ],
-    "bestFor": "Porsche Cayenne Coupe: 2022 год, привод AWD, двигатель 3,0l, на 335HP, пробег 85 000 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "SUV-купе"
+    "bestFor": "Porsche Cayenne Coupe: 2022 год, привод AWD, двигатель 3,0l, на 335HP, пробег 85 000 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2535",
     "brand": "Porsche",
     "model": "Cayenne",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "27 500 mi",
     "engine": "3,0l, на 335HP",
     "drive": "AWD",
@@ -3490,9 +3846,9 @@
     "trim": "BASE",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "03.06.2026",
@@ -3509,14 +3865,14 @@
       "Торги: 03.06.2026",
       "Расчёт источника: 02.06.2026"
     ],
-    "bestFor": "Porsche Cayenne: 2022 год, привод AWD, двигатель 3,0l, на 335HP, комплектация BASE, пробег 27 500 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Porsche Cayenne: 2022 год, привод AWD, двигатель 3,0l, на 335HP, комплектация BASE, пробег 27 500 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2525",
     "brand": "Mercedes-Benz",
     "model": "GLE AMG 53",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "32 000 mi",
     "engine": "3,0l, на 429HP",
     "drive": "AWD",
@@ -3545,9 +3901,9 @@
     "trim": "",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: спереди"
     ],
     "auctionDate": "03.06.2026",
@@ -3563,14 +3919,14 @@
       "Торги: 03.06.2026",
       "Расчёт источника: 02.06.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE AMG 53: 2022 год, привод AWD, двигатель 3,0l, на 429HP, пробег 32 000 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE AMG 53: 2022 год, привод AWD, двигатель 3,0l, на 429HP, пробег 32 000 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2515",
     "brand": "Kia",
     "model": "Soul",
     "year": 2025,
+    "body": "Компактный кроссовер",
     "mileage": "Н/Д",
     "engine": "2,0l, на 147HP",
     "drive": "FWD",
@@ -3599,9 +3955,9 @@
     "trim": "EX",
     "transmission": "CVT",
     "interior": "качественный текстиль",
-    "damage": "\"кража, нет ключей\"",
+    "damage": "кража, нет ключей",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: кража, нет ключей"
     ],
     "auctionDate": "04.06.2026",
@@ -3618,14 +3974,14 @@
       "Торги: 04.06.2026",
       "Расчёт источника: 02.06.2026"
     ],
-    "bestFor": "Kia Soul: 2025 год, привод FWD, двигатель 2,0l, на 147HP, комплектация EX. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах.",
-    "body": "Компактный кроссовер"
+    "bestFor": "Kia Soul: 2025 год, привод FWD, двигатель 2,0l, на 147HP, комплектация EX. Компактный и практичный вариант для города, ежедневных поездок и тех, кому важен удобный салон при небольших габаритах."
   },
   {
     "id": "AWG-2505",
     "brand": "Kia",
     "model": "K4",
     "year": 2025,
+    "body": "Седан",
     "mileage": "6 045 mi",
     "engine": "2,0l, на 147HP",
     "drive": "FWD",
@@ -3654,9 +4010,9 @@
     "trim": "LXS",
     "transmission": "CVT",
     "interior": "качественный текстиль",
-    "damage": "\"град\"",
+    "damage": "град",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: град"
     ],
     "auctionDate": "02.06.2026",
@@ -3673,14 +4029,14 @@
       "Торги: 02.06.2026",
       "Расчёт источника: 01.06.2026"
     ],
-    "bestFor": "Kia K4: 2025 год, привод FWD, двигатель 2,0l, на 147HP, комплектация LXS, пробег 6 045 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Kia K4: 2025 год, привод FWD, двигатель 2,0l, на 147HP, комплектация LXS, пробег 6 045 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2495",
     "brand": "BMW",
     "model": "X6",
     "year": 2023,
+    "body": "SUV-купе",
     "mileage": "21 100 mi",
     "engine": "3,0l, на 375HP",
     "drive": "AWD",
@@ -3709,9 +4065,9 @@
     "trim": "",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: спереди"
     ],
     "auctionDate": "04.06.2026",
@@ -3727,14 +4083,14 @@
       "Торги: 04.06.2026",
       "Расчёт источника: 31.05.2026"
     ],
-    "bestFor": "BMW X6: 2023 год, привод AWD, двигатель 3,0l, на 375HP, пробег 21 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "SUV-купе"
+    "bestFor": "BMW X6: 2023 год, привод AWD, двигатель 3,0l, на 375HP, пробег 21 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2473",
     "brand": "GMC",
     "model": "CANYON",
     "year": 2024,
+    "body": "Пикап",
     "mileage": "11 000 mi",
     "engine": "2,7l, на 310HP",
     "drive": "4WD",
@@ -3763,9 +4119,9 @@
     "trim": "4Wd Elevation",
     "transmission": "АКПП - 8",
     "interior": "комбинированный",
-    "damage": "\"справа, ходовая\"",
+    "damage": "справа, ходовая",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: справа, ходовая"
     ],
     "auctionDate": "02.06.2026",
@@ -3782,14 +4138,14 @@
       "Торги: 02.06.2026",
       "Расчёт источника: 28.05.2026"
     ],
-    "bestFor": "GMC CANYON: 2024 год, привод 4WD, двигатель 2,7l, на 310HP, комплектация 4Wd Elevation, пробег 11 000 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город.",
-    "body": "Пикап"
+    "bestFor": "GMC CANYON: 2024 год, привод 4WD, двигатель 2,7l, на 310HP, комплектация 4Wd Elevation, пробег 11 000 mi. Практичный вариант для тех, кому нужны возможности пикапа, уверенная тяга и универсальность для работы и поездок за город."
   },
   {
     "id": "AWG-2315",
     "brand": "Subaru",
     "model": "Crosstrek",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "10 700 mi",
     "engine": "2.0l, на 152HP",
     "drive": "AWD",
@@ -3818,9 +4174,9 @@
     "trim": "Premium",
     "transmission": "CVT",
     "interior": "комбинированный",
-    "damage": "\"слева\"",
+    "damage": "слева",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: слева"
     ],
     "auctionDate": "13.05.2026",
@@ -3837,14 +4193,14 @@
       "Торги: 13.05.2026",
       "Расчёт источника: 10.05.2026"
     ],
-    "bestFor": "Subaru Crosstrek: 2024 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Premium, пробег 10 700 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Subaru Crosstrek: 2024 год, привод AWD, двигатель 2.0l, на 152HP, комплектация Premium, пробег 10 700 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2305",
     "brand": "Kia",
     "model": "Seltos",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "8 200 mi",
     "engine": "2.0l, на 149HP",
     "drive": "FWD",
@@ -3873,9 +4229,9 @@
     "trim": "S",
     "transmission": "CVT",
     "interior": "комбинированный",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "13.05.2026",
@@ -3892,14 +4248,14 @@
       "Торги: 13.05.2026",
       "Расчёт источника: 10.05.2026"
     ],
-    "bestFor": "Kia Seltos: 2024 год, привод FWD, двигатель 2.0l, на 149HP, комплектация S, пробег 8 200 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Kia Seltos: 2024 год, привод FWD, двигатель 2.0l, на 149HP, комплектация S, пробег 8 200 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2285",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "25 900 mi",
     "engine": "1.3l, на 155HP",
     "drive": "FWD",
@@ -3928,7 +4284,7 @@
     "trim": "LT",
     "transmission": "АКПП",
     "interior": "качественный текстиль, электронная панель, ассистент водителя...",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
       "Повреждения: незначительные"
     ],
@@ -3946,14 +4302,14 @@
       "Торги: 15.05.2026",
       "Расчёт источника: 09.05.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2023 год, привод FWD, двигатель 1.3l, на 155HP, комплектация LT, пробег 25 900 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2023 год, привод FWD, двигатель 1.3l, на 155HP, комплектация LT, пробег 25 900 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2266",
     "brand": "Nissan",
     "model": "Kicks",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "9800m",
     "engine": "1.6l на 125HP",
     "drive": "FWD",
@@ -3983,9 +4339,7 @@
     "transmission": "CVT",
     "interior": "качественный текстиль",
     "damage": "",
-    "safety": [
-      "Безопасность: "
-    ],
+    "safety": [],
     "auctionDate": "",
     "customsRub": 0,
     "lot": "",
@@ -3999,14 +4353,14 @@
       "VIN: 3N1CP5DV0PL513261",
       "Расчёт источника: 09.05.2026"
     ],
-    "bestFor": "Nissan Kicks: 2023 год, привод FWD, двигатель 1.6l на 125HP, комплектация SR, пробег 9800m. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Nissan Kicks: 2023 год, привод FWD, двигатель 1.6l на 125HP, комплектация SR, пробег 9800m. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2246",
     "brand": "Mercedes-Benz",
     "model": "GLE",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "26 400 mi",
     "engine": "2.0l, на 255HP",
     "drive": "AWD",
@@ -4035,9 +4389,9 @@
     "trim": "GLE-350",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, панорама, ассистент водителя...",
-    "damage": "\"царапины\"",
+    "damage": "царапины",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: царапины"
     ],
     "auctionDate": "08.05.2026",
@@ -4054,14 +4408,14 @@
       "Торги: 08.05.2026",
       "Расчёт источника: 07.05.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE: 2023 год, привод AWD, двигатель 2.0l, на 255HP, комплектация GLE-350, пробег 26 400 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE: 2023 год, привод AWD, двигатель 2.0l, на 255HP, комплектация GLE-350, пробег 26 400 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2236",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2022,
+    "body": "Седан",
     "mileage": "23 000 mi",
     "engine": "2.0l, на 147HP",
     "drive": "FWD",
@@ -4090,7 +4444,7 @@
     "trim": "SEL+",
     "transmission": "CVT",
     "interior": "качественный текстиль, электронная панель, ассистент водителя...",
-    "damage": "\"спереди справа\"",
+    "damage": "спереди справа",
     "safety": [
       "Повреждения: спереди справа"
     ],
@@ -4108,14 +4462,14 @@
       "Торги: 07.05.2026",
       "Расчёт источника: 07.05.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2.0l, на 147HP, комплектация SEL+, пробег 23 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2022 год, привод FWD, двигатель 2.0l, на 147HP, комплектация SEL+, пробег 23 000 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-2226",
     "brand": "Mercedes-Benz",
     "model": "AMG C63",
     "year": 2024,
+    "body": "Седан",
     "mileage": "28 300 mi",
     "engine": "гибрид 2,0l на 469HP",
     "drive": "AWD",
@@ -4144,9 +4498,9 @@
     "trim": "S E Performance",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, панорама, ассистент водителя...",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "11.05.2026",
@@ -4163,14 +4517,14 @@
       "Торги: 11.05.2026",
       "Расчёт источника: 07.05.2026"
     ],
-    "bestFor": "Mercedes-Benz AMG C63: 2024 год, привод AWD, двигатель гибрид 2,0l на 469HP, комплектация S E Performance, пробег 28 300 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "Mercedes-Benz AMG C63: 2024 год, привод AWD, двигатель гибрид 2,0l на 469HP, комплектация S E Performance, пробег 28 300 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-2205",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "35 800 mi",
     "engine": "1.3l, на 155HP",
     "drive": "AWD",
@@ -4199,7 +4553,7 @@
     "trim": "Activ",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, 2 ключа, электронная панель, ассистент водителя...",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
       "Повреждения: незначительные"
     ],
@@ -4217,14 +4571,14 @@
       "Торги: 07.05.2026",
       "Расчёт источника: 06.05.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2023 год, привод AWD, двигатель 1.3l, на 155HP, комплектация Activ, пробег 35 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2023 год, привод AWD, двигатель 1.3l, на 155HP, комплектация Activ, пробег 35 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2195",
     "brand": "BMW",
     "model": "X3",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "14 100 mi",
     "engine": "2.0l, на 248HP",
     "drive": "AWD",
@@ -4253,7 +4607,7 @@
     "trim": "XDRIVE 30I",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, панорама, ассистент водителя...",
-    "damage": "\"сзади,",
+    "damage": "сзади,",
     "safety": [
       "Повреждения: сзади,"
     ],
@@ -4271,14 +4625,14 @@
       "Торги: 05.05.2026",
       "Расчёт источника: 02.05.2026"
     ],
-    "bestFor": "BMW X3: 2024 год, привод AWD, двигатель 2.0l, на 248HP, комплектация XDRIVE 30I, пробег 14 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "BMW X3: 2024 год, привод AWD, двигатель 2.0l, на 248HP, комплектация XDRIVE 30I, пробег 14 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2185",
     "brand": "BMW",
     "model": "X2",
     "year": 2025,
+    "body": "Кроссовер / SUV",
     "mileage": "11 600 mi",
     "engine": "2.0l, на 312HP",
     "drive": "AWD",
@@ -4307,9 +4661,9 @@
     "trim": "M35I",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, панорама, ассистент водителя...",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: спереди"
     ],
     "auctionDate": "04.05.2026",
@@ -4326,14 +4680,14 @@
       "Торги: 04.05.2026",
       "Расчёт источника: 02.05.2026"
     ],
-    "bestFor": "BMW X2: 2025 год, привод AWD, двигатель 2.0l, на 312HP, комплектация M35I, пробег 11 600 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "BMW X2: 2025 год, привод AWD, двигатель 2.0l, на 312HP, комплектация M35I, пробег 11 600 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2155",
     "brand": "Mercedes-Benz",
     "model": "GLE",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "27 300 mi",
     "engine": "2.0l, на 255HP",
     "drive": "AWD",
@@ -4362,9 +4716,9 @@
     "trim": "GLE-350",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, панорама, ассистент водителя...",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "04.05.2026",
@@ -4381,14 +4735,14 @@
       "Торги: 04.05.2026",
       "Расчёт источника: 30.04.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE: 2023 год, привод AWD, двигатель 2.0l, на 255HP, комплектация GLE-350, пробег 27 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE: 2023 год, привод AWD, двигатель 2.0l, на 255HP, комплектация GLE-350, пробег 27 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2145",
     "brand": "Audi",
     "model": "Q5",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "31 800 mi",
     "engine": "2.0l, на 201HP",
     "drive": "AWD",
@@ -4417,9 +4771,9 @@
     "trim": "Premium 40",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод...",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "06.05.2026",
@@ -4436,14 +4790,14 @@
       "Торги: 06.05.2026",
       "Расчёт источника: 30.04.2026"
     ],
-    "bestFor": "Audi Q5: 2023 год, привод AWD, двигатель 2.0l, на 201HP, комплектация Premium 40, пробег 31 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Audi Q5: 2023 год, привод AWD, двигатель 2.0l, на 201HP, комплектация Premium 40, пробег 31 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-2135",
     "brand": "Volkswagen",
     "model": "Tiguan",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "18 800 mi",
     "engine": "2.0l, на 184HP",
     "drive": "AWD",
@@ -4472,10 +4826,9 @@
     "trim": "SEL R-line",
     "transmission": "АКПП",
     "interior": "кожа, эл.привод, электронная панель, сенсорный дисплей, ассистент водителя...",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "04.05.2026",
     "customsRub": 0,
@@ -4491,14 +4844,14 @@
       "Торги: 04.05.2026",
       "Расчёт источника: 30.04.2026"
     ],
-    "bestFor": "Volkswagen Tiguan: 2024 год, привод AWD, двигатель 2.0l, на 184HP, комплектация SEL R-line, пробег 18 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Volkswagen Tiguan: 2024 год, привод AWD, двигатель 2.0l, на 184HP, комплектация SEL R-line, пробег 18 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-2125",
     "brand": "Mercedes-Benz",
     "model": "GLA",
     "year": 2025,
+    "body": "Кроссовер / SUV",
     "mileage": "4 100 mi",
     "engine": "2.0l, на 221HP",
     "drive": "FWD",
@@ -4527,10 +4880,9 @@
     "trim": "GLA 250",
     "transmission": "АКПП",
     "interior": "кожа, электронная панель, сенсорный дисплей, ассистент водителя...",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "05.05.2026",
     "customsRub": 0,
@@ -4546,14 +4898,14 @@
       "Торги: 05.05.2026",
       "Расчёт источника: 29.04.2026"
     ],
-    "bestFor": "Mercedes-Benz GLA: 2025 год, привод FWD, двигатель 2.0l, на 221HP, комплектация GLA 250, пробег 4 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLA: 2025 год, привод FWD, двигатель 2.0l, на 221HP, комплектация GLA 250, пробег 4 100 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1964",
     "brand": "Hyundai",
     "model": "Kona",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "16 500 mi",
     "engine": "2,0l на 147HP",
     "drive": "AWD",
@@ -4584,7 +4936,7 @@
     "interior": "текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -4599,14 +4951,14 @@
       "VIN: KM8K2CAB2PU050479",
       "Расчёт источника: 12.04.2026"
     ],
-    "bestFor": "Hyundai Kona: 2023 год, привод AWD, двигатель 2,0l на 147HP, комплектация SE, пробег 16 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Kona: 2023 год, привод AWD, двигатель 2,0l на 147HP, комплектация SE, пробег 16 500 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1954",
     "brand": "Mitsubishi",
     "model": "Eclipse Cross",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "42 800 mi",
     "engine": "1.5l, на 152HP",
     "drive": "AWD",
@@ -4635,9 +4987,9 @@
     "trim": "SE",
     "transmission": "CVT",
     "interior": "кожа",
-    "damage": "\"вандализм\"",
+    "damage": "вандализм",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: вандализм"
     ],
     "auctionDate": "13.04.2026",
@@ -4654,14 +5006,14 @@
       "Торги: 13.04.2026",
       "Расчёт источника: 11.04.2026"
     ],
-    "bestFor": "Mitsubishi Eclipse Cross: 2024 год, привод AWD, двигатель 1.5l, на 152HP, комплектация SE, пробег 42 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mitsubishi Eclipse Cross: 2024 год, привод AWD, двигатель 1.5l, на 152HP, комплектация SE, пробег 42 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1944",
     "brand": "Volkswagen",
     "model": "Atlas",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "100 км",
     "engine": "2.0l, на 269HP",
     "drive": "AWD",
@@ -4690,10 +5042,9 @@
     "trim": "Sel",
     "transmission": "АКПП",
     "interior": "кожа, 7 мест, электронная панель, сенсорный дисплей, панорама, ассистент водителя",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: ",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "14.04.2026",
     "customsRub": 0,
@@ -4709,14 +5060,14 @@
       "Торги: 14.04.2026",
       "Расчёт источника: 11.04.2026"
     ],
-    "bestFor": "Volkswagen Atlas: 2024 год, привод AWD, двигатель 2.0l, на 269HP, комплектация Sel, пробег 100 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Volkswagen Atlas: 2024 год, привод AWD, двигатель 2.0l, на 269HP, комплектация Sel, пробег 100 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1933",
     "brand": "Volkswagen",
     "model": "Jetta",
     "year": 2021,
+    "body": "Седан",
     "mileage": "55 800 mi",
     "engine": "1.4l, на 147HP",
     "drive": "FWD",
@@ -4745,9 +5096,9 @@
     "trim": "S+",
     "transmission": "АКПП-8",
     "interior": "кожа, электропривод, климат, старт-стоп...",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "14.04.2026",
@@ -4764,14 +5115,14 @@
       "Торги: 14.04.2026",
       "Расчёт источника: 10.04.2026"
     ],
-    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1.4l, на 147HP, комплектация S+, пробег 55 800 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1.4l, на 147HP, комплектация S+, пробег 55 800 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-1911",
     "brand": "BMW",
     "model": "X7",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "30 600 mi",
     "engine": "3.0l, на 375HP",
     "drive": "AWD",
@@ -4800,9 +5151,9 @@
     "trim": "Xdrive40I",
     "transmission": "АКПП",
     "interior": "кожа, электронная панель, сенсорный дисплей, ассистент водителя, панорама...",
-    "damage": "\"бампер\"",
+    "damage": "бампер",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: бампер"
     ],
     "auctionDate": "13.04.2026",
@@ -4819,14 +5170,14 @@
       "Торги: 13.04.2026",
       "Расчёт источника: 10.04.2026"
     ],
-    "bestFor": "BMW X7: 2024 год, привод AWD, двигатель 3.0l, на 375HP, комплектация Xdrive40I, пробег 30 600 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "BMW X7: 2024 год, привод AWD, двигатель 3.0l, на 375HP, комплектация Xdrive40I, пробег 30 600 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1901",
     "brand": "BMW",
     "model": "530I",
     "year": 2024,
+    "body": "Седан",
     "mileage": "12 100 mi",
     "engine": "2.0l, на 255HP",
     "drive": "RWD",
@@ -4855,9 +5206,9 @@
     "trim": "",
     "transmission": "АКПП",
     "interior": "кожа, электронная панель, сенсорный дисплей, ассистент водителя, панорама...",
-    "damage": "\"незначительные\"",
+    "damage": "незначительные",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: незначительные"
     ],
     "auctionDate": "09.04.2026",
@@ -4873,14 +5224,14 @@
       "Торги: 09.04.2026",
       "Расчёт источника: 07.04.2026"
     ],
-    "bestFor": "BMW 530I: 2024 год, привод RWD, двигатель 2.0l, на 255HP, пробег 12 100 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "BMW 530I: 2024 год, привод RWD, двигатель 2.0l, на 255HP, пробег 12 100 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-1891",
     "brand": "Nissan",
     "model": "Kicks",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "12 800 mi",
     "engine": "2.0l, на 141HP",
     "drive": "FWD",
@@ -4909,9 +5260,9 @@
     "trim": "SR",
     "transmission": "CVT",
     "interior": "комбинированный, электронная панель, сенсорный дисплей, ассистент водителя....",
-    "damage": "\"сзади\"",
+    "damage": "сзади",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: сзади"
     ],
     "auctionDate": "09.04.2026",
@@ -4928,14 +5279,14 @@
       "Торги: 09.04.2026",
       "Расчёт источника: 07.04.2026"
     ],
-    "bestFor": "Nissan Kicks: 2024 год, привод FWD, двигатель 2.0l, на 141HP, комплектация SR, пробег 12 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Nissan Kicks: 2024 год, привод FWD, двигатель 2.0l, на 141HP, комплектация SR, пробег 12 800 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1882",
     "brand": "Nissan",
     "model": "Sentra",
     "year": 2021,
+    "body": "Седан",
     "mileage": "28 900 mi",
     "engine": "2,0l на 149HP",
     "drive": "FWD",
@@ -4966,7 +5317,7 @@
     "interior": "кожа",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -4981,14 +5332,14 @@
       "VIN: 3N1AB8DV9MY284844",
       "Расчёт источника: 06.04.2026"
     ],
-    "bestFor": "Nissan Sentra: 2021 год, привод FWD, двигатель 2,0l на 149HP, комплектация SR, пробег 28 900 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Nissan Sentra: 2021 год, привод FWD, двигатель 2,0l на 149HP, комплектация SR, пробег 28 900 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-1872",
     "brand": "Volkswagen",
     "model": "Jetta",
     "year": 2021,
+    "body": "Седан",
     "mileage": "31 400 mi",
     "engine": "1.4l, на 147HP",
     "drive": "FWD",
@@ -5017,7 +5368,7 @@
     "trim": "SEL Premium",
     "transmission": "АКПП-8",
     "interior": "кожа",
-    "damage": "\"спереди\"",
+    "damage": "спереди",
     "safety": [
       "Повреждения: спереди"
     ],
@@ -5035,14 +5386,14 @@
       "Торги: 06.04.2026",
       "Расчёт источника: 05.04.2026"
     ],
-    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1.4l, на 147HP, комплектация SEL Premium, пробег 31 400 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Volkswagen Jetta: 2021 год, привод FWD, двигатель 1.4l, на 147HP, комплектация SEL Premium, пробег 31 400 mi. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-1614",
     "brand": "Honda",
     "model": "HR-V",
     "year": 2021,
+    "body": "Кроссовер / SUV",
     "mileage": "40 600 mi",
     "engine": "1,8l на 141HP",
     "drive": "AWD",
@@ -5072,9 +5423,7 @@
     "transmission": "AKПП",
     "interior": "текстиль",
     "damage": "",
-    "safety": [
-      "Безопасность: "
-    ],
+    "safety": [],
     "auctionDate": "",
     "customsRub": 0,
     "lot": "",
@@ -5088,14 +5437,14 @@
       "VIN: 3CZRU6H10NM700952",
       "Расчёт источника: 02.03.2026"
     ],
-    "bestFor": "Honda HR-V: 2021 год, привод AWD, двигатель 1,8l на 141HP, комплектация AWD Sport, пробег 40 600 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Honda HR-V: 2021 год, привод AWD, двигатель 1,8l на 141HP, комплектация AWD Sport, пробег 40 600 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1457",
     "brand": "Mitsubishi",
     "model": "Eclipse Cross",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "34 500 км",
     "engine": "1.5l на 152HP",
     "drive": "AWD",
@@ -5126,7 +5475,7 @@
     "interior": "из качественного текстиля",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -5141,14 +5490,14 @@
       "VIN: JA4ATVAA4PZ609558",
       "Расчёт источника: 10.02.2026"
     ],
-    "bestFor": "Mitsubishi Eclipse Cross: 2023 год, привод AWD, двигатель 1.5l на 152HP, комплектация LE, пробег 34 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mitsubishi Eclipse Cross: 2023 год, привод AWD, двигатель 1.5l на 152HP, комплектация LE, пробег 34 500 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1437",
     "brand": "Acura",
     "model": "TLX",
     "year": 2025,
+    "body": "Седан",
     "mileage": "949 mi",
     "engine": "бензин",
     "drive": "AWD",
@@ -5196,14 +5545,14 @@
       "Торги: 09.02.2026",
       "Расчёт источника: 08.02.2026"
     ],
-    "bestFor": "Acura TLX: 2025 год, привод AWD, двигатель бензин, комплектация A-Spec Package, пробег 949 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "Acura TLX: 2025 год, привод AWD, двигатель бензин, комплектация A-Spec Package, пробег 949 mi. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-1427",
     "brand": "BMW",
     "model": "X1 M35I",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "11 200мl",
     "engine": "бензин",
     "drive": "AWD",
@@ -5251,14 +5600,14 @@
       "Торги: 09.02.2026",
       "Расчёт источника: 08.02.2026"
     ],
-    "bestFor": "BMW X1 M35I: 2024 год, привод AWD, двигатель бензин, комплектация M35i xDRIVE, пробег 11 200мl. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "BMW X1 M35I: 2024 год, привод AWD, двигатель бензин, комплектация M35i xDRIVE, пробег 11 200мl. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1383",
     "brand": "Mercedes-Benz",
     "model": "GLE",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "65 300 км",
     "engine": "бензин",
     "drive": "4️⃣",
@@ -5306,14 +5655,14 @@
       "Торги: 09.02.2026",
       "Расчёт источника: 05.02.2026"
     ],
-    "bestFor": "Mercedes-Benz GLE: 2023 год, привод 4️⃣, двигатель бензин, комплектация 350 4Matic, пробег 65 300 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLE: 2023 год, привод 4️⃣, двигатель бензин, комплектация 350 4Matic, пробег 65 300 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1373",
     "brand": "Mercedes-Benz",
     "model": "GLB 250",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "35 000 км",
     "engine": "2,0-turbo на 221HP",
     "drive": "4️⃣",
@@ -5344,7 +5693,7 @@
     "interior": "алькантара, панорама",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -5359,14 +5708,14 @@
       "VIN: W1N4M4HB6PW308003",
       "Расчёт источника: 03.02.2026"
     ],
-    "bestFor": "Mercedes-Benz GLB 250: 2023 год, привод 4️⃣, двигатель 2,0-turbo на 221HP, комплектация AMG Line, full packet, пробег 35 000 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLB 250: 2023 год, привод 4️⃣, двигатель 2,0-turbo на 221HP, комплектация AMG Line, full packet, пробег 35 000 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1363",
     "brand": "Land Rover",
     "model": "Range Rover Evoque",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "24 500 км",
     "engine": "бензин",
     "drive": "AWD",
@@ -5414,14 +5763,14 @@
       "Торги: 03.02.2026",
       "Расчёт источника: 02.02.2026"
     ],
-    "bestFor": "Land Rover Range Rover Evoque: 2023 год, привод AWD, двигатель бензин, комплектация Dynamic SE, пробег 24 500 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Land Rover Range Rover Evoque: 2023 год, привод AWD, двигатель бензин, комплектация Dynamic SE, пробег 24 500 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1303",
     "brand": "Audi",
     "model": "A6",
     "year": 2024,
+    "body": "Седан",
     "mileage": "5 200 км",
     "engine": "бензин",
     "drive": "RWD",
@@ -5469,14 +5818,14 @@
       "Торги: 03.02.2026",
       "Расчёт источника: 29.01.2026"
     ],
-    "bestFor": "Audi A6: 2024 год, привод RWD, двигатель бензин, комплектация Premium Plus, пробег 5 200 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "Audi A6: 2024 год, привод RWD, двигатель бензин, комплектация Premium Plus, пробег 5 200 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-1090",
     "brand": "Chevrolet",
     "model": "Trailblazer",
     "year": 2025,
+    "body": "Кроссовер / SUV",
     "mileage": "1 000 км",
     "engine": "1,3-turbo.",
     "drive": "FWD",
@@ -5507,7 +5856,7 @@
     "interior": "качественный текстиль",
     "damage": "царапина на бампере",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: царапина на бампере"
     ],
     "auctionDate": "12.01.2026",
@@ -5524,14 +5873,14 @@
       "Торги: 12.01.2026",
       "Расчёт источника: 11.01.2026"
     ],
-    "bestFor": "Chevrolet Trailblazer: 2025 год, привод FWD, двигатель 1,3-turbo., комплектация LS, пробег 1 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Chevrolet Trailblazer: 2025 год, привод FWD, двигатель 1,3-turbo., комплектация LS, пробег 1 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1080",
     "brand": "Audi",
     "model": "A3",
     "year": 2024,
+    "body": "Седан",
     "mileage": "14 500 км",
     "engine": "2,0-turbo",
     "drive": "FWD",
@@ -5562,7 +5911,7 @@
     "interior": "кожа",
     "damage": "без удара",
     "safety": [
-      "Безопасность: и кузов ",
+      "Безопасность: и кузов",
       "Повреждения: без удара"
     ],
     "auctionDate": "",
@@ -5578,14 +5927,14 @@
       "VIN: WAUAUDGY7RA137498",
       "Расчёт источника: 11.01.2026"
     ],
-    "bestFor": "Audi A3: 2024 год, привод FWD, двигатель 2,0-turbo, комплектация Premium 40 TFSI, пробег 14 500 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "Audi A3: 2024 год, привод FWD, двигатель 2,0-turbo, комплектация Premium 40 TFSI, пробег 14 500 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-1070",
     "brand": "Hyundai",
     "model": "Kona",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "30 000 км",
     "engine": "атмосферный",
     "drive": "AWD",
@@ -5616,7 +5965,7 @@
     "interior": "качественный текстиль",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -5631,14 +5980,14 @@
       "VIN: KM8K6CAB5PU946652",
       "Расчёт источника: 10.01.2026"
     ],
-    "bestFor": "Hyundai Kona: 2022 год, привод AWD, двигатель атмосферный, комплектация Sel, пробег 30 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Kona: 2022 год, привод AWD, двигатель атмосферный, комплектация Sel, пробег 30 000 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1059",
     "brand": "Mitsubishi",
     "model": "Eclipse Cross",
     "year": 2021,
+    "body": "Кроссовер / SUV",
     "mileage": "50 000мл",
     "engine": "1,5-turbo",
     "drive": "AWD",
@@ -5669,7 +6018,7 @@
     "interior": "кожа",
     "damage": "",
     "safety": [
-      "Безопасность: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -5684,14 +6033,14 @@
       "VIN: JA4ATWAA9NZ003496",
       "Расчёт источника: 08.01.2026"
     ],
-    "bestFor": "Mitsubishi Eclipse Cross: 2021 год, привод AWD, двигатель 1,5-turbo, комплектация SE, пробег 50 000мл. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mitsubishi Eclipse Cross: 2021 год, привод AWD, двигатель 1,5-turbo, комплектация SE, пробег 50 000мл. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1052",
     "brand": "Honda",
     "model": "H-RV",
     "year": 2022,
+    "body": "Кроссовер / SUV",
     "mileage": "17 400 км",
     "engine": "1.8",
     "drive": "AWD",
@@ -5737,14 +6086,14 @@
       "VIN: 3CZRU6H57NM752985",
       "Расчёт источника: 08.01.2026"
     ],
-    "bestFor": "Honda H-RV: 2022 год, привод AWD, двигатель 1.8, комплектация EX, пробег 17 400 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Honda H-RV: 2022 год, привод AWD, двигатель 1.8, комплектация EX, пробег 17 400 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1042",
     "brand": "Honda",
     "model": "H-RV",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "17 900 км",
     "engine": "2,0",
     "drive": "FWD",
@@ -5792,14 +6141,14 @@
       "Торги: 09.01.2026",
       "Расчёт источника: 08.01.2026"
     ],
-    "bestFor": "Honda H-RV: 2024 год, привод FWD, двигатель 2,0, комплектация LX, пробег 17 900 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Honda H-RV: 2024 год, привод FWD, двигатель 2,0, комплектация LX, пробег 17 900 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-1032",
     "brand": "Mercedes-Benz",
     "model": "GLB-250",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "34 400 км",
     "engine": "2,0-turbo.",
     "drive": "FWD",
@@ -5830,7 +6179,7 @@
     "interior": "светлая кожа",
     "damage": "Незначительная вмятина / царапины",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: Незначительная вмятина / царапины"
     ],
     "auctionDate": "09.01.2026",
@@ -5846,14 +6195,14 @@
       "Торги: 09.01.2026",
       "Расчёт источника: 08.01.2026"
     ],
-    "bestFor": "Mercedes-Benz GLB-250: 2024 год, привод FWD, двигатель 2,0-turbo., пробег 34 400 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLB-250: 2024 год, привод FWD, двигатель 2,0-turbo., пробег 34 400 км. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-1012",
     "brand": "Hyundai",
     "model": "Kona",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "14 200 км",
     "engine": "атмосферный",
     "drive": "AWD",
@@ -5884,7 +6233,7 @@
     "interior": "качественный текстиль",
     "damage": "задний бампер, Крышка багажника",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: задний бампер, Крышка багажника"
     ],
     "auctionDate": "08.01.2026",
@@ -5901,14 +6250,14 @@
       "Торги: 08.01.2026",
       "Расчёт источника: 07.01.2026"
     ],
-    "bestFor": "Hyundai Kona: 2024 год, привод AWD, двигатель атмосферный, комплектация Sel, пробег 14 200 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Hyundai Kona: 2024 год, привод AWD, двигатель атмосферный, комплектация Sel, пробег 14 200 км. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-989",
     "brand": "Hyundai",
     "model": "Elantra",
     "year": 2024,
+    "body": "Седан",
     "mileage": "23 200 км",
     "engine": "атмосферный",
     "drive": "RWD",
@@ -5939,7 +6288,7 @@
     "interior": "качественный текстиль",
     "damage": "задний бампер, левое крыло",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: задний бампер, левое крыло"
     ],
     "auctionDate": "07.01.2026",
@@ -5956,14 +6305,14 @@
       "Торги: 07.01.2026",
       "Расчёт источника: 05.01.2026"
     ],
-    "bestFor": "Hyundai Elantra: 2024 год, привод RWD, двигатель атмосферный, комплектация Sel, пробег 23 200 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Hyundai Elantra: 2024 год, привод RWD, двигатель атмосферный, комплектация Sel, пробег 23 200 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-979",
     "brand": "Kia",
     "model": "K4",
     "year": 2025,
+    "body": "Седан",
     "mileage": "20 000 км",
     "engine": "атмосферный",
     "drive": "FWD",
@@ -5994,7 +6343,7 @@
     "interior": "анатомический, комбинированный",
     "damage": "передний бампер и крыло",
     "safety": [
-      "Безопасность: ",
+      "Безопасность: завод",
       "Повреждения: передний бампер и крыло"
     ],
     "auctionDate": "06.01.2026",
@@ -6011,14 +6360,14 @@
       "Торги: 06.01.2026",
       "Расчёт источника: 05.01.2026"
     ],
-    "bestFor": "Kia K4: 2025 год, привод FWD, двигатель атмосферный, комплектация GT-Line, пробег 20 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами.",
-    "body": "Седан"
+    "bestFor": "Kia K4: 2025 год, привод FWD, двигатель атмосферный, комплектация GT-Line, пробег 20 000 км. Практичный вариант для ежедневных поездок, города и трассы с понятными эксплуатационными расходами."
   },
   {
     "id": "AWG-864",
     "brand": "BMW",
     "model": "X1",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "7 300 mi",
     "engine": "2,0-turbo",
     "drive": "AWD",
@@ -6047,7 +6396,7 @@
     "trim": "XDrive28I",
     "transmission": "АКПП",
     "interior": "кожа",
-    "damage": "\"СЗАДИ\"",
+    "damage": "СЗАДИ",
     "safety": [
       "Безопасность: завод",
       "Повреждения: СЗАДИ"
@@ -6066,14 +6415,14 @@
       "Торги: 16.12.2025",
       "Расчёт источника: 11.12.2025"
     ],
-    "bestFor": "BMW X1: 2024 год, привод AWD, двигатель 2,0-turbo, комплектация XDrive28I, пробег 7 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "BMW X1: 2024 год, привод AWD, двигатель 2,0-turbo, комплектация XDrive28I, пробег 7 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-854",
     "brand": "BMW",
     "model": "330 XI",
     "year": 2024,
+    "body": "Седан",
     "mileage": "2 800 км",
     "engine": "2,0-turbo",
     "drive": "AWD",
@@ -6120,14 +6469,14 @@
       "Торги: 16.12.2025",
       "Расчёт источника: 11.12.2025"
     ],
-    "bestFor": "BMW 330 XI: 2024 год, привод AWD, двигатель 2,0-turbo, пробег 2 800 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение.",
-    "body": "Седан"
+    "bestFor": "BMW 330 XI: 2024 год, привод AWD, двигатель 2,0-turbo, пробег 2 800 км. Подойдёт тем, кто ищет комфортный автомобиль для города и трассы с акцентом на динамику и оснащение."
   },
   {
     "id": "AWG-834",
     "brand": "Audi",
     "model": "Q7",
     "year": 2024,
+    "body": "Кроссовер / SUV",
     "mileage": "19 800 mi",
     "engine": "2,0-turbo",
     "drive": "AWD",
@@ -6175,14 +6524,14 @@
       "Торги: 10.12.2025",
       "Расчёт источника: 09.12.2025"
     ],
-    "bestFor": "Audi Q7: 2024 год, привод AWD, двигатель 2,0-turbo, комплектация Premium, пробег 19 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Audi Q7: 2024 год, привод AWD, двигатель 2,0-turbo, комплектация Premium, пробег 19 800 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-824",
     "brand": "Volkswagen",
     "model": "Tiguan",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "45 000 mi",
     "engine": "2,0-turbo",
     "drive": "FWD",
@@ -6211,10 +6560,9 @@
     "trim": "SE",
     "transmission": "АКПП",
     "interior": "из кожи",
-    "damage": "\"",
+    "damage": "",
     "safety": [
-      "Безопасность: завод",
-      "Повреждения: "
+      "Безопасность: завод"
     ],
     "auctionDate": "",
     "customsRub": 0,
@@ -6229,14 +6577,14 @@
       "VIN: 3VV3B7AX8RM042956",
       "Расчёт источника: 09.12.2025"
     ],
-    "bestFor": "Volkswagen Tiguan: 2023 год, привод FWD, двигатель 2,0-turbo, комплектация SE, пробег 45 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Volkswagen Tiguan: 2023 год, привод FWD, двигатель 2,0-turbo, комплектация SE, пробег 45 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   },
   {
     "id": "AWG-814",
     "brand": "Mercedes-Benz",
     "model": "GLB 250",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "45 300 mi",
     "engine": "2,0-turbo",
     "drive": "AWD",
@@ -6279,14 +6627,14 @@
       "Комплектация: LUXE",
       "VIN: W1N4M4HB8PW334358"
     ],
-    "bestFor": "Mercedes-Benz GLB 250: 2023 год, привод AWD, двигатель 2,0-turbo, комплектация LUXE, пробег 45 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Mercedes-Benz GLB 250: 2023 год, привод AWD, двигатель 2,0-turbo, комплектация LUXE, пробег 45 300 mi. Подойдёт тем, кому нужен комфортный премиальный кроссовер или SUV для города, трассы и дальних поездок."
   },
   {
     "id": "AWG-803",
     "brand": "Volkswagen",
     "model": "Tiguan",
     "year": 2023,
+    "body": "Кроссовер / SUV",
     "mileage": "31 000 mi",
     "engine": "2,0-turbo",
     "drive": "AWD",
@@ -6329,7 +6677,6 @@
       "Комплектация: максимальная",
       "VIN: 3VV4B7AXXPM065334"
     ],
-    "bestFor": "Volkswagen Tiguan: 2023 год, привод AWD, двигатель 2,0-turbo, комплектация максимальная, пробег 31 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город.",
-    "body": "Кроссовер / SUV"
+    "bestFor": "Volkswagen Tiguan: 2023 год, привод AWD, двигатель 2,0-turbo, комплектация максимальная, пробег 31 000 mi. Подойдёт для ежедневной городской эксплуатации, семейных поездок и выездов за город."
   }
 ]

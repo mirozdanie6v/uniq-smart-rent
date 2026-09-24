@@ -1,28 +1,29 @@
 {
   "sourceCount": 169,
-  "candidateCount": 124,
-  "normalizedCount": 117,
-  "skippedInvalidCount": 45,
+  "candidateCount": 131,
+  "normalizedCount": 124,
+  "skippedInvalidCount": 38,
   "duplicateVinCount": 7,
-  "excludedTotal": 52,
+  "excludedTotal": 45,
   "pricedRub": 58,
   "pricedBid": 48,
-  "noPrice": 59,
-  "withPhotos": 117,
+  "noPrice": 66,
+  "withPhotos": 124,
   "brandCounts": {
-    "Kia": 13,
+    "Kia": 14,
+    "Volkswagen": 9,
     "BMW": 9,
-    "Hyundai": 16,
+    "Hyundai": 18,
     "Toyota": 7,
     "GMC": 2,
     "RAM": 2,
     "Subaru": 7,
-    "Chevrolet": 11,
+    "Chevrolet": 13,
     "Buick": 2,
     "Nissan": 5,
     "Honda": 5,
     "Mercedes-Benz": 13,
-    "Volkswagen": 8,
+    "Opel": 1,
     "Porsche": 3,
     "Mitsubishi": 4,
     "Ford": 4,
@@ -72,6 +73,18 @@
       "posts": [
         "3021",
         "3752"
+      ]
+    },
+    {
+      "vin": "",
+      "posts": [
+        "3262",
+        "3282",
+        "3290",
+        "3310",
+        "3357",
+        "3373",
+        "3723"
       ]
     }
   ],
@@ -301,60 +314,11 @@
       "reason": "invalid_or_missing_vin"
     },
     {
-      "sourcePostId": "3262",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3262",
-      "title": "Chevrolet Trailblazer 01/2023",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3282",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3282",
-      "title": "Hyundai Venue 03/2023",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3290",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3290",
-      "title": "Hyundai Tucson 2026",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3310",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3310",
-      "title": "KIA Sportage 2026",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3357",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3357",
-      "title": "Opel Astra 06/2023",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3373",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3373",
-      "title": "Chevrolet TRAX 05/2023",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
-    },
-    {
       "sourcePostId": "3395",
       "sourceUrl": "https://t.me/AutoWorld_Georgia/3395",
       "title": "K1500 11/23г.",
       "vin": "1GCUDGE80RZ204593",
       "reason": "missing_vehicle_title"
-    },
-    {
-      "sourcePostId": "3723",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3723",
-      "title": "Volkswagen T-Cross 2022",
-      "vin": "",
-      "reason": "invalid_or_missing_vin"
     },
     {
       "sourcePostId": "3733",
