@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
 import {readFile} from 'node:fs/promises';
+import {seedCatalog} from './fixtures/auto-sale-business.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 
@@ -17,7 +18,7 @@ async function setup(tag,{emptyCatalog=false,catalogSeed=null}={}){
   globalThis.confirm=()=>true;
   dom.window.confirm=()=>true;
   if(emptyCatalog)localStorage.setItem('auto-sale-catalog-v1','[]');
-  if(Array.isArray(catalogSeed))localStorage.setItem('auto-sale-catalog-v1',JSON.stringify(catalogSeed));
+  else localStorage.setItem('auto-sale-catalog-v1',JSON.stringify(Array.isArray(catalogSeed)?catalogSeed:seedCatalog()));
   await import(`../public/auto-sale-app-v3.mjs?manager-catalog=${tag}-${Date.now()}-${Math.random()}`);
   await tick();
   return{dom,root:document.querySelector('#app')};
@@ -84,19 +85,12 @@ test('manager can edit and hide a catalog vehicle from clients',async()=>{
 });
 
 
-test('empty server catalog is seeded with existing cars and each row opens edit form',async()=>{
-  const {dom,root}=await setup('seed-existing',{emptyCatalog:true});
+test('empty server catalog stays empty instead of restoring demo vehicles',async()=>{
+  const {dom,root}=await setup('empty',{emptyCatalog:true});
   root.querySelector('[data-role="manager"]').click();await tick();
   root.querySelector('[data-go="catalogAdmin"]').click();await tick();
-  const rows=[...root.querySelectorAll('[data-catalog-edit]')];
-  assert.equal(rows.length,16);
-  const bmw=root.querySelector('[data-catalog-edit="bmw-x5-22"]');
-  assert.ok(bmw);
-  bmw.click();await tick();
-  const form=root.querySelector('#catalogCarForm');assert.ok(form);
-  assert.equal(form.elements.brand.value,'BMW');
-  assert.equal(form.elements.model.value,'X5 xDrive40i');
-  assert.equal(form.elements.price.value,'46800');
+  assert.equal(root.querySelectorAll('[data-catalog-edit]').length,0);
+  assert.equal(JSON.parse(localStorage.getItem('auto-sale-catalog-v1')).length,0);
   dom.window.close();
 });
 
