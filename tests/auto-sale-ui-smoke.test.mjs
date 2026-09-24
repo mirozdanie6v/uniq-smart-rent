@@ -16,7 +16,8 @@ test('entry page boots the current v3 AUTO SALE chain',()=>{
   assert.match(html,/auto-sale-bootstrap\.mjs/);
   assert.match(bootstrap,/await import\('\.\/auto-sale-app-v3\.mjs(?:\?[^']+)?'\)/);
   assert.match(bootstrap,/await import\('\.\/auto-sale-ui-business-guard\.mjs'\)/);
-  assert.match(bootstrap,/await import\('\.\/auto-sale-catalog-extra\.mjs'\)/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-telegram\.mjs/);
+  assert.match(bootstrap,/await import\('\.\/auto-sale-telegram-id\.mjs/);
 });
 
 test('all three roles and every operational route are rendered by v3',()=>{
