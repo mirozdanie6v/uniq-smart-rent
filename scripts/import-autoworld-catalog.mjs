@@ -7,7 +7,7 @@ const STATE_URL=process.env.AUTO_SALE_STATE_URL||'https://auto-sale-demo.viivers
 const DRY_RUN=/^(1|true|yes)$/i.test(String(process.env.DRY_RUN||''));
 const REPLACE_SOURCE_ALL=/^(1|true|yes)$/i.test(String(process.env.REPLACE_SOURCE_ALL||''));
 const ONLY_POST_IDS=new Set(String(process.env.ONLY_POST_IDS||'').split(',').map(x=>x.trim()).filter(Boolean));
-const ALLOW_NO_VIN_POST_IDS=new Set(['3723','3290','3310','3262','3282','3357','3373']);
+const ALLOW_NO_VIN_POST_IDS=new Set(['3723','3290','3310','3262','3282','3357','3373','3893']);
 const allowNoVin=source=>ALLOW_NO_VIN_POST_IDS.has(String(source?.sourcePostId||''));
 
 const clean=value=>String(value??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();
@@ -18,6 +18,18 @@ function titleFromRaw(raw){
   const joined=[];
   for(let i=0;i<lines.length;i++){
     for(let n=1;n<=3&&i+n<=lines.length;n++)joined.push(lines.slice(i,i+n).join(' '));
+  }
+  for(const candidate of joined){
+    const m=candidate.match(/([A-Za-zА-Яа-я][A-Za-zА-Яа-я0-9()+. ]{1,60}?)\s+(20\d{2}|\d{2})\s*[-–—]\s*(20\d{2}|\d{2})\s*г?\.?/i);
+    if(m){
+      const name=clean(m[1]);
+      const parts=name.split(/\s+/);
+      const y1=Number(m[2].length===2?'20'+m[2]:m[2]);
+      const y2=Number(m[3].length===2?'20'+m[3]:m[3]);
+      if(parts.length>=2&&y1>=2000&&y2>=y1&&y2<=2030){
+        return{title:`${name} ${y1}–${y2}`,brand:parts[0],model:`${parts.slice(1).join(' ')} ${y1}–${y2}`,year:y2};
+      }
+    }
   }
   for(const candidate of joined){
     const m=candidate.match(/([A-Za-zА-Яа-я][A-Za-zА-Яа-я0-9()\-+. ]{1,60}?)\s+(0?[1-9]|1[0-2])\/(20\d{2}|\d{2})\s*г?\.?/i);
@@ -186,7 +198,8 @@ function normalizeCar(source){
     trim&&`Комплектация: ${trim}`,
     vin&&`VIN: ${vin}`,
     source.lot&&`Лот: ${clean(source.lot)}`,
-    source.calculationDate&&`Расчёт источника: ${clean(source.calculationDate)}`
+    source.calculationDate&&`Расчёт источника: ${clean(source.calculationDate)}`,
+    Array.isArray(source.vins)&&source.vins.length&&`VIN в источнике: ${source.vins.map(clean).filter(Boolean).join(' · ')}`
   ].filter(Boolean);
   const safety=[
     safetyText&&`Безопасность: ${safetyText.replace(/^["']|["']$/g,'')}`,
