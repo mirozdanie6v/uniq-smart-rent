@@ -6,6 +6,9 @@ const AUDIT_PATH=process.env.AUDIT_PATH||OUTPUT_PATH.replace(/\.json$/,'-audit.j
 const STATE_URL=process.env.AUTO_SALE_STATE_URL||'https://auto-sale-demo.viiversion.com/api/auto-sale/state';
 const DRY_RUN=/^(1|true|yes)$/i.test(String(process.env.DRY_RUN||''));
 const REPLACE_SOURCE_ALL=/^(1|true|yes)$/i.test(String(process.env.REPLACE_SOURCE_ALL||''));
+const ONLY_POST_IDS=new Set(String(process.env.ONLY_POST_IDS||'').split(',').map(x=>x.trim()).filter(Boolean));
+const ALLOW_NO_VIN_POST_IDS=new Set(['3723','3290','3310','3262','3282','3357','3373']);
+const allowNoVin=source=>ALLOW_NO_VIN_POST_IDS.has(String(source?.sourcePostId||''));
 
 const clean=value=>String(value??'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').trim();
 const unique=list=>[...new Set((Array.isArray(list)?list:[]).filter(Boolean))];
@@ -102,7 +105,7 @@ function sourceQualityReason(source){
   const title=titleFromRaw(source.rawText);
   const vin=clean(source.vin).toUpperCase();
   const photos=unique(source.photos).filter(url=>/^https:\/\/storage\.yandexcloud\.net\//i.test(url));
-  if(!vin||vin.length!==17)return'invalid_or_missing_vin';
+  if(vin ? vin.length!==17 : !allowNoVin(source))return'invalid_or_missing_vin';
   if(!title.brand||!title.model)return'missing_vehicle_title';
   if(Number(title.year)<2000||Number(title.year)>2030)return'invalid_year';
   if(!photos.length)return'missing_recovered_photos';
@@ -118,9 +121,9 @@ function buildBodyType(brand,model){
   if(/(?:228|gran coupe)/i.test(key))return'4-дверное купе';
   if(/prius/i.test(key))return'Лифтбек';
   if(/(?:k4|forte|elantra|sentra|corolla|jetta|tlx|\ba6\b|\ba3\b|330|530|amg c63)/i.test(key))return'Седан';
-  if(/impreza/i.test(key))return'Компактный автомобиль';
+  if(/(?:impreza|astra)/i.test(key))return'Компактный автомобиль';
   if(/soul/i.test(key))return'Компактный кроссовер';
-  if(/(?:trailblazer|trax|envista|rogue|qashqai|hr-v|h-rv|cr-v|crosstrek|seltos|venue|kona|gle|glb|gla|\bx1\b|\bx2\b|\bx3\b|\bx7\b|q5|q7|macan|cayenne|atlas|tiguan|evoque|kicks|eclipse|encore|ecosport)/i.test(key))return'Кроссовер / SUV';
+  if(/(?:trailblazer|trax|envista|rogue|qashqai|hr-v|h-rv|cr-v|crosstrek|seltos|venue|kona|t-cross|tucson|sportage|gle|glb|gla|\bx1\b|\bx2\b|\bx3\b|\bx7\b|q5|q7|macan|cayenne|atlas|tiguan|evoque|kicks|eclipse|encore|ecosport)/i.test(key))return'Кроссовер / SUV';
 
   return'Легковой автомобиль';
 }
@@ -164,13 +167,16 @@ function normalizeCar(source){
   const photos=unique(source.photos).filter(url=>/^https:\/\/storage\.yandexcloud\.net\//i.test(url));
   const names=canonicalVehicleName(rawBrand,rawModel,title.title||source.title,vin);
   const brand=names.brand,model=names.model;
-  if(!vin||vin.length!==17||!brand||!model||year<2000||year>2030||!photos.length)return null;
+  if((vin ? vin.length!==17 : !allowNoVin(source))||!brand||!model||year<2000||year>2030||!photos.length)return null;
 
   const engine=clean(source.engine)||field(source.rawText,'Двигатель');
   const transmission=clean(source.transmission)||field(source.rawText,'Коробка');
   const interior=clean(source.interior)||field(source.rawText,'Салон');
-  const damage=clean(source.damage)||field(source.rawText,'Повреждения?');
-  const safetyText=clean(source.safety)||field(source.rawText,'Безопасность');
+  const raw=String(source.rawText||'');
+  const sourceDamage=clean(source.damage).replace(/^[\"']+|[\"'…]+$/g,'').trim();
+  const damage=/без повреждений/i.test(raw)?'без повреждений':(sourceDamage.length>1?sourceDamage:field(raw,'Повреждения?').replace(/^[\"']+|[\"'…]+$/g,'').trim());
+  const sourceSafety=clean(source.safety).replace(/^[\"']+|[\"']+$/g,'').trim();
+  const safetyText=sourceSafety||(/Безопасность[\s\S]{0,50}?завод/i.test(raw)?'завод':field(raw,'Безопасность').replace(/^[\"']+|[\"']+$/g,'').trim());
   const trim=clean(source.trim)||field(source.rawText,'комплектация');
   const bid=extractBid(source);
   const priceRub=Number(source.priceRub)||0;
@@ -231,13 +237,15 @@ function normalizeCar(source){
 }
 
 function dedupe(list){
-  const byVin=new Map();
+  const byKey=new Map();
   for(const car of list){
     if(!car)continue;
-    const before=byVin.get(car.vin);
-    if(!before||Number(car.sourcePostId)>Number(before.sourcePostId))byVin.set(car.vin,car);
+    const vin=clean(car.vin).toUpperCase();
+    const key=vin?`vin:${vin}`:`id:${car.id}`;
+    const before=byKey.get(key);
+    if(!before||Number(car.sourcePostId)>Number(before.sourcePostId))byKey.set(key,car);
   }
-  return[...byVin.values()].sort((a,b)=>Number(b.sourcePostId)-Number(a.sourcePostId));
+  return[...byKey.values()].sort((a,b)=>Number(b.sourcePostId)-Number(a.sourcePostId));
 }
 
 async function fetchState(){
@@ -256,7 +264,9 @@ async function putState(state,catalog){
 }
 
 async function main(){
-  const source=JSON.parse(await readFile(SOURCE_PATH,'utf8'));
+  const sourceAll=JSON.parse(await readFile(SOURCE_PATH,'utf8'));
+  const source=ONLY_POST_IDS.size?sourceAll.filter(item=>ONLY_POST_IDS.has(String(item.sourcePostId||''))):sourceAll;
+  if(ONLY_POST_IDS.size&&source.length!==ONLY_POST_IDS.size)throw new Error(`selected_source_count_mismatch_${source.length}_of_${ONLY_POST_IDS.size}`);
   const normalizedRows=source.map(item=>({source:item,car:normalizeCar(item)}));
   const imported=dedupe(normalizedRows.map(x=>x.car));
   if(!imported.length)throw new Error('no_valid_imported_cars');
@@ -297,11 +307,12 @@ async function main(){
   for(let attempt=0;attempt<8;attempt++){
     const state=await fetchState();
     const importedIds=new Set(imported.map(x=>x.id));
-    const importedVins=new Set(imported.map(x=>x.vin));
+    const importedVins=new Set(imported.map(x=>clean(x.vin).toUpperCase()).filter(Boolean));
     const existing=(state.catalog||[]).filter(car=>{
       if(REPLACE_SOURCE_ALL&&String(car.source||'')==='AutoWorld_Georgia')return false;
+      const existingVin=clean(car.vin).toUpperCase();
       return !importedIds.has(String(car.id||'')) &&
-        !(String(car.source||'')==='AutoWorld_Georgia'&&importedVins.has(String(car.vin||'').toUpperCase()));
+        !(String(car.source||'')==='AutoWorld_Georgia'&&existingVin&&importedVins.has(existingVin));
     });
     const catalog=[...existing,...imported];
     const response=await putState(state,catalog);
