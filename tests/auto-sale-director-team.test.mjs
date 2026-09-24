@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+import {seedLeads,seedQuotes,seedOrders,seedTeam} from './fixtures/auto-sale-business.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
 async function setup(tag){
@@ -11,6 +11,7 @@ async function setup(tag){
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
   localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
   localStorage.setItem('auto-sale-notes-v2','{}');
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
   sessionStorage.setItem('auto-sale-role-v2','owner');
   await import(`../public/auto-sale-app-v3.mjs?director-app=${tag}-${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-director-team.mjs?director=${tag}-${Date.now()}-${Math.random()}`);
