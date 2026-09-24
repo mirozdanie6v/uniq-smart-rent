@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
 import {leadTransitionAllowed as browserLeadTransitionAllowed} from '../public/auto-sale-business-rules.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
