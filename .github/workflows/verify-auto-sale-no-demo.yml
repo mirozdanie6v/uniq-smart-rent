@@ -1,0 +1,77 @@
+name: Verify deployed AUTO SALE no-demo state
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .verify-auto-sale-no-demo
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify raw and custom deployment plus state hashes
+        run: |
+          node --input-type=module <<'NODE'
+          import crypto from 'node:crypto';
+
+          const endpoints=[
+            ['raw','https://bba01u6g86lg2q49p34d.containers.yandexcloud.net'],
+            ['custom','https://auto-sale-demo.viiversion.com']
+          ];
+          const hash=x=>crypto.createHash('sha256').update(JSON.stringify(x)).digest('hex');
+          const expected={
+            catalog:'4a22b905012ec6e4e0809200df06cecb5ebcb294ac62648491f1df988b29cd93',
+            leads:'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+            quotes:'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+            orders:'4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+            notes:'44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a',
+            team:'e0012eeb89f7f62187db488464add002c85ea40bf9205c98f6feaaa07362f603'
+          };
+          for(const [label,base] of endpoints){
+            const q='?audit='+Date.now();
+            const [index,app,core,details,team,extra,photos,stateR]=await Promise.all([
+              fetch(base+'/'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-app-v3.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-core.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-car-details.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-director-team.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-catalog-extra.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/auto-sale-photo-catalog.mjs'+q,{cache:'no-store'}).then(r=>r.text()),
+              fetch(base+'/api/auto-sale/state',{cache:'no-store'})
+            ]);
+            if(!stateR.ok)throw new Error(label+'_state_http_'+stateR.status);
+            const s=await stateR.json();
+
+            if(!index.includes('АвтоМир Грузия'))throw new Error(label+'_brand_missing');
+            if(!app.includes('const defaultCars=[]'))throw new Error(label+'_empty_catalog_fallback_missing');
+            if(!core.includes('export const seedLeads = () => []'))throw new Error(label+'_empty_business_fallback_missing');
+            if(!extra.includes('No catalog rows are injected here'))throw new Error(label+'_extra_catalog_compat_missing');
+            if(!photos.includes('__AUTO_SALE_VERIFIED_PHOTOS__=[]'))throw new Error(label+'_photo_fallback_not_disabled');
+
+            const active=[app,core,details,team,extra,photos].join('\n');
+            for(const bad of ['Демо-данные','пример автомобиля','bmw-x5-22','tesla-y-23','rav4-22','L-DEMO-','Q-DEMO-','O-DEMO-','images.unsplash.com','TM-DMITRY','TM-ANNA','TM-MAKSIM']){
+              if(active.includes(bad))throw new Error(label+'_demo_residue_'+bad);
+            }
+
+            const hashes={
+              catalog:hash(s.catalog||[]),
+              leads:hash(s.leads||[]),
+              quotes:hash(s.quotes||[]),
+              orders:hash(s.orders||[]),
+              notes:hash(s.notes||{}),
+              team:hash(s.team||[])
+            };
+            for(const [key,value] of Object.entries(expected)){
+              if(hashes[key]!==value)throw new Error(label+'_state_changed_'+key+'_'+hashes[key]);
+            }
+            console.log('AUTO_SALE_NO_DEMO_DEPLOYED_OK',label,JSON.stringify({
+              revision:s.revision,
+              counts:{catalog:(s.catalog||[]).length,leads:(s.leads||[]).length,quotes:(s.quotes||[]).length,orders:(s.orders||[]).length,noteKeys:Object.keys(s.notes||{}).length,team:(s.team||[]).length},
+              hashes
+            }));
+          }
+          NODE
