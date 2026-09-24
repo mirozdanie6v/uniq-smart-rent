@@ -8,6 +8,9 @@ const bootstrap=await readFile(new URL('../public/auto-sale-bootstrap.mjs',impor
 const css=await readFile(new URL('../public/auto-sale-admin.css',import.meta.url),'utf8');
 const responsive=await readFile(new URL('../public/auto-sale-responsive.css',import.meta.url),'utf8');
 const mobileAdmin=await readFile(new URL('../public/auto-sale-mobile-admin.css',import.meta.url),'utf8');
+const core=await readFile(new URL('../public/auto-sale-core.mjs',import.meta.url),'utf8');
+const details=await readFile(new URL('../public/auto-sale-car-details.mjs',import.meta.url),'utf8');
+const team=await readFile(new URL('../public/auto-sale-director-team.mjs',import.meta.url),'utf8');
 
 test('entry page boots the current v3 AUTO SALE chain',()=>{
   assert.match(html,/auto-sale-bootstrap\.mjs/);
@@ -57,4 +60,19 @@ test('manager and director tables collapse into mobile cards instead of wide scr
 
 test('very narrow screens and landscape phones have dedicated fallbacks',()=>{
   for(const token of ['@media(max-width:380px)','@media(max-width:340px)','orientation:landscape']) assert.ok(responsive.includes(token),token);
+});
+
+test('active production bundle contains no demo business or catalog fallback data',()=>{
+  for(const token of ['L-101','Q-501','O-2301','bmw-x5-22','tesla-y-23','images.unsplash.com','Демо-данные'])assert.equal(app.includes(token)||core.includes(token),false,token);
+  for(const token of ['TM-DMITRY','TM-ANNA','TM-MAKSIM'])assert.equal(team.includes(token),false,token);
+  assert.doesNotMatch(details,/пример автомобиля|bmw-x5-22|tesla-y-23/);
+  assert.match(app,/const defaultCars=\[\]/);
+  assert.match(core,/export const seedLeads = \(\) => \[\]/);
+});
+
+test('empty production state stays empty instead of restoring seeded data',async()=>{
+  const mod=await import('../public/auto-sale-core.mjs?no-demo-smoke');
+  assert.deepEqual(mod.seedLeads(),[]);
+  assert.deepEqual(mod.seedQuotes(),[]);
+  assert.deepEqual(mod.seedOrders(),[]);
 });
