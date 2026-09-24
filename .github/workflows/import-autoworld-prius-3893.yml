@@ -1,0 +1,174 @@
+name: Import grouped Toyota Prius AutoWorld post
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .import-autoworld-prius-3893
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install scraper dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Fetch grouped Prius source post and upload photos
+        env:
+          AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
+        run: |
+          python - <<'PY'
+          import json, re, time, importlib.util
+          from pathlib import Path
+          from urllib.parse import urljoin
+          from bs4 import BeautifulSoup
+
+          spec=importlib.util.spec_from_file_location("awg","scripts/scrape-autoworld-georgia.py")
+          awg=importlib.util.module_from_spec(spec);spec.loader.exec_module(awg)
+          target='3893'; found=None
+          url=awg.START_URL; seen=set()
+
+          for _ in range(14):
+              if not url or url in seen: break
+              seen.add(url)
+              soup=BeautifulSoup(awg.fetch_page(url),'html.parser')
+              for msg in soup.select('.tgme_widget_message'):
+                  dp=msg.get('data-post','')
+                  if '/' not in dp or dp.rsplit('/',1)[-1]!=target: continue
+                  text=awg.clean_text(msg.select_one('.tgme_widget_message_text'))
+                  dt=msg.select_one('time[datetime]')
+                  published=dt.get('datetime','') if dt else ''
+                  src=f'https://t.me/{awg.CHANNEL}/{target}'
+                  source_photos=awg.photo_urls(msg)
+                  vins=list(dict.fromkeys(awg.VIN_RE.findall(text)))
+                  if len(vins)<2: raise RuntimeError('expected_grouped_vins')
+                  uploaded=[]; failures=[]
+                  for i,purl in enumerate(source_photos[:10]):
+                      try:
+                          u=awg.upload_photo(target,i,purl)
+                          if u: uploaded.append(u)
+                      except Exception as e:
+                          failures.append({'index':i,'url':purl,'error':str(e)})
+                          print('AUTOWORLD_PRIUS_PHOTO_WARNING '+json.dumps({'index':i,'error':str(e)},ensure_ascii=False),flush=True)
+                  if not uploaded: raise RuntimeError('no_prius_photos_uploaded')
+                  found={
+                    'source':'AutoWorld_Georgia','sourcePostId':target,'sourceUrl':src,'publishedAt':published,
+                    'rawText':text,'title':'Toyota Prius 2020–2021 — 3 варианта','brand':'Toyota',
+                    'model':'Prius 2020–2021','year':2021,'trim':'','mileage':'','engine':'','powerHp':None,
+                    'consumption':'','transmission':'','drive':'','safety':'','interior':'','damage':'',
+                    'vin':'','vins':vins,'groupedOffer':True,'auctionDate':'','estimatedBidUsd':None,
+                    'priceRub':None,'customsRub':None,'lot':'','calculationDate':'24.09.2026',
+                    'sourcePhotos':source_photos,'photos':uploaded,'photoFailures':failures
+                  }
+                  break
+              if found: break
+              prev=soup.select_one('link[rel="prev"]') or soup.select_one(".tme_messages_more[href*='before=']")
+              href=prev.get('href','') if prev else ''
+              if not href: break
+              url=urljoin('https://t.me',href);time.sleep(.2)
+
+          if not found: raise SystemExit('prius_post_3893_not_found')
+          Path('/tmp/prius-3893.json').write_text(json.dumps(found,ensure_ascii=False,indent=2)+'\n','utf-8')
+          print('AUTOWORLD_PRIUS_SOURCE_OK '+json.dumps({
+            'post':target,'publishedAt':found['publishedAt'],'vins':found['vins'],'photos':len(found['photos'])
+          },ensure_ascii=False))
+          PY
+
+      - name: Merge Prius grouped source record
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const full=JSON.parse(fs.readFileSync('data/autoworld-georgia/cars.json','utf8'));
+          const row=JSON.parse(fs.readFileSync('/tmp/prius-3893.json','utf8'));
+          const byId=new Map(full.map(x=>[String(x.sourcePostId),x]));
+          byId.set('3893',row);
+          const merged=[...byId.values()].sort((a,b)=>Number(a.sourcePostId)-Number(b.sourcePostId));
+          fs.writeFileSync('data/autoworld-georgia/cars.json',JSON.stringify(merged,null,2)+'\n');
+
+          let latest={};
+          try{latest=JSON.parse(fs.readFileSync('data/autoworld-georgia/latest-import.json','utf8'))}catch{}
+          const posts=Array.isArray(latest.posts)?latest.posts.filter(x=>String(x.sourcePostId)!=='3893'):[];
+          posts.push({
+            sourcePostId:'3893',sourceUrl:row.sourceUrl,publishedAt:row.publishedAt,
+            title:row.title,vin:'',vins:row.vins,photos:row.photos.length,rawText:row.rawText,groupedOffer:true
+          });
+          latest={...latest,generatedAt:new Date().toISOString(),posts};
+          fs.writeFileSync('data/autoworld-georgia/latest-import.json',JSON.stringify(latest,null,2)+'\n');
+          console.log('AUTOWORLD_PRIUS_MERGED archive='+merged.length);
+          NODE
+
+      - name: Normalize full snapshot
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: data/autoworld-georgia/catalog-import.json
+          AUDIT_PATH: data/autoworld-georgia/catalog-import-audit.json
+          DRY_RUN: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Validate grouped Prius normalization
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const catalog=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import.json','utf8'));
+          const row=catalog.find(x=>String(x.sourcePostId)==='3893');
+          if(!row)throw new Error('prius_3893_not_normalized');
+          if(row.vin)throw new Error('grouped_prius_must_not_have_single_vin');
+          if(!String(row.model).includes('2020–2021'))throw new Error('prius_range_missing_'+row.model);
+          if(!(row.highlights||[]).some(x=>String(x).includes('JTDKAMFUXN3160058')&&String(x).includes('JTDKARFU8L3123522')&&String(x).includes('JTDL9MFU3M3027380')))throw new Error('grouped_vins_missing');
+          if(!row.image)throw new Error('prius_image_missing');
+          console.log('AUTOWORLD_PRIUS_NORMALIZED '+JSON.stringify({
+            post:row.sourcePostId,name:row.brand+' '+row.model,year:row.year,
+            photos:1+(row.otherPhotos||[]).length,highlights:row.highlights
+          }));
+          NODE
+
+      - name: Commit grouped source and normalized snapshot
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/autoworld-georgia/cars.json data/autoworld-georgia/catalog-import.json data/autoworld-georgia/catalog-import-audit.json data/autoworld-georgia/latest-import.json
+          git commit -m "Import grouped Toyota Prius AutoWorld offer"
+          git fetch origin prototype/auto-sale-usa
+          git rebase origin/prototype/auto-sale-usa
+          git push origin HEAD:prototype/auto-sale-usa
+
+      - name: Import grouped Prius into live YDB
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: /tmp/prius-catalog.json
+          AUDIT_PATH: /tmp/prius-audit.json
+          AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+          ONLY_POST_IDS: '3893'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Verify grouped Prius live
+        run: |
+          node --input-type=module <<'NODE'
+          const r=await fetch('https://auto-sale-demo.viiversion.com/api/auto-sale/state',{cache:'no-store'});
+          if(!r.ok)throw new Error('state_'+r.status);
+          const s=await r.json();
+          const row=(s.catalog||[]).find(x=>String(x.sourcePostId)==='3893');
+          if(!row)throw new Error('prius_live_missing');
+          if(row.vin)throw new Error('prius_live_single_vin_invalid');
+          console.log('AUTOWORLD_PRIUS_LIVE_OK '+JSON.stringify({
+            revision:s.revision,catalog:(s.catalog||[]).length,
+            row:{post:row.sourcePostId,name:row.brand+' '+row.model,photos:1+(row.otherPhotos||[]).length}
+          }));
+          NODE
