@@ -186,7 +186,6 @@ function normalizeCar(source){
     trim&&`Комплектация: ${trim}`,
     vin&&`VIN: ${vin}`,
     source.lot&&`Лот: ${clean(source.lot)}`,
-    source.auctionDate&&`Торги: ${clean(source.auctionDate)}`,
     source.calculationDate&&`Расчёт источника: ${clean(source.calculationDate)}`
   ].filter(Boolean);
   const safety=[
