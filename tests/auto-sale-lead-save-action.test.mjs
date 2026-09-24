@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from '../public/auto-sale-core.mjs';
+import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
 
 test('manager save card button persists edited lead data',async()=>{
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/'});
