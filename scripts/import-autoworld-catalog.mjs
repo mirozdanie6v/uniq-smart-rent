@@ -123,7 +123,7 @@ function buildBodyType(brand,model){
   if(/(?:k4|forte|elantra|sentra|corolla|jetta|tlx|\ba6\b|\ba3\b|330|530|amg c63)/i.test(key))return'Седан';
   if(/(?:impreza|astra)/i.test(key))return'Компактный автомобиль';
   if(/soul/i.test(key))return'Компактный кроссовер';
-  if(/(?:trailblazer|trax|envista|rogue|qashqai|hr-v|h-rv|cr-v|crosstrek|seltos|venue|kona|t-cross|tucson|sportage|gle|glb|gla|\bx1\b|\bx2\b|\bx3\b|\bx7\b|q5|q7|macan|cayenne|atlas|tiguan|evoque|kicks|eclipse|encore|ecosport)/i.test(key))return'Кроссовер / SUV';
+  if(/(?:trailblazer|trax|envista|rogue|qashqai|hr-v|h-rv|cr-v|crosstrek|seltos|venue|kona|t-cross|tucson|sportage|gle|glc|glb|gla|\bx1\b|\bx2\b|\bx3\b|\bx7\b|q5|q7|macan|cayenne|atlas|tiguan|evoque|kicks|eclipse|encore|ecosport)/i.test(key))return'Кроссовер / SUV';
 
   return'Легковой автомобиль';
 }
