@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ORDER_STAGES, seedLeads, seedQuotes, seedOrders, calculateQuote, quoteCost,
+  ORDER_STAGES, calculateQuote, quoteCost,
   nextId, nextOrderStage, filterLeads, filterOrders, sourceStats, managerStats,
   financeStats, dashboardStats, funnelStats, clientStage
 } from '../public/auto-sale-core.mjs';
+import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
 
 test('quote total equals all cost components including company service',()=>{
   const q=seedQuotes()[0];
