@@ -69,6 +69,7 @@ test('submit bridge preserves a changed lead status from the live form',async()=
   localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
   localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
 
   await import(`../public/auto-sale-submit-bridge.mjs?lead-bridge=${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-app-v3.mjs?lead-app=${Date.now()}-${Math.random()}`);
