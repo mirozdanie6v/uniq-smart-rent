@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
-import {seedLeads,seedQuotes,seedOrders} from './fixtures/auto-sale-business.mjs';
+import {seedLeads,seedQuotes,seedOrders,seedTeam} from './fixtures/auto-sale-business.mjs';
 import {leadTransitionAllowed as browserLeadTransitionAllowed} from '../public/auto-sale-business-rules.mjs';
 
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -13,6 +13,7 @@ async function setup(tag){
   localStorage.setItem('auto-sale-leads-v2',JSON.stringify(seedLeads()));
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify(seedQuotes()));
   localStorage.setItem('auto-sale-orders-v2',JSON.stringify(seedOrders()));
+  localStorage.setItem('auto-sale-team-v1',JSON.stringify(seedTeam()));
   await import(`../public/auto-sale-app-v3.mjs?save-app=${tag}-${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-ui-business-guard.mjs?save-guard=${tag}-${Date.now()}-${Math.random()}`);
   await import(`../public/auto-sale-quote-save-fix.mjs?save-feedback=${tag}-${Date.now()}-${Math.random()}`);
