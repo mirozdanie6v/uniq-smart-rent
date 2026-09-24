@@ -51,3 +51,11 @@ test('rich popup can open managed catalog cars without a static detail registry 
   assert.match(details,/if\(!base&&!managed\)return null/);
   assert.match(details,/if\(!currentCar\(id\)\)return/);
 });
+
+
+test('vehicle popup exposes auction date as a dedicated field',()=>{
+  assert.match(details,/spec\('Аукцион',car\.auction\)/);
+  assert.match(details,/spec\('Дата аукциона',auctionDateText\(car\)\)/);
+  assert.match(details,/detailHighlights/);
+  assert.match(details,/\^Торги\\s\*:/);
+});
