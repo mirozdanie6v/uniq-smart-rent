@@ -6,19 +6,19 @@ const details=fs.readFileSync(new URL('../public/auto-sale-car-details.mjs',impo
 const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const css=fs.readFileSync(new URL('../public/auto-sale-car-details.css',import.meta.url),'utf8');
 
-const ids=['bmw-x5-22','tesla-y-23','rav4-22','mustang-mach-e','gle-21','lexus-rx-22','bmw-x3-23','audi-q5-22','porsche-macan-21','volvo-xc60-22','honda-crv-23','mazda-cx5-23','jeep-grand-cherokee-22','subaru-outback-23','tesla-model3-23','cadillac-xt5-22'];
-
-test('rich detail registry covers all sixteen catalog cars',()=>{
-  for(const id of ids)assert.match(details,new RegExp(`id:'${id.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}'`));
-  assert.equal((details.match(/\{id:'/g)||[]).length,16);
+test('car detail module has no static demo vehicle registry',()=>{
+  for(const token of ['bmw-x5-22','tesla-y-23','rav4-22','cadillac-xt5-22'])assert.doesNotMatch(details,new RegExp(token));
+  assert.doesNotMatch(details,/const carDetails=\[/);
+  assert.doesNotMatch(details,/пример автомобиля/);
 });
 
-test('every rich car detail includes useful technical and customer information',()=>{
-  for(const field of ['body:','power:','engine:','transmission:','drive:','seats:','efficiency:','highlights:','safety:','bestFor:'])assert.match(details,new RegExp(field.replace(':','\\:')));
-  assert.match(details,/Точная комплектация, состояние, история, пробег и опции конкретного автомобиля подтверждаются по VIN/);
+test('managed catalog cars still receive useful detail fields',()=>{
+  for(const field of ["body:'Автомобиль из каталога'","power:'—'","highlights:[]","safety:[]","bestFor:"])assert.ok(details.includes(field),field);
+  assert.match(details,/const currentCar=id=>/);
+  assert.match(details,/if\(!managed\)return null/);
 });
 
-test('car photo and both detail button types open the unified rich modal',()=>{
+test('car photo and detail button types open the unified modal',()=>{
   assert.match(details,/\.auto-car \.auto-car-media/);
   assert.match(details,/\[data-detail\],\[data-extra-detail\]/);
   assert.match(details,/data-car-photo-detail/);
@@ -33,29 +33,14 @@ test('rich details are keyboard accessible and responsive assets are loaded',()=
   assert.match(css,/@media\(max-width:760px\)/);
 });
 
-
 test('client popup uses a swipeable photo slider with arrows and thumbnails',()=>{
-  assert.match(details,/data-car-slider/);
-  assert.match(details,/data-car-slide-prev/);
-  assert.match(details,/data-car-slide-next/);
-  assert.match(details,/data-car-slide-thumb/);
-  assert.match(details,/touchstart/);
-  assert.match(details,/touchend/);
-  assert.match(details,/setSliderIndex/);
+  for(const token of ['data-car-slider','data-car-slide-prev','data-car-slide-next','data-car-slide-thumb','touchstart','touchend','setSliderIndex'])assert.ok(details.includes(token),token);
   assert.match(css,/auto-car-slider-track/);
   assert.match(css,/touch-action:pan-y/);
 });
-
-test('rich popup can open managed catalog cars without a static detail registry entry',()=>{
-  assert.match(details,/const currentCar=id=>/);
-  assert.match(details,/if\(!base&&!managed\)return null/);
-  assert.match(details,/if\(!currentCar\(id\)\)return/);
-});
-
 
 test('vehicle popup exposes auction date as a dedicated field',()=>{
   assert.match(details,/spec\('Аукцион',car\.auction\)/);
   assert.match(details,/spec\('Дата аукциона',auctionDateText\(car\)\)/);
   assert.match(details,/detailHighlights/);
-  assert.match(details,/\^Торги\\s\*:/);
 });
