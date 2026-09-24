@@ -1,4 +1,5 @@
 name: Validate AUTO SALE no-demo cleanup
+# rerun 2
 
 on:
   push:
