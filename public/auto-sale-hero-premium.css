@@ -192,3 +192,39 @@
 @media(max-width:480px){
   .auto-hero-simple{padding:20px 16px 18px}
 }
+
+
+/* auto-mir-reference-hero-v3 */
+/* Only the hero image layer changes here. Existing copy, buttons and layout stay intact. */
+.auto-hero-simple{
+  background-image:
+    linear-gradient(90deg,rgba(4,7,11,.86) 0%,rgba(4,7,11,.68) 36%,rgba(4,7,11,.30) 62%,rgba(4,7,11,.08) 100%),
+    url('./assets/auto-mir-hero-desktop-v3.webp');
+  background-size:cover;
+  background-position:center 56%;
+  background-repeat:no-repeat;
+  background-color:#080b10;
+}
+.auto-hero-simple:after{
+  background:linear-gradient(180deg,rgba(4,7,11,.02) 0%,rgba(4,7,11,.14) 72%,rgba(4,7,11,.34) 100%);
+  filter:none;
+  inset:0;
+  height:auto;
+  pointer-events:none;
+}
+.auto-hero-simple .auto-hero-copy{position:relative;z-index:2}
+
+@media(max-width:720px){
+  .auto-hero-simple{
+    background-image:
+      linear-gradient(90deg,rgba(4,7,11,.88) 0%,rgba(4,7,11,.68) 45%,rgba(4,7,11,.22) 76%,rgba(4,7,11,.08) 100%),
+      url('./assets/auto-mir-hero-desktop-v3.webp');
+    background-position:58% 58%;
+  }
+}
+
+@media(max-width:480px){
+  .auto-hero-simple{
+    background-position:61% 58%;
+  }
+}
