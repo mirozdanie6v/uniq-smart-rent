@@ -1,0 +1,81 @@
+name: Validate AUTO SALE origin logistics
+
+on:
+  push:
+    branches: [feature/auto-sale-origin-logistics-20260925]
+    paths:
+      - .github/workflows/validate-origin-logistics.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Full application check
+        run: npm run check
+
+      - name: Rebuild catalog with origin metadata without live write
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: /tmp/catalog-origin.json
+          AUDIT_PATH: /tmp/catalog-origin-audit.json
+          DRY_RUN: 'true'
+        run: |
+          node scripts/import-autoworld-catalog.mjs
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const rows=JSON.parse(fs.readFileSync('/tmp/catalog-origin.json','utf8'));
+          if(rows.length!==133)throw new Error('catalog_count_'+rows.length);
+          if(rows.some(x=>!String(x.origin||'').trim()))throw new Error('origin_missing');
+          const counts={};
+          for(const x of rows)counts[x.origin]=(counts[x.origin]||0)+1;
+          for(const required of ['США','Грузия'])if(!counts[required])throw new Error('origin_group_missing_'+required);
+          const known={
+            '3902':'США',
+            '3912':'США',
+            '3922':'США',
+            '3931':'США',
+            '3969':'США',
+            '3373':'Корея',
+            '3357':'Европа',
+            '803':'США / Грузия',
+            '814':'США / Грузия'
+          };
+          const byPost=new Map(rows.map(x=>[String(x.sourcePostId),x]));
+          for(const [id,origin] of Object.entries(known)){
+            if(byPost.get(id)?.origin!==origin)throw new Error('origin_mismatch_'+id+'_'+byPost.get(id)?.origin);
+          }
+          console.log('AUTO_SALE_ORIGIN_CATALOG_OK',JSON.stringify({count:rows.length,origins:counts}));
+          NODE
+
+      - name: Check active production wording
+        run: |
+          set -euo pipefail
+          if grep -En 'Доставка по США|Доставка США|Аукцион → порт → море → таможня' public/auto-sale-app-v3.mjs public/auto-sale-business-rules.mjs; then
+            echo "USA-only logistics wording remains" >&2
+            exit 1
+          fi
+          grep -q "id=\"originFilter\"" public/auto-sale-app-v3.mjs
+          grep -q "Международная перевозка" public/auto-sale-app-v3.mjs
+          grep -q "Подготовка к отправке" public/auto-sale-core.mjs
+          grep -q "В пути" public/auto-sale-core.mjs
+          echo "AUTO_SALE_ORIGIN_STATIC_OK"
+
+      - name: Validate backend syntax
+        run: |
+          node --check server/auto-sale-rules.mjs
+          node --check server/ydb-sync.mjs
+          node --check server/yandex-server.mjs
+
+      - name: Build Yandex image
+        run: docker build -f Dockerfile.yandex -t auto-sale-origin-logistics:check .
