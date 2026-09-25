@@ -4,6 +4,7 @@ const arr=v=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object'):[];
 const text=v=>String(v??'').trim();
 const num=v=>Number(v)||0;
 const same=(a,b)=>String(a??'')===String(b??'');
+const sameJson=(a,b)=>JSON.stringify(a??null)===JSON.stringify(b??null);
 const latestQuote=(quotes,leadId)=>quotes.filter(q=>text(q.leadId)===leadId).sort((a,b)=>num(b.version)-num(a.version))[0];
 const bad=(error,data={})=>({status:400,data:{error,...data}});
 const photoList=v=>Array.isArray(v)?v.filter(Boolean):[];
@@ -74,6 +75,7 @@ export async function syncYdbState(store,input){
         for(const key of ['leadId','model','lot','auction','inland','ocean','customs','repair','service','total','version','validUntil']){
           if(!same(before[key],quote[key]))return bad('locked_quote_changed',{id:quote.id,field:key});
         }
+        if(!sameJson(before.verification,quote.verification))return bad('locked_quote_changed',{id:quote.id,field:'verification'});
       }
     }else if(initialized&&!quoteTransitionAllowed('',text(quote.status))){
       return bad('invalid_initial_quote_status',{id:quote.id,status:quote.status});
