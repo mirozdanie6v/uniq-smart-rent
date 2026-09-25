@@ -22,10 +22,10 @@ jobs:
           python - <<'PY'
           import requests
           from bs4 import BeautifulSoup
-          html=requests.get('https://t.me/s/AutoWorld_Georgia',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
+          html=requests.get('https://t.me/s/AutoWorld_Georgia?before=3970',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
           soup=BeautifulSoup(html,'html.parser')
           msgs=soup.select('.tgme_widget_message')
-          for msg in msgs[-8:]:
+          for msg in msgs:
               pid=msg.get('data-post','')
               node=msg.select_one('.tgme_widget_message_text')
               print('\n===== POST',pid,'=====')
