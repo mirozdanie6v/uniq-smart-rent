@@ -22,6 +22,7 @@ function telegramIdentity(){
 }
 const currentTelegram=telegramIdentity();
 window.__AUTO_SALE_TELEGRAM_USER__=currentTelegram;
+const botMessagingAvailable=Boolean(tg?.initData&&currentTelegram?.id);
 
 function usernameFrom(value){const match=String(value||'').match(/(?:^|\s|\/)(?:@|t\.me\/)?([A-Za-z0-9_]{5,32})(?:$|\s|\?|\/)/i);return match?.[1]||''}
 function clientTelegram(lead){return{username:String(lead.telegramUsername||usernameFrom(lead.contact)||'').replace(/^@/,''),id:String(lead.telegramUserId||'')}}
@@ -59,7 +60,10 @@ function enhanceManagerLead(){
 
   const contact=clientTelegram(lead);const side=document.querySelector('.auto-side-panel .auto-side-actions');
   if(side&&!side.querySelector('[data-tg-client]')){
-    const button=document.createElement('button');button.type='button';button.className='auto-btn tg';button.dataset.tgClient=id;button.textContent=hasTelegram(contact)?'Написать клиенту в Telegram':'Telegram клиента не указан';button.disabled=!hasTelegram(contact);side.prepend(button);
+    const button=document.createElement('button');button.type='button';button.className='auto-btn tg';button.dataset.tgClient=id;button.textContent=hasTelegram(contact)?'Открыть чат клиента':'Telegram клиента не указан';button.disabled=!hasTelegram(contact);side.prepend(button);
+  }
+  if(side&&!side.querySelector('[data-tg-send][data-tg-target="client"]')){
+    const button=document.createElement('button');button.type='button';button.className='auto-btn ghost';button.dataset.tgSend=id;button.dataset.tgTarget='client';button.textContent=botMessagingAvailable&&contact.id?'Отправить через бота':'Сообщение через бота недоступно';button.disabled=!(botMessagingAvailable&&contact.id);side.prepend(button);
   }
   const clientContact=form.elements.contact?.closest('label');
   if(clientContact&&hasTelegram(contact)&&!clientContact.querySelector('.auto-tg-inline')){
@@ -88,7 +92,7 @@ function stageSteps(active){
 }
 function clientDetail(lead){
   const quote=quoteFor(lead.id),order=orderFor(lead.id),manager=managerTelegram(lead);const stage=order?.stage||lead.status;const stageIndex=order?Math.max(0,['Запрос','Подбор','Расчёт','Согласование','Выкуп','Порт США','В море','Таможня','Доставка','Выдача'].indexOf(order.stage)):({'Новый':0,'В работе':1,'Расчёт':2,'Ожидает клиента':3,'Сделка':4,'Отказ':0}[lead.status]??0);
-  return `<div class="auto-tg-modal-bg" data-client-detail-bg><div class="auto-tg-modal" role="dialog" aria-modal="true"><div class="auto-modal-head"><div><span class="auto-eyebrow">${esc(order?.id||lead.id)} · МОЙ ЗАКАЗ</span><h2>${esc(order?.model||lead.model||'Автомобиль')}</h2><p class="auto-modal-sub">Менеджер: ${esc(lead.manager||order?.manager||'назначается')} · ${esc(stage)}</p></div><button class="auto-close" type="button" data-client-detail-close>×</button></div>${stageSteps(stageIndex)}<div class="auto-client-order-grid"><div><span>Стоимость</span><b>${quote?.total?money(quote.total):lead.budget?`до ${money(lead.budget)}`:'по расчёту'}</b></div><div><span>Следующий шаг / ETA</span><b>${order?.eta?dateRu(order.eta):dateRu(lead.nextAction)}</b></div><div><span>LOT</span><b>${esc(order?.lot||'ещё не присвоен')}</b></div><div><span>VIN</span><b>${esc(order?.vin||'ещё не присвоен')}</b></div><div><span>Локация</span><b>${esc(order?.location||'—')}</b></div><div><span>Оплачено</span><b>${order?`${money(order.paid)} из ${money(order.total)}`:lead.deposit?money(lead.deposit):'—'}</b></div></div><div class="auto-client-request"><h3>Параметры заявки</h3><p>${esc(lead.yearFrom||'—')}–${esc(lead.yearTo||'—')} · пробег до ${esc(lead.mileageMax||'—')} км · ${esc(lead.engine||'Не важно')} · ${esc(lead.drive||'Не важно')}</p>${lead.note?`<small>${esc(lead.note)}</small>`:''}</div><div class="auto-actions"><button class="auto-btn tg" type="button" data-tg-manager="${esc(lead.id)}" ${hasTelegram(manager)?'':'disabled'}>${hasTelegram(manager)?'Написать менеджеру в Telegram':'Telegram менеджера ещё не указан'}</button><button class="auto-btn ghost" type="button" data-client-detail-close>Закрыть</button></div></div></div>`;
+  return `<div class="auto-tg-modal-bg" data-client-detail-bg><div class="auto-tg-modal" role="dialog" aria-modal="true"><div class="auto-modal-head"><div><span class="auto-eyebrow">${esc(order?.id||lead.id)} · МОЙ ЗАКАЗ</span><h2>${esc(order?.model||lead.model||'Автомобиль')}</h2><p class="auto-modal-sub">Менеджер: ${esc(lead.manager||order?.manager||'назначается')} · ${esc(stage)}</p></div><button class="auto-close" type="button" data-client-detail-close>×</button></div>${stageSteps(stageIndex)}<div class="auto-client-order-grid"><div><span>Стоимость</span><b>${quote?.total?money(quote.total):lead.budget?`до ${money(lead.budget)}`:'по расчёту'}</b></div><div><span>Следующий шаг / ETA</span><b>${order?.eta?dateRu(order.eta):dateRu(lead.nextAction)}</b></div><div><span>LOT</span><b>${esc(order?.lot||'ещё не присвоен')}</b></div><div><span>VIN</span><b>${esc(order?.vin||'ещё не присвоен')}</b></div><div><span>Локация</span><b>${esc(order?.location||'—')}</b></div><div><span>Оплачено</span><b>${order?`${money(order.paid)} из ${money(order.total)}`:lead.deposit?money(lead.deposit):'—'}</b></div></div><div class="auto-client-request"><h3>Параметры заявки</h3><p>${esc(lead.yearFrom||'—')}–${esc(lead.yearTo||'—')} · пробег до ${esc(lead.mileageMax||'—')} км · ${esc(lead.engine||'Не важно')} · ${esc(lead.drive||'Не важно')}</p>${lead.note?`<small>${esc(lead.note)}</small>`:''}</div><div class="auto-actions"><button class="auto-btn tg" type="button" data-tg-manager="${esc(lead.id)}" ${hasTelegram(manager)?'':'disabled'}>${hasTelegram(manager)?'Открыть чат менеджера':'Telegram менеджера ещё не указан'}</button><button class="auto-btn ghost" type="button" data-tg-send="${esc(lead.id)}" data-tg-target="manager" ${botMessagingAvailable&&manager.id?'':'disabled'}>${botMessagingAvailable&&manager.id?'Отправить через бота':'Сообщение через бота недоступно'}</button><button class="auto-btn ghost" type="button" data-client-detail-close>Закрыть</button></div></div></div>`;
 }
 function showClientDetail(id){const lead=leads().find(item=>item.id===id);if(!lead)return;document.querySelector('[data-client-detail-bg]')?.remove();document.body.insertAdjacentHTML('beforeend',clientDetail(lead))}
 function closeClientDetail(){document.querySelector('[data-client-detail-bg]')?.remove()}
@@ -112,7 +116,66 @@ document.addEventListener('submit',event=>{
   }
 },true);
 
+document.addEventListener('submit',async event=>{
+  const form=event.target;if(form?.id!=='telegramMessageForm')return;
+  event.preventDefault();
+  const status=form.querySelector('[data-tg-compose-status]'),button=form.querySelector('button[type="submit"]');
+  const data=Object.fromEntries(new FormData(form).entries());
+  if(status){status.textContent='Отправляю…';status.dataset.state='loading'}
+  if(button)button.disabled=true;
+  try{
+    await sendBotMessage(data.leadId,data.target,data.message);
+    if(status){status.textContent='Сообщение отправлено';status.dataset.state='success'}
+    setTimeout(closeMessageComposer,650);
+  }catch(error){
+    if(status){status.textContent=error.message||'Не удалось отправить сообщение';status.dataset.state='error'}
+    if(button)button.disabled=false;
+  }
+},true);
+
+async function sendBotMessage(leadId,target,message){
+  if(!botMessagingAvailable)throw new Error('Откройте приложение внутри Telegram, чтобы отправлять сообщения через бота.');
+  const response=await fetch('/api/auto-sale/telegram/message',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},
+    body:JSON.stringify({leadId,target,text:message})
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const map={
+      telegram_not_configured:'Telegram-бот ещё не подключён на сервере.',
+      client_telegram_not_linked:'Клиент ещё не открыл Mini App через Telegram.',
+      manager_telegram_not_linked:'Telegram менеджера ещё не привязан.',
+      telegram_sender_forbidden:'Этот Telegram-пользователь не привязан к данной сделке.',
+      telegram_init_data_expired:'Сессия Telegram устарела. Закройте и заново откройте Mini App.'
+    };
+    throw new Error(map[data.error]||'Не удалось отправить сообщение через Telegram.');
+  }
+  return data;
+}
+function closeMessageComposer(){document.querySelector('[data-tg-compose-bg]')?.remove()}
+function openMessageComposer(leadId,target){
+  closeMessageComposer();
+  const lead=leads().find(item=>item.id===leadId);if(!lead)return;
+  const recipient=target==='client'?(lead.name||'клиент'):(lead.manager||'менеджер');
+  document.body.insertAdjacentHTML('beforeend',`<div class="auto-tg-compose-bg" data-tg-compose-bg><form class="auto-tg-compose" id="telegramMessageForm"><div class="auto-modal-head"><div><span class="auto-eyebrow">TELEGRAM · AUTO МИР</span><h3>Сообщение: ${esc(recipient)}</h3><p>Сообщение будет отправлено через бота от имени AUTO МИР.</p></div><button class="auto-close" type="button" data-tg-compose-close>×</button></div><input type="hidden" name="leadId" value="${esc(leadId)}"><input type="hidden" name="target" value="${esc(target)}"><label>Сообщение<textarea name="message" maxlength="1500" rows="5" required placeholder="Введите сообщение клиенту или менеджеру"></textarea></label><div class="auto-tg-compose-status" data-tg-compose-status></div><div class="auto-actions"><button class="auto-btn primary" type="submit">Отправить</button><button class="auto-btn ghost" type="button" data-tg-compose-close>Отмена</button></div></form></div>`);
+  queueMicrotask(()=>document.querySelector('#telegramMessageForm textarea')?.focus());
+}
+function enhanceManagerOrder(){
+  const form=document.querySelector('#orderForm');if(!form||form.dataset.telegramMessaging==='1')return;
+  form.dataset.telegramMessaging='1';
+  const order=orders().find(item=>item.id===form.elements.id?.value),lead=order?leads().find(item=>item.id===order.leadId):null;
+  if(!lead)return;
+  const contact=clientTelegram(lead),actions=form.querySelector('.auto-actions');
+  if(actions&&!actions.querySelector('[data-tg-send][data-tg-target="client"]')){
+    const button=document.createElement('button');button.type='button';button.className='auto-btn ghost';button.dataset.tgSend=lead.id;button.dataset.tgTarget='client';button.textContent=botMessagingAvailable&&contact.id?'Сообщение клиенту через бота':'Telegram-бот недоступен';button.disabled=!(botMessagingAvailable&&contact.id);actions.append(button);
+  }
+}
+
 document.addEventListener('click',event=>{
+  const sendButton=event.target.closest('[data-tg-send]');if(sendButton){event.preventDefault();event.stopPropagation();openMessageComposer(sendButton.dataset.tgSend,sendButton.dataset.tgTarget);return}
+  const composeClose=event.target.closest('[data-tg-compose-close]');if(composeClose){event.preventDefault();closeMessageComposer();return}
+  if(event.target.matches('[data-tg-compose-bg]')){closeMessageComposer();return}
   const clientButton=event.target.closest('[data-tg-client]');if(clientButton){event.preventDefault();event.stopPropagation();const lead=leads().find(item=>item.id===clientButton.dataset.tgClient);if(lead)openTelegram(clientTelegram(lead));return}
   const managerButton=event.target.closest('[data-tg-manager]');if(managerButton){event.preventDefault();const lead=leads().find(item=>item.id===managerButton.dataset.tgManager);if(lead)openTelegram(managerTelegram(lead));return}
   const close=event.target.closest('[data-client-detail-close]');if(close){event.preventDefault();closeClientDetail();return}
@@ -125,10 +188,11 @@ document.addEventListener('keydown',event=>{
 });
 
 function injectStyles(){if(document.getElementById('autoSaleTelegramStyles'))return;const style=document.createElement('style');style.id='autoSaleTelegramStyles';style.textContent=`
-.auto-order-card[data-client-lead]{cursor:pointer;transition:transform .16s ease,border-color .16s ease}.auto-order-card[data-client-lead]:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.28)}.auto-order-card[data-client-lead]:focus-visible{outline:2px solid currentColor;outline-offset:3px}.auto-order-open-hint{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:13px;opacity:.75}.auto-btn.tg{background:#229ED9;color:#fff;border-color:#229ED9}.auto-btn.tg:disabled{opacity:.45;cursor:not-allowed}.auto-tg-hint{display:grid;gap:2px;padding:12px 14px;border:1px solid rgba(34,158,217,.32);border-radius:14px;background:rgba(34,158,217,.08)}.auto-tg-hint span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7}.auto-tg-hint small,.auto-tg-inline,.auto-tg-manager-field small{font-size:12px;opacity:.68}.auto-tg-modal-bg{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px}.auto-tg-modal{width:min(760px,100%);max-height:92dvh;overflow:auto;background:#101318;border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.45)}.auto-client-track{display:flex;gap:7px;overflow-x:auto;padding:14px 0 18px;scrollbar-width:none}.auto-client-track span{min-width:84px;display:grid;gap:5px;opacity:.38}.auto-client-track span.done{opacity:1}.auto-client-track i{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;font-style:normal;border:1px solid rgba(255,255,255,.25);font-size:11px}.auto-client-track .done i{background:#fff;color:#0b0d10}.auto-client-track b{font-size:11px;font-weight:600}.auto-client-order-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.auto-client-order-grid>div{padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:14px;display:grid;gap:5px}.auto-client-order-grid span{font-size:11px;opacity:.58}.auto-client-order-grid b{font-size:14px}.auto-client-request{margin-top:14px;padding:15px;border:1px solid rgba(255,255,255,.1);border-radius:14px}.auto-client-request h3{margin:0 0 7px}.auto-client-request p{margin:0}.auto-client-request small{display:block;margin-top:8px;opacity:.68}@media(max-width:720px){.auto-tg-modal-bg{align-items:flex-end;padding:0}.auto-tg-modal{border-radius:22px 22px 0 0;max-height:94dvh;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}.auto-client-order-grid{grid-template-columns:1fr 1fr}}@media(max-width:390px){.auto-client-order-grid{grid-template-columns:1fr}}
+.auto-order-card[data-client-lead]{cursor:pointer;transition:transform .16s ease,border-color .16s ease}.auto-order-card[data-client-lead]:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.28)}.auto-order-card[data-client-lead]:focus-visible{outline:2px solid currentColor;outline-offset:3px}.auto-order-open-hint{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.1);font-size:13px;opacity:.75}.auto-btn.tg{background:#229ED9;color:#fff;border-color:#229ED9}.auto-btn.tg:disabled{opacity:.45;cursor:not-allowed}.auto-tg-hint{display:grid;gap:2px;padding:12px 14px;border:1px solid rgba(34,158,217,.32);border-radius:14px;background:rgba(34,158,217,.08)}.auto-tg-hint span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.7}.auto-tg-hint small,.auto-tg-inline,.auto-tg-manager-field small{font-size:12px;opacity:.68}.auto-tg-modal-bg{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:18px}.auto-tg-modal{width:min(760px,100%);max-height:92dvh;overflow:auto;background:#101318;border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.45)}.auto-client-track{display:flex;gap:7px;overflow-x:auto;padding:14px 0 18px;scrollbar-width:none}.auto-client-track span{min-width:84px;display:grid;gap:5px;opacity:.38}.auto-client-track span.done{opacity:1}.auto-client-track i{width:25px;height:25px;border-radius:50%;display:grid;place-items:center;font-style:normal;border:1px solid rgba(255,255,255,.25);font-size:11px}.auto-client-track .done i{background:#fff;color:#0b0d10}.auto-client-track b{font-size:11px;font-weight:600}.auto-client-order-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.auto-client-order-grid>div{padding:13px;border:1px solid rgba(255,255,255,.1);border-radius:14px;display:grid;gap:5px}.auto-client-order-grid span{font-size:11px;opacity:.58}.auto-client-order-grid b{font-size:14px}.auto-client-request{margin-top:14px;padding:15px;border:1px solid rgba(255,255,255,.1);border-radius:14px}.auto-client-request h3{margin:0 0 7px}.auto-client-request p{margin:0}.auto-client-request small{display:block;margin-top:8px;opacity:.68}.auto-tg-compose-bg{position:fixed;inset:0;z-index:2100;background:rgba(0,0,0,.76);backdrop-filter:blur(8px);display:grid;place-items:center;padding:18px}.auto-tg-compose{width:min(560px,100%);display:grid;gap:14px;padding:20px;border:1px solid rgba(255,255,255,.13);border-radius:22px;background:#101318;box-shadow:0 24px 80px rgba(0,0,0,.5)}.auto-tg-compose label{display:grid;gap:7px}.auto-tg-compose textarea{width:100%;resize:vertical;min-height:120px}.auto-tg-compose-status{min-height:18px;font-size:12px;color:rgba(255,255,255,.65)}.auto-tg-compose-status[data-state="success"]{color:#2fd38a}.auto-tg-compose-status[data-state="error"]{color:#ff6b6b}
+@media(max-width:720px){.auto-tg-modal-bg,.auto-tg-compose-bg{align-items:flex-end;padding:0}.auto-tg-modal,.auto-tg-compose{border-radius:22px 22px 0 0;max-height:94dvh;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}.auto-client-order-grid{grid-template-columns:1fr 1fr}}@media(max-width:390px){.auto-client-order-grid{grid-template-columns:1fr}}
 `;document.head.append(style)}
 
-let scheduled=false;function enhance(){scheduled=false;injectStyles();autofillClientRequest();enhanceManagerLead();enhanceClientOrderCards()}
+let scheduled=false;function enhance(){scheduled=false;injectStyles();autofillClientRequest();enhanceManagerLead();enhanceManagerOrder();enhanceClientOrderCards()}
 function scheduleEnhance(){if(scheduled)return;scheduled=true;queueMicrotask(enhance)}
 const observer=new MutationObserver(scheduleEnhance);observer.observe(document.getElementById('app'),{childList:true,subtree:true});
 scheduleEnhance();
