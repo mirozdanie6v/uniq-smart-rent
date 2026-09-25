@@ -48,7 +48,18 @@ jobs:
           UPLOAD_MISSING_PHOTOS: 'true'
         run: python scripts/scrape-autoworld-georgia.py
 
-      - name: Detect vehicle location from source images, newest first
+      - name: Rescan full public archive for Telegram location markers
+        env:
+          AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
+          OUT_DIR: data/autoworld-georgia
+          MAX_PAGES: '260'
+          MAX_PHOTOS_PER_CAR: '10'
+          REQUEST_DELAY: '0.05'
+          MERGE_EXISTING: 'true'
+          UPLOAD_MISSING_PHOTOS: 'false'
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Detect vehicle location from images or text when marker is unavailable
         env:
           SOURCE_PATH: data/autoworld-georgia/cars.json
           ORIGIN_SCAN_LIMIT: '0'
