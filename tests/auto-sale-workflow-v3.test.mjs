@@ -59,6 +59,16 @@ test('validated client to handoff workflow preserves all business rules',async()
   set(form,'[name="repair"]','1200');
   set(form,'[name="service"]','1500');
   set(form,'[name="validUntil"]','2026-09-20');
+  set(form,'[name="verificationLot"]','998877');
+  set(form,'[name="verificationVin"]','WAUZZZTEST1234567');
+  set(form,'[name="verificationYear"]','2023');
+  set(form,'[name="verificationMileage"]','18000');
+  set(form,'[name="verificationDamage"]','Косметические повреждения бампера');
+  set(form,'[name="verificationReportUrl"]','https://example.com/audi-q5-report');
+  set(form,'[name="verificationHistory"]','История проверена, критичных записей нет.');
+  set(form,'[name="verificationResult"]','Одобрен к покупке');
+  set(form,'[name="verificationCheckedAt"]','2026-09-12');
+  set(form,'[name="verificationPhotos"]','["https://example.com/audi-q5-before.jpg"]');
   set(form,'[name="status"]','Отправлен');
   submit(dom,form);
 
@@ -66,6 +76,9 @@ test('validated client to handoff workflow preserves all business rules',async()
   assert.ok(quote);
   assert.equal(quote.total,39000);
   assert.equal(quote.status,'Отправлен');
+  assert.equal(quote.verification.lotNumber,'998877');
+  assert.equal(quote.verification.result,'Одобрен к покупке');
+  assert.equal(quote.verification.photos.length,1);
   lead=JSON.parse(localStorage.getItem('auto-sale-leads-v2')).find(x=>x.id===lead.id);
   assert.equal(lead.status,'Ожидает клиента');
   root.querySelector(`[data-id="${quote.id}"][data-quote-action="На согласовании"]`).click();
@@ -89,6 +102,8 @@ test('validated client to handoff workflow preserves all business rules',async()
   let order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.leadId===lead.id);
   assert.ok(order);
   assert.equal(order.stage,'Выкуп');
+  assert.equal(order.lot,'998877');
+  assert.equal(order.vin,'WAUZZZTEST1234567');
   assert.equal(order.paid,10000);
   assert.equal(order.payments.length,1);
   assert.equal(order.paymentPlan.length,4);
