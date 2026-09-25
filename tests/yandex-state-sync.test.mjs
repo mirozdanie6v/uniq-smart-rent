@@ -138,3 +138,47 @@ test('YDB sync accepts catalog cars whose price is supplied by source metadata o
   assert.equal(stored.catalog[0].priceRub,2970000);
   assert.equal(stored.catalog[1].price,0);
 });
+
+test('YDB sync blocks USA approval without a complete vehicle dossier',async()=>{
+  const previous=base();
+  previous.leads[0].status='Ожидает клиента';
+  previous.quotes=[{
+    id:'Q-VERIFY',leadId:'L-1',model:'BMW X5',origin:'США',transportMode:'Море',
+    lot:25000,auction:1000,inland:1000,ocean:2500,customs:6500,repair:1500,service:1500,total:39000,
+    status:'На согласовании',version:1,validUntil:'2026-10-10'
+  }];
+  const store=fakeStore(previous);
+  const input=structuredClone(previous);input.baseRevision=7;input.quotes[0].status='Согласован';
+  const result=await syncYdbState(store,input);
+  assert.equal(result.status,400);
+  assert.equal(result.data.error,'invalid_quote');
+  assert.ok(result.data.details.includes('verification_lot_required'));
+});
+
+test('YDB sync accepts approved USA quote with dossier and locks it afterwards',async()=>{
+  const verification={
+    lotNumber:'LOT-900',vin:'VIN900TEST',year:2023,mileage:18000,damage:'Косметические повреждения',
+    photos:['https://storage.yandexcloud.net/viiversion-auto-sale-media/cars/VERIFY-Q-900/verification-a.jpg'],
+    reportUrl:'https://example.com/report-900',history:'История проверена.',
+    result:'Одобрен к покупке',checkedAt:'2026-09-25'
+  };
+  const previous=base();
+  previous.leads[0].status='Ожидает клиента';
+  previous.quotes=[{
+    id:'Q-VERIFY',leadId:'L-1',model:'BMW X5',origin:'США',transportMode:'Море',
+    lot:25000,auction:1000,inland:1000,ocean:2500,customs:6500,repair:1500,service:1500,total:39000,
+    status:'На согласовании',version:1,validUntil:'2026-10-10',verification
+  }];
+  const store=fakeStore(previous);
+  const input=structuredClone(previous);input.baseRevision=7;input.quotes[0].status='Согласован';
+  const approved=await syncYdbState(store,input);
+  assert.equal(approved.status,200);
+
+  const stored=await store.loadState();
+  const changed=structuredClone(stored);changed.baseRevision=stored.revision;
+  changed.quotes[0].verification.damage='Изменено после согласования';
+  const locked=await syncYdbState(store,changed);
+  assert.equal(locked.status,400);
+  assert.equal(locked.data.error,'locked_quote_changed');
+  assert.equal(locked.data.field,'verification');
+});
