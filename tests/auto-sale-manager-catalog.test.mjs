@@ -35,6 +35,7 @@ test('manager navigation exposes catalog and can add a published vehicle',async(
   form.elements.brand.value='Kia';
   form.elements.model.value='Telluride SX';
   form.elements.year.value='2024';
+  form.elements.origin.value='Грузия';
   form.elements.mileage.value='12 000 км';
   form.elements.engine.value='3.8 бензин';
   form.elements.drive.value='AWD';
@@ -51,6 +52,7 @@ test('manager navigation exposes catalog and can add a published vehicle',async(
   const car=catalog.find(x=>x.brand==='Kia'&&x.model==='Telluride SX');
   assert.ok(car);
   assert.equal(car.active,true);
+  assert.equal(car.origin,'Грузия');
   assert.equal(car.price,42000);
   assert.equal(car.auctionDate,'30.09.2026');
 
@@ -194,9 +196,25 @@ test('manager can permanently delete a vehicle from the catalog',async()=>{
   dom.window.close();
 });
 
-test('mobile manager catalog labels year instead of lead budget',async()=>{
+test('mobile manager catalog labels origin, year and auction date correctly',async()=>{
   const css=await readFile(new URL('../public/auto-sale-mobile-admin.css',import.meta.url),'utf8');
-  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(2\)::before\{content:'Год выпуска'\}/);
-  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(5\)::before\{content:'Дата аукциона'\}/);
+  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(2\)::before\{content:'Локация'\}/);
+  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(3\)::before\{content:'Год выпуска'\}/);
+  assert.match(css,/\.auto-data-table\.catalog \.auto-data-row>span:nth-child\(6\)::before\{content:'Дата аукциона'\}/);
   assert.match(css,/:not\(\.catalog\)/);
+});
+
+test('client catalog filters vehicles by origin',async()=>{
+  const seed=[
+    {id:'USA-1',brand:'Nissan',model:'Kicks USA',year:2025,origin:'США',mileage:'1 mi',engine:'2.0',drive:'FWD',auction:'Copart',auctionDate:'30.09.2026',price:15000,delivery:'8 недель',tag:'USA',image:'https://example.com/usa.jpg',active:true},
+    {id:'GE-1',brand:'Kia',model:'Sportage Georgia',year:2025,origin:'Грузия',mileage:'10 км',engine:'2.0',drive:'AWD',auction:'',auctionDate:'',price:18000,delivery:'7 дней',tag:'GE',image:'https://example.com/ge.jpg',active:true}
+  ];
+  const {dom,root}=await setup('origin-filter',{catalogSeed:seed});
+  root.querySelector('[data-role="client"]').click();await tick();
+  root.querySelector('[data-go="catalog"]').click();await tick();
+  const filter=root.querySelector('#originFilter');assert.ok(filter);
+  filter.value='Грузия';filter.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await tick();
+  assert.ok(root.querySelector('[data-detail="GE-1"]'));
+  assert.equal(root.querySelector('[data-detail="USA-1"]'),null);
+  dom.window.close();
 });
