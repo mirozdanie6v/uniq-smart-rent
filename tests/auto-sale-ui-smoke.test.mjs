@@ -77,3 +77,11 @@ test('empty production state stays empty instead of restoring seeded data',async
   assert.deepEqual(mod.seedQuotes(),[]);
   assert.deepEqual(mod.seedOrders(),[]);
 });
+
+test('entry page never renders a literal backslash-n artifact',()=>{
+  assert.equal(html.includes('\\n  <!-- compatibility marker'),false);
+});
+
+test('catalog auction date label keeps explicit visible spacing before value',()=>{
+  assert.match(app,/Дата аукциона&nbsp;<\/span><b>\$\{esc\(auctionDateText\(c\.auctionDate\)\)\}<\/b>/);
+});
