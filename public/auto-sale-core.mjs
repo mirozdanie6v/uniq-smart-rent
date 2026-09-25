@@ -1,4 +1,6 @@
-export const ORDER_STAGES = ['Запрос','Подбор','Расчёт','Согласование','Выкуп','Порт США','В море','Таможня','Доставка','Выдача'];
+export const ORDER_STAGES = ['Запрос','Подбор','Расчёт','Согласование','Выкуп','Подготовка к отправке','В пути','Таможня','Доставка','Выдача'];
+const LEGACY_ORDER_STAGES={'Порт США':'Подготовка к отправке','В море':'В пути'};
+export const normalizeOrderStage=stage=>LEGACY_ORDER_STAGES[stage]||stage;
 export const LEAD_STATUSES = ['Новый','В работе','Расчёт','Ожидает клиента','Сделка','Отказ'];
 export const MANAGERS = [];
 export const SOURCES = ['Telegram','Instagram','Сайт','Рекомендации','WhatsApp'];
@@ -30,7 +32,7 @@ export function nextId(prefix, items = []) {
 }
 
 export function orderStageIndex(stage) {
-  const idx = ORDER_STAGES.indexOf(stage);
+  const idx = ORDER_STAGES.indexOf(normalizeOrderStage(stage));
   return idx < 0 ? 0 : idx;
 }
 
@@ -51,7 +53,7 @@ export function leadStage(status) {
 }
 
 export function clientStage(lead, order) {
-  return order?.stage || leadStage(lead?.status);
+  return order?.stage ? normalizeOrderStage(order.stage) : leadStage(lead?.status);
 }
 
 export function filterLeads(leads = [], filters = {}) {
@@ -70,7 +72,7 @@ export function filterOrders(orders = [], filters = {}) {
   return orders.filter(order => {
     const hay = `${order.id} ${order.customer} ${order.model} ${order.vin} ${order.lot}`.toLowerCase();
     return (!query || hay.includes(query)) &&
-      (!filters.stage || filters.stage === 'all' || order.stage === filters.stage) &&
+      (!filters.stage || filters.stage === 'all' || normalizeOrderStage(order.stage) === normalizeOrderStage(filters.stage)) &&
       (!filters.manager || filters.manager === 'all' || order.manager === filters.manager) &&
       (!filters.risk || filters.risk === 'all' || (filters.risk === 'risk' ? order.risk !== 'Нет' : order.risk === 'Нет'));
   });
