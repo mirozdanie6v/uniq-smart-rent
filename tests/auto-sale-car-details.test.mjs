@@ -41,6 +41,6 @@ test('client popup uses a swipeable photo slider with arrows and thumbnails',()=
 
 test('vehicle popup exposes auction date as a dedicated field',()=>{
   assert.match(details,/spec\('Аукцион',car\.auction\)/);
-  assert.match(details,/spec\('Дата аукциона',auctionDateText\(car\)\)/);
+  assert.match(details,/spec\(ended\?'Аукцион завершён':'Дата аукциона',auctionDateText\(car\)\)/);
   assert.match(details,/detailHighlights/);
 });
