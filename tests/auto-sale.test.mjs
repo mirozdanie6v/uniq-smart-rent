@@ -15,7 +15,8 @@ test('quote total equals all cost components including company service',()=>{
 });
 
 test('next order stage advances once and stops at delivery handoff',()=>{
-  assert.equal(nextOrderStage('Выкуп'),'Порт США');
+  assert.equal(nextOrderStage('Выкуп'),'Подготовка к отправке');
+  assert.equal(nextOrderStage('В пути'),'Таможня');
   assert.equal(nextOrderStage('В море'),'Таможня');
   assert.equal(nextOrderStage('Выдача'),'Выдача');
   assert.equal(ORDER_STAGES.length,10);
@@ -70,7 +71,7 @@ test('client stage follows CRM before order and logistics after conversion',()=>
   const lead=seedLeads().find(x=>x.id==='L-101');
   assert.equal(clientStage(lead,null),'Расчёт');
   const order=seedOrders().find(x=>x.leadId==='L-101');
-  assert.equal(clientStage(lead,order),'В море');
+  assert.equal(clientStage(lead,order),'В пути');
 });
 
 test('new ids continue after the highest numeric id',()=>{
