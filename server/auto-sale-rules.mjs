@@ -12,6 +12,25 @@ const records=v=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object'):[];
 const quoteSum=q=>['lot','auction','inland','ocean','customs','repair','service'].reduce((sum,key)=>sum+num(q[key]),0);
 const PAYMENT_STAGE_IDS=['auction_deposit','auction_balance','logistics_legalization','customs_fts'];
 
+const verification=value=>value&&typeof value==='object'?value:{};
+const verificationPhotos=value=>Array.isArray(verification(value).photos)?verification(value).photos.filter(Boolean):[];
+function validateVehicleVerification(quote){
+  const v=verification(quote.verification),errors=[];
+  if(!text(v.lotNumber))errors.push('verification_lot_required');
+  if(!text(v.vin))errors.push('verification_vin_required');
+  if(num(v.year)<1900)errors.push('verification_year_required');
+  if(Number(v.mileage)<0||!Number.isFinite(Number(v.mileage)))errors.push('verification_mileage_invalid');
+  if(!text(v.damage))errors.push('verification_damage_required');
+  const photos=verificationPhotos(v);
+  if(!photos.length)errors.push('verification_photo_required');
+  if(photos.some(x=>!/^https?:\/\//i.test(text(x))))errors.push('verification_photo_invalid');
+  if(!text(v.reportUrl)&&!text(v.history))errors.push('verification_report_required');
+  if(text(v.reportUrl)&&!/^https?:\/\//i.test(text(v.reportUrl)))errors.push('verification_report_invalid');
+  if(!text(v.checkedAt))errors.push('verification_date_required');
+  if(text(v.result)!=='Одобрен к покупке')errors.push('verification_approval_required');
+  return errors;
+}
+
 export function leadTransitionAllowed(from,to,{hasAgreedQuote=false,deposit=0}={}){
   if(from===to)return true;
   if(to==='Отказ')return from!=='Сделка'&&from!=='Отказ';
@@ -58,7 +77,8 @@ export function validateQuote(quote){
     if(num(quote.total)!==quoteSum(quote))errors.push('quote_total_mismatch');
     if(!text(quote.validUntil))errors.push('valid_until_required');
   }
-  return errors;
+  if(status==='Согласован'&&text(quote.origin)==='США')errors.push(...validateVehicleVerification(quote));
+  return [...new Set(errors)];
 }
 
 export function validateOrder(order,previousStage=''){
