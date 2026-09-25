@@ -309,6 +309,8 @@ async function main(){
     vin:clean(x.source.vin),
     reason:sourceQualityReason(x.source)
   }));
+  const originCounts={};
+  for(const car of imported)originCounts[car.origin]=(originCounts[car.origin]||0)+1;
   const audit={
     sourceCount:source.length,
     candidateCount:candidates.length,
@@ -320,6 +322,7 @@ async function main(){
     pricedBid:imported.filter(x=>Number(x.estimatedBidUsd)>0).length,
     noPrice:imported.filter(x=>!Number(x.priceRub)&&!Number(x.estimatedBidUsd)).length,
     withPhotos:imported.filter(x=>x.image).length,
+    originCounts,
     brandCounts,
     duplicateVins,
     skipped
