@@ -10,6 +10,7 @@ const responsive=await readFile(new URL('../public/auto-sale-responsive.css',imp
 const mobileAdmin=await readFile(new URL('../public/auto-sale-mobile-admin.css',import.meta.url),'utf8');
 const core=await readFile(new URL('../public/auto-sale-core.mjs',import.meta.url),'utf8');
 const details=await readFile(new URL('../public/auto-sale-car-details.mjs',import.meta.url),'utf8');
+const clientCss=await readFile(new URL('../public/auto-sale.css',import.meta.url),'utf8');
 const team=await readFile(new URL('../public/auto-sale-director-team.mjs',import.meta.url),'utf8');
 
 test('entry page boots the current v3 AUTO SALE chain',()=>{
@@ -84,4 +85,15 @@ test('entry page never renders a literal backslash-n artifact',()=>{
 
 test('catalog auction date label keeps explicit visible spacing before value',()=>{
   assert.match(app,/Дата аукциона&nbsp;<\/span><b>\$\{esc\(auctionDateText\(c\.auctionDate\)\)\}<\/b>/);
+});
+
+test('completed auctions are marked and cannot request a calculation',()=>{
+  assert.match(app,/const auctionEnded=car=>/);
+  assert.match(app,/Аукцион завершён/);
+  assert.match(app,/disabled aria-disabled="true" title="Аукцион завершён"/);
+  assert.match(app,/if\(!c\|\|auctionEnded\(c\)\)return/);
+  assert.match(details,/auctionEnded=car=>/);
+  assert.match(details,/request\.disabled\|\|!car\|\|auctionEnded\(car\)/);
+  assert.match(clientCss,/\.auto-auction-date\.ended/);
+  assert.match(clientCss,/\.auto-btn\.primary:disabled/);
 });
