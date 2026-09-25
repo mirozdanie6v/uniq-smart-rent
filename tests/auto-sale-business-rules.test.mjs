@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   ACTIVE_LEAD_STATUSES,QUOTE_STATUSES,validateClientRequest,validateManagerLead,validateLeadUpdate,validateQuote,
   canCreateOrder,validateOrderUpdate,normalizePayments,paymentsTotal,leadTransitionAllowed,quoteTransitionAllowed,orderRequiredFields,
-  auctionDepositRange,buildUsPaymentPlan,paymentPlanTotal,paymentStageState,nextPaymentStage,migratePaymentsToPlan,validatePaymentStageEntry
+  auctionDepositRange,buildUsPaymentPlan,paymentPlanTotal,paymentStageState,nextPaymentStage,migratePaymentsToPlan,validatePaymentStageEntry,
+  normalizeVehicleVerification,validateVehicleVerification
 } from '../public/auto-sale-business-rules.mjs';
 
 const LEAD_STATUSES=['Новый','В работе','Расчёт','Ожидает клиента','Сделка','Отказ'];
@@ -61,9 +62,10 @@ test('sent quote requires complete cost structure and validity date',()=>{
   assert.equal(validateQuote({leadId:'L-1',model:'BMW',origin:'США',status:'Отправлен',lot:20000,auction:1000,inland:700,ocean:2500,customs:6000,service:1500,repair:0,validUntil:'2026-09-20'}).length,0);
 });
 
-test('order creation enforces the 25–30% auction advance for USA',()=>{
-  const usa={status:'Согласован',origin:'США',total:39000};
+test('order creation enforces verified USA lot plus the 25–30% auction advance',()=>{
+  const usa={status:'Согласован',origin:'США',total:39000,verification:{lotNumber:'LOT-777',vin:'WAUZZZTEST1234567',year:2023,mileage:18000,damage:'Косметические повреждения',photos:['https://example.com/lot.jpg'],reportUrl:'https://example.com/report',history:'Проверена история.',result:'Одобрен к покупке',checkedAt:'2026-09-25'}};
   assert.equal(canCreateOrder({quote:{status:'На согласовании',origin:'США',total:39000},deposit:10000}).ok,false);
+  assert.equal(canCreateOrder({quote:{status:'Согласован',origin:'США',total:39000},deposit:10000}).ok,false);
   assert.equal(canCreateOrder({quote:usa,deposit:5000}).ok,false);
   assert.equal(canCreateOrder({quote:usa,deposit:10000}).ok,true);
   assert.deepEqual(auctionDepositRange(39000),{min:9750,max:11700});
@@ -130,4 +132,18 @@ test('legacy payment totals migrate into four stages without losing money',()=>{
   assert.equal(paymentsTotal(migrated),30000);
   assert.equal(migrated.every(x=>x.paymentStage),true);
   assert.equal(nextPaymentStage(plan,migrated).id,'logistics_legalization');
+});
+
+test('approved USA quote requires a complete pre-purchase dossier',()=>{
+  const base={leadId:'L-VERIFY',model:'Audi Q5',origin:'США',status:'Согласован',lot:26000,auction:1000,inland:700,ocean:2400,customs:6200,repair:1200,service:1500,validUntil:'2026-10-01'};
+  assert.ok(validateQuote(base).some(x=>x.includes('LOT / номер лота')));
+  const verification=normalizeVehicleVerification({verificationLot:'LOT-777',verificationVin:'WAUZZZTEST1234567',verificationYear:'2023',verificationMileage:'18000',verificationDamage:'Косметические повреждения',verificationPhotos:'["https://example.com/lot.jpg"]',verificationReportUrl:'https://example.com/report',verificationHistory:'Проверена история.',verificationResult:'Одобрен к покупке',verificationCheckedAt:'2026-09-25'});
+  assert.deepEqual(validateVehicleVerification({verification},{requireApproved:true}),[]);
+  assert.deepEqual(validateQuote({...base,verification}),[]);
+});
+
+test('lot cannot be approved while verification result needs more work',()=>{
+  const verification={lotNumber:'LOT-778',vin:'VIN778',year:2022,mileage:24000,damage:'Повреждение бампера',photos:['https://example.com/a.jpg'],history:'История проверена.',reportUrl:'',result:'Требует дополнительной проверки',checkedAt:'2026-09-25'};
+  const errors=validateVehicleVerification({verification},{requireApproved:true});
+  assert.ok(errors.some(x=>x.includes('Одобрен к покупке')));
 });
