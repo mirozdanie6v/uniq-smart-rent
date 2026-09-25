@@ -95,4 +95,5 @@ jobs:
           console.log('CATALOG_LOCATION_MISMATCHES',JSON.stringify(mismatch));
           console.log('CATALOG_LOCATION_ISSUES',JSON.stringify(issues));
           console.log('CATALOG_LOCATION_LOW_CONFIDENCE',JSON.stringify(low));
+          console.log('CATALOG_LOCATION_AMBIGUOUS_SOURCE',JSON.stringify(source.filter(x=>['803','814'].includes(String(x.sourcePostId))).map(x=>({post:String(x.sourcePostId),title:x.title,origin:x.origin,method:x.originDetection?.method||'',evidence:x.originDetection?.evidence||'',rawText:x.rawText||'',sourceUrl:x.sourceUrl||''}))));
           NODE
