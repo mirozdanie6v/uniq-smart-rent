@@ -14,7 +14,7 @@ const PAYMENT_STAGE_IDS=['auction_deposit','auction_balance','logistics_legaliza
 
 const verification=value=>value&&typeof value==='object'?value:{};
 const verificationPhotos=value=>Array.isArray(verification(value).photos)?verification(value).photos.filter(Boolean):[];
-function validateVehicleVerification(quote){
+export function validateVehicleVerification(quote){
   const v=verification(quote.verification),errors=[];
   if(!text(v.lotNumber))errors.push('verification_lot_required');
   if(!text(v.vin))errors.push('verification_vin_required');
@@ -77,7 +77,6 @@ export function validateQuote(quote){
     if(num(quote.total)!==quoteSum(quote))errors.push('quote_total_mismatch');
     if(!text(quote.validUntil))errors.push('valid_until_required');
   }
-  if(status==='Согласован'&&text(quote.origin)==='США')errors.push(...validateVehicleVerification(quote));
   return [...new Set(errors)];
 }
 
