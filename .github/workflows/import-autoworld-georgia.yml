@@ -2,6 +2,11 @@ name: Import AutoWorld Georgia public channel
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .import-autoworld-fresh-once
 
 permissions:
   contents: write
@@ -25,20 +30,22 @@ jobs:
       - name: Scrape public Telegram archive and upload photos
         env:
           AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
-          MAX_PAGES: '260'
+          MAX_PAGES: '1'
           MAX_PHOTOS_PER_CAR: '10'
           REQUEST_DELAY: '0.20'
+          ONLY_POST_IDS: '3980,3990,4000'
+          OUT_DIR: data/autoworld-georgia-fresh-2026-09-25
         run: python scripts/scrape-autoworld-georgia.py
 
       - name: Show import report
-        run: cat data/autoworld-georgia/report.json
+        run: cat data/autoworld-georgia-fresh-2026-09-25/report.json
 
       - name: Commit import dataset
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/autoworld-georgia
+          git add data/autoworld-georgia-fresh-2026-09-25
           if git diff --cached --quiet; then
             echo "No import changes"
             exit 0
