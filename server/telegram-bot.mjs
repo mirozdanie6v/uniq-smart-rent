@@ -13,7 +13,7 @@ function safeEqualHex(a,b){
   }catch{return false}
 }
 function parseManagerIds(value){
-  return unique(String(value||'').split(',').map(x=>x.trim()).filter(x=>/^\d+$/.test(x)));
+  return unique(String(value||'').split(',').map(x=>x.trim()).filter(x=>/^-?\d+$/.test(x)));
 }
 function leadFor(state,leadId){
   return arr(state?.leads).find(x=>clean(x.id)===clean(leadId))||null;
@@ -68,7 +68,7 @@ export function createTelegramService({
 
   async function send(chatId,message,{disableWebPagePreview=true}={}){
     const id=clean(chatId),body=clean(message);
-    if(!/^\d+$/.test(id)){const error=new Error('telegram_chat_id_required');error.statusCode=409;throw error}
+    if(!/^-?\d+$/.test(id)){const error=new Error('telegram_chat_id_required');error.statusCode=409;throw error}
     if(!body){const error=new Error('telegram_message_required');error.statusCode=400;throw error}
     if(body.length>3500){const error=new Error('telegram_message_too_long');error.statusCode=400;throw error}
     return api('sendMessage',{chat_id:id,text:body,disable_web_page_preview:disableWebPagePreview});
