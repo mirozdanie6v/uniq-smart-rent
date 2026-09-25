@@ -2,6 +2,11 @@ name: Import AutoWorld Georgia public channel
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .import-autoworld-once
 
 permissions:
   contents: write
