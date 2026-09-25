@@ -9,6 +9,11 @@
   "pricedBid": 53,
   "noPrice": 70,
   "withPhotos": 133,
+  "originCounts": {
+    "США": 79,
+    "Грузия": 52,
+    "США / Грузия": 2
+  },
   "brandCounts": {
     "Subaru": 8,
     "Chevrolet": 16,

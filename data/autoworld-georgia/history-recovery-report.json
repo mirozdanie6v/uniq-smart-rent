@@ -1,39 +1,6 @@
 {
-  "before": 170,
+  "before": 178,
   "after": 178,
-  "recoveredCount": 8,
-  "recovered": [
-    {
-      "sourcePostId": "3893",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3902",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3912",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3922",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3931",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3941",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3950",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    },
-    {
-      "sourcePostId": "3960",
-      "fromCommit": "23100be8b7180daec86857e7d0f1966b8466730a"
-    }
-  ]
+  "recoveredCount": 0,
+  "recovered": []
 }
