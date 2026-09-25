@@ -44,3 +44,8 @@ test('vehicle popup exposes auction date as a dedicated field',()=>{
   assert.match(details,/spec\(ended\?'Аукцион завершён':'Дата аукциона',auctionDateText\(car\)\)/);
   assert.match(details,/detailHighlights/);
 });
+
+test('vehicle popup shows origin and uses source-neutral verification copy',()=>{
+  assert.match(details,/spec\('Локация автомобиля',car\.origin\|\|'Уточняется'\)/);
+  assert.match(details,/по VIN и данным источника до покупки/);
+});
