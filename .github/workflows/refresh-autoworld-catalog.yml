@@ -34,6 +34,9 @@ jobs:
           pip install --quiet requests beautifulsoup4 pillow
           python scripts/detect-autoworld-origin.py --self-test
 
+      - name: Recover any announcements lost from the current dataset
+        run: python scripts/recover-autoworld-history.py
+
       - name: Scrape fresh posts and merge with saved archive
         env:
           AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
@@ -64,8 +67,8 @@ jobs:
         env:
           STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
         run: |
-          node - <<'NODE'
-          const fs=require('fs');
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
           const audit=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import-audit.json','utf8'));
           const source=JSON.parse(fs.readFileSync('data/autoworld-georgia/cars.json','utf8'));
           const state=await (await fetch(process.env.STATE_URL,{headers:{accept:'application/json'}})).json();
@@ -80,7 +83,7 @@ jobs:
           console.log('AUTOWORLD_LIVE_REFRESH_OK',JSON.stringify({
             sourceRows:source.length,
             imported:imported.length,
-            latestSource:latestSource.map(x=>({id:x.sourcePostId,title:x.title,origin:x.origin,method:x.originDetection?.method||''})),
+            latestSource:latestSource.map(x=>({id:x.sourcePostId,title:x.title,origin:x.origin,method:x.originDetection?.method||'',evidence:x.originDetection?.evidence||''})),
             originCounts:imported.reduce((a,x)=>(a[x.origin]=(a[x.origin]||0)+1,a),{})
           }));
           NODE
