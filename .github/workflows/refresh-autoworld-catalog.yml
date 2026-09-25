@@ -1,0 +1,100 @@
+name: Refresh AutoWorld Georgia catalog
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.refresh-autoworld-catalog'
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install scraper and OCR dependencies
+        run: |
+          sudo apt-get update -y >/dev/null
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-rus tesseract-ocr-eng >/dev/null
+          pip install --quiet requests beautifulsoup4 pillow
+          python scripts/detect-autoworld-origin.py --self-test
+
+      - name: Scrape fresh posts and merge with saved archive
+        env:
+          AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
+          OUT_DIR: data/autoworld-georgia
+          MAX_PAGES: '16'
+          MAX_PHOTOS_PER_CAR: '10'
+          REQUEST_DELAY: '0.15'
+          MERGE_EXISTING: 'true'
+          UPLOAD_MISSING_PHOTOS: 'true'
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Detect vehicle location from source images, newest first
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          ORIGIN_SCAN_LIMIT: '0'
+        run: python scripts/detect-autoworld-origin.py
+
+      - name: Restore and import full AutoWorld catalog
+        env:
+          SOURCE_PATH: data/autoworld-georgia/cars.json
+          OUTPUT_PATH: data/autoworld-georgia/catalog-import.json
+          AUDIT_PATH: data/autoworld-georgia/catalog-import-audit.json
+          AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+          REPLACE_SOURCE_ALL: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Verify live imported catalog
+        env:
+          STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const audit=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import-audit.json','utf8'));
+          const source=JSON.parse(fs.readFileSync('data/autoworld-georgia/cars.json','utf8'));
+          const state=await (await fetch(process.env.STATE_URL,{headers:{accept:'application/json'}})).json();
+          const imported=(state.catalog||[]).filter(x=>x.source==='AutoWorld_Georgia');
+          if(imported.length!==audit.normalizedCount)throw new Error(`live_count_${imported.length}_expected_${audit.normalizedCount}`);
+          const latestSource=[...source].sort((a,b)=>Number(b.sourcePostId)-Number(a.sourcePostId)).slice(0,12);
+          const latestIds=new Set(latestSource.map(x=>String(x.sourcePostId)));
+          const latestImported=imported.filter(x=>latestIds.has(String(x.sourcePostId)));
+          if(!latestImported.length)throw new Error('latest_source_not_imported');
+          const noOrigin=imported.filter(x=>!String(x.origin||'').trim());
+          if(noOrigin.length)throw new Error('imported_without_origin_'+noOrigin.length);
+          console.log('AUTOWORLD_LIVE_REFRESH_OK',JSON.stringify({
+            sourceRows:source.length,
+            imported:imported.length,
+            latestSource:latestSource.map(x=>({id:x.sourcePostId,title:x.title,origin:x.origin,method:x.originDetection?.method||''})),
+            originCounts:imported.reduce((a,x)=>(a[x.origin]=(a[x.origin]||0)+1,a),{})
+          }));
+          NODE
+
+      - name: Commit refreshed source and normalized catalog
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/autoworld-georgia
+          if git diff --cached --quiet; then
+            echo "No dataset changes"
+            exit 0
+          fi
+          git commit -m "Refresh AutoWorld catalog and vehicle locations"
+          git pull --rebase origin prototype/auto-sale-usa
+          git push origin HEAD:prototype/auto-sale-usa
