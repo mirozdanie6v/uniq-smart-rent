@@ -136,3 +136,9 @@ test('quote UI separates USA auction costs from Georgia purchase costs',()=>{
   assert.match(app,/Доставка из Грузии в Россию/);
   assert.match(app,/origin==='США'\?Number\(data\.auction\)\|\|0:0/);
 });
+
+test('USA orders expose the four promised payment stages',()=>{
+  for(const token of ['auction_deposit','auction_balance','logistics_legalization','customs_fts','Аукционный аванс','Автомобиль + аукционные сборы','Логистика и легализация','Таможенные платежи ФТС','paymentPlanView'])assert.ok(app.includes(token),token);
+  assert.match(app,/auctionDepositRange/);
+  assert.match(app,/validatePaymentStageEntry/);
+});
