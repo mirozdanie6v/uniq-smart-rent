@@ -239,11 +239,8 @@ function shell(content){const d=dashboard(),f=finances();return `<div class="aut
 function hero(){
   return `<section class="auto-hero auto-hero-premium auto-hero-simple">
     <div class="auto-hero-copy">
-      <h1>Автомобили из <span>США</span><br>и <em>Грузии</em> в Россию</h1>
+      <h1>Автомобили<br>из <span>США</span> и <em>Грузии</em><br>с доставкой в Россию</h1>
       <p>Подбор и проверка лота, прозрачный расчёт, выкуп и доставка под ключ — со статусом заказа в приложении.</p>
-      <div class="auto-market-route" aria-label="Поставка автомобилей из США и Грузии в Россию">
-        <span><i>🇺🇸</i><b>США</b></span><strong>/</strong><span><i>🇬🇪</i><b>Грузия</b></span><strong>→</strong><span><i>🇷🇺</i><b>Россия</b></span>
-      </div>
       <div class="auto-actions auto-hero-actions"><button class="auto-btn primary" data-open-request>Подобрать автомобиль <span aria-hidden="true">→</span></button><button class="auto-btn ghost" data-go="catalog">Смотреть каталог</button></div>
     </div>
   </section>`
