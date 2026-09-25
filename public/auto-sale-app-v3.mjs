@@ -8,7 +8,8 @@ import {
   QUOTE_STATUSES,RISK_TYPES,PAYMENT_METHODS,leadTransitionAllowed,
   validateClientRequest,validateManagerLead,validateLeadUpdate,validateQuote,
   canCreateOrder,validateOrderUpdate,normalizePayments,paymentsTotal,nextPaymentId,
-  PAYMENT_STAGE_DEFS,auctionDepositRange,buildUsPaymentPlan,paymentStageState,nextPaymentStage,migratePaymentsToPlan,validatePaymentStageEntry
+  PAYMENT_STAGE_DEFS,auctionDepositRange,buildUsPaymentPlan,paymentStageState,nextPaymentStage,migratePaymentsToPlan,validatePaymentStageEntry,
+  VERIFICATION_RESULTS,normalizeVehicleVerification
 } from './auto-sale-business-rules.mjs';
 
 const root=document.querySelector('#app');
@@ -215,6 +216,60 @@ async function removeCatalogPhoto(button){
   if(removed)await deleteCatalogPhoto(removed);
 }
 
+const MAX_VERIFICATION_PHOTOS=8;
+const verificationPhotoThumb=(src,index)=>`<div class="catalog-photo-thumb"><img src="${esc(src)}" alt="Фото автомобиля до покупки"><button type="button" data-verification-photo-remove="${index}" aria-label="Удалить фото проверки">×</button></div>`;
+function verificationPhotoEditor(verification={}){
+  const photos=Array.isArray(verification.photos)?verification.photos:[];
+  return `<div class="catalog-photo-editor auto-verification-photos full">
+    <div class="catalog-photo-block">
+      <div class="catalog-photo-title"><b>Фото до покупки</b><small>Кузов, салон, повреждения · до ${MAX_VERIFICATION_PHOTOS} фото</small></div>
+      <input type="hidden" name="verificationPhotos" value="${esc(JSON.stringify(photos))}">
+      <div class="catalog-photo-preview" data-verification-photo-preview>${photos.length?photos.map((src,i)=>verificationPhotoThumb(src,i)).join(''):'<div class="catalog-photo-empty">Фото проверки пока не добавлены</div>'}</div>
+      <label class="catalog-photo-upload">Добавить фото проверки<input type="file" multiple accept="image/jpeg,image/png,image/webp" data-verification-photo-upload></label>
+      <p class="catalog-photo-hint">Фото сохраняются в файловом хранилище и входят в досье конкретного лота.</p>
+    </div>
+  </div>`;
+}
+function updateVerificationPhotoPreview(form){
+  const photos=parsePhotoList(form.elements.verificationPhotos?.value);
+  const box=form.querySelector('[data-verification-photo-preview]');
+  if(box)box.innerHTML=photos.length?photos.map((src,i)=>verificationPhotoThumb(src,i)).join(''):'<div class="catalog-photo-empty">Фото проверки пока не добавлены</div>';
+}
+async function handleVerificationPhotoUpload(input){
+  const form=input.closest('#quoteForm');if(!form)return;
+  const files=[...(input.files||[])];if(!files.length)return;
+  input.disabled=true;
+  try{
+    const current=parsePhotoList(form.elements.verificationPhotos?.value),allowed=Math.max(0,MAX_VERIFICATION_PHOTOS-current.length),uploaded=[];
+    const ref=String(form.elements.id?.value||form.elements.leadId?.value||'draft').replace(/[^A-Za-z0-9_-]/g,'_');
+    for(const file of files.slice(0,allowed)){
+      const converted=await compressCatalogPhoto(file);
+      uploaded.push(await uploadCatalogPhoto(converted,file,`VERIFY-${ref}`,'verification'));
+    }
+    form.elements.verificationPhotos.value=JSON.stringify([...current,...uploaded]);
+    updateVerificationPhotoPreview(form);
+  }catch(error){showErrors(form,[error?.message||'Не удалось загрузить фото проверки.'])}
+  finally{input.value='';input.disabled=false}
+}
+async function removeVerificationPhoto(button){
+  const form=button.closest('#quoteForm');if(!form)return;
+  const photos=parsePhotoList(form.elements.verificationPhotos?.value),index=Number(button.dataset.verificationPhotoRemove)||0,removed=String(photos[index]||'');
+  photos.splice(index,1);form.elements.verificationPhotos.value=JSON.stringify(photos);updateVerificationPhotoPreview(form);
+  if(removed)await deleteCatalogPhoto(removed);
+}
+function vehicleVerificationView(q,compact=false){
+  const v=normalizeVehicleVerification(q),photos=v.photos||[];
+  if(!v.lotNumber&&!v.vin&&!photos.length&&!v.history&&!v.reportUrl)return'';
+  const tone=v.result==='Одобрен к покупке'?'good':v.result==='Не рекомендован'?'warn':'';
+  return `<div class="auto-verification-card ${compact?'compact':''}">
+    <div class="auto-verification-head"><div><span class="auto-eyebrow">ДОСЬЕ ПРОВЕРКИ</span><h4>${esc(v.lotNumber||'Лот не указан')} · ${esc(v.vin||'VIN не указан')}</h4></div><span class="auto-status ${tone}">${esc(v.result||'Не проверено')}</span></div>
+    <div class="auto-verification-meta"><span><b>Год / пробег</b>${v.year||'—'} · ${v.mileage?new Intl.NumberFormat('ru-RU').format(v.mileage)+' км':'—'}</span><span><b>Повреждения</b>${esc(v.damage||'—')}</span><span><b>Проверено</b>${dateRu(v.checkedAt)}</span></div>
+    ${v.history?`<p>${esc(v.history)}</p>`:''}
+    ${v.reportUrl?`<a class="auto-verification-report" href="${esc(v.reportUrl)}" target="_blank" rel="noopener noreferrer">Открыть отчёт проверки →</a>`:''}
+    ${photos.length?`<div class="auto-verification-gallery">${photos.map(src=>`<a href="${esc(src)}" target="_blank" rel="noopener noreferrer"><img src="${esc(src)}" alt="Фото автомобиля до покупки"></a>`).join('')}</div>`:''}
+  </div>`;
+}
+
 
 let leads=parse(localStorage,KEYS.leads,null)||[];
 let quotes=parse(localStorage,KEYS.quotes,null)||[];
@@ -223,7 +278,7 @@ let notes=parse(localStorage,KEYS.notes,{});
 const storedCatalog=parse(localStorage,KEYS.catalog,null);
 let cars=Array.isArray(storedCatalog)&&storedCatalog.length?storedCatalog.map(car=>({...car,active:car.active!==false})):defaultCars.map(car=>({...car}));
 leads=leads.map(x=>({...x,origin:String(x.origin||''),yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
-quotes=quotes.map(x=>{const origin=String(x.origin||'').trim()||(Number(x.auction)>0?'США':'Грузия');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7)}});
+quotes=quotes.map(x=>{const origin=String(x.origin||'').trim()||(Number(x.auction)>0?'США':'Грузия');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7),verification:normalizeVehicleVerification(x)}});
 orders=orders.map(x=>{const rawPayments=normalizePayments(x),origin=String(x.origin||'').trim()||(x.lot?'США':'Уточняется'),lead=leads.find(l=>l.id===x.leadId),quote=quotes.filter(q=>q.leadId===x.leadId).sort((a,b)=>(b.version||1)-(a.version||1))[0],riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое'),riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');let paymentPlan=Array.isArray(x.paymentPlan)?x.paymentPlan:[],paymentPlanNeedsReview=Boolean(x.paymentPlanNeedsReview);if(origin==='США'&&quote&&paymentPlan.length!==4){const range=auctionDepositRange(x.total||quote.total),knownDeposit=Number(lead?.deposit)||0,deposit=knownDeposit||Math.round((range.min+range.max)/2);paymentPlan=buildUsPaymentPlan({...quote,origin,total:Number(x.total)||Number(quote.total)||0},deposit,{needsReview:!knownDeposit});paymentPlanNeedsReview=!knownDeposit;}const payments=paymentPlan.length?migratePaymentsToPlan(rawPayments,paymentPlan):rawPayments;return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),paymentPlan,paymentPlanNeedsReview,payments,paid:paymentsTotal(payments),riskType,riskNote}});
 const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};saveAll();
 
