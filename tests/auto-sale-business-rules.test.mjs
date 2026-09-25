@@ -65,17 +65,17 @@ test('order creation requires agreed quote plus recorded deposit',()=>{
   assert.equal(canCreateOrder({quote:{status:'Согласован'},deposit:5000}).ok,true);
 });
 
-test('logistics fields start at US port and remain required through handoff',()=>{
+test('logistics fields are route-neutral and required through handoff',()=>{
   assert.deepEqual(orderRequiredFields('Выкуп'),[]);
-  for(const stage of ['Порт США','В море','Таможня','Доставка','Выдача'])assert.deepEqual(orderRequiredFields(stage),['lot','vin','eta','location'],stage);
+  for(const stage of ['Подготовка к отправке','В пути','Таможня','Доставка','Выдача','Порт США','В море'])assert.deepEqual(orderRequiredFields(stage),['vin','eta','location'],stage);
 });
 
 test('logistics blocks skipped stages missing fields unnoted risks and invalid payments',()=>{
-  assert.ok(validateOrderUpdate({stage:'В море',lot:'123',vin:'VIN',eta:'2026-10-20',location:'Atlantic',riskType:'Нет',paymentAmount:0},'Выкуп',['Выкуп','Порт США']).length>0);
-  assert.ok(validateOrderUpdate({stage:'Порт США',lot:'123',vin:'',eta:'2026-10-20',location:'Long Beach',riskType:'Нет',paymentAmount:0},'Выкуп',['Выкуп','Порт США']).length>0);
-  assert.ok(validateOrderUpdate({stage:'Порт США',lot:'123',vin:'VIN',eta:'2026-10-20',location:'Long Beach',riskType:'Задержка',riskNote:'',paymentAmount:0},'Выкуп',['Выкуп','Порт США']).length>0);
-  assert.ok(validateOrderUpdate({stage:'Порт США',lot:'123',vin:'VIN',eta:'2026-10-20',location:'Long Beach',riskType:'Нет',paymentAmount:1000,paymentDate:''},'Выкуп',['Выкуп','Порт США']).length>0);
-  assert.equal(validateOrderUpdate({stage:'Порт США',lot:'123',vin:'VIN',eta:'2026-10-20',location:'Long Beach',riskType:'Нет',paymentAmount:1000,paymentDate:'2026-09-12'},'Выкуп',['Выкуп','Порт США']).length,0);
+  assert.ok(validateOrderUpdate({stage:'В пути',lot:'123',vin:'VIN',eta:'2026-10-20',location:'Маршрут',riskType:'Нет',paymentAmount:0},'Выкуп',['Выкуп','Подготовка к отправке']).length>0);
+  assert.ok(validateOrderUpdate({stage:'Подготовка к отправке',lot:'',vin:'',eta:'2026-10-20',location:'Точка отправления',riskType:'Нет',paymentAmount:0},'Выкуп',['Выкуп','Подготовка к отправке']).length>0);
+  assert.ok(validateOrderUpdate({stage:'Подготовка к отправке',lot:'',vin:'VIN',eta:'2026-10-20',location:'Точка отправления',riskType:'Задержка',riskNote:'',paymentAmount:0},'Выкуп',['Выкуп','Подготовка к отправке']).length>0);
+  assert.ok(validateOrderUpdate({stage:'Подготовка к отправке',lot:'',vin:'VIN',eta:'2026-10-20',location:'Точка отправления',riskType:'Нет',paymentAmount:1000,paymentDate:''},'Выкуп',['Выкуп','Подготовка к отправке']).length>0);
+  assert.equal(validateOrderUpdate({stage:'Подготовка к отправке',lot:'',vin:'VIN',eta:'2026-10-20',location:'Точка отправления',riskType:'Нет',paymentAmount:1000,paymentDate:'2026-09-12'},'Выкуп',['Выкуп','Подготовка к отправке']).length,0);
 });
 
 test('issued vehicle cannot move backward',()=>{
@@ -90,4 +90,9 @@ test('legacy paid total migrates into payment history',()=>{
 
 test('active status registry matches CRM matrix',()=>{
   assert.deepEqual(ACTIVE_LEAD_STATUSES,['Новый','В работе','Расчёт','Ожидает клиента']);
+});
+
+test('Georgia quote can omit auction fee and sea transport',()=>{
+  const errors=validateQuote({leadId:'L-GE',model:'Kia',origin:'Грузия',transportMode:'Автовоз',status:'Отправлен',lot:20000,auction:0,inland:900,ocean:0,customs:0,service:1500,repair:0,validUntil:'2026-10-01'});
+  assert.deepEqual(errors,[]);
 });
