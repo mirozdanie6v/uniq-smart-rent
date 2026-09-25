@@ -1,0 +1,60 @@
+name: Optimize AUTO MIR hero assets
+
+on:
+  push:
+    branches:
+      - asset/auto-mir-hero-clean-v3
+    paths:
+      - '.optimize-auto-mir-hero'
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: asset/auto-mir-hero-clean-v3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Optimize responsive hero images
+        run: |
+          python -m pip install --quiet pillow
+          python <<'PY'
+          from PIL import Image
+          from pathlib import Path
+
+          def cover_resize(src,dst,size):
+              im=Image.open(src).convert('RGB')
+              sw,sh=im.size
+              tw,th=size
+              sr=sw/sh
+              tr=tw/th
+              if sr>tr:
+                  nw=int(sh*tr)
+                  x=(sw-nw)//2
+                  im=im.crop((x,0,x+nw,sh))
+              else:
+                  nh=int(sw/tr)
+                  y=max(0,(sh-nh)//2)
+                  im=im.crop((0,y,sw,y+nh))
+              im=im.resize(size,Image.Resampling.LANCZOS)
+              im.save(dst,'WEBP',quality=84,method=6)
+              print(src, '->', dst, size, Path(dst).stat().st_size)
+
+          cover_resize('public/assets/auto-mir-hero-desktop-v3.png','public/assets/auto-mir-hero-desktop-v3.webp',(1920,1080))
+          cover_resize('public/assets/auto-mir-hero-mobile-v3.png','public/assets/auto-mir-hero-mobile-v3.webp',(1080,1920))
+          PY
+
+      - name: Commit optimized assets
+        run: |
+          git config user.name "VIIVERSION Asset Bot"
+          git config user.email "49186663+mirozdanie6v@users.noreply.github.com"
+          git add public/assets/auto-mir-hero-desktop-v3.webp public/assets/auto-mir-hero-mobile-v3.webp
+          git commit -m "Optimize AUTO MIR hero assets for responsive delivery" || exit 0
+          git push origin HEAD:asset/auto-mir-hero-clean-v3
