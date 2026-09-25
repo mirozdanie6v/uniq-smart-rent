@@ -170,6 +170,17 @@ function buildBestFor(car){
   return facts.length?`${name}: ${facts.join(', ')}. ${use}`:`${name}. ${use}`;
 }
 
+function inferOrigin(source){
+  const explicit=clean(source?.origin);
+  if(explicit)return explicit;
+  const raw=String(source?.rawText||'');
+  if(/КОРЕ[ЯИ]/i.test(raw))return'Корея';
+  if(/ЕВРОП/i.test(raw))return'Европа';
+  if(/ПРИМЕР\s+РАСЧ[ЕЁ]ТА\s+США\s*\/\s*ГРУЗ/i.test(raw))return'США / Грузия';
+  if(clean(source?.auctionDate)||clean(source?.lot)||/\bТОРГИ\b|BUY\s*NOW|РАСЧ[ЕЁ]ТНАЯ\s+СТАВКА/i.test(raw))return'США';
+  return'Грузия';
+}
+
 function normalizeCar(source){
   const title=titleFromRaw(source.rawText);
   const rawBrand=clean(title.brand||source.brand);
@@ -212,6 +223,7 @@ function normalizeCar(source){
     model,
     year,
     body:buildBodyType(brand,model),
+    origin:inferOrigin(source),
     mileage:extractMileage(source)||'Пробег уточняется',
     engine:engine||'Двигатель уточняется',
     drive,
