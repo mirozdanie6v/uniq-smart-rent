@@ -99,6 +99,11 @@ export async function syncYdbState(store,input){
       if(!lead||text(lead.status)!=='Сделка'||!quote||text(quote.status)!=='Согласован'||num(lead.deposit)<=0){
         return bad('order_prerequisites_missing',{id:order.id});
       }
+      if(text(quote.origin)==='США'){
+        const min=Math.ceil(num(quote.total)*.25),max=Math.floor(num(quote.total)*.30),plan=arr(order.paymentPlan);
+        if(num(lead.deposit)<min||num(lead.deposit)>max)return bad('auction_deposit_out_of_range',{id:order.id,min,max});
+        if(plan.length!==4)return bad('usa_payment_plan_required',{id:order.id});
+      }
       if([...previousOrders.values()].some(x=>text(x.leadId)===leadId))return bad('duplicate_order_for_lead',{leadId});
     }
   }
