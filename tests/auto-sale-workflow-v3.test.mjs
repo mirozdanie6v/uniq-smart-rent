@@ -92,7 +92,7 @@ test('validated client to handoff workflow preserves all business rules',async()
   assert.equal(order.paid,10000);
   assert.equal(order.payments.length,1);
   assert.equal(order.paymentPlan.length,4);
-  assert.deepEqual(order.paymentPlan.map(x=>x.amount),[10000,16000,6500,6500]);
+  assert.deepEqual(order.paymentPlan.map(x=>x.amount),[10000,17000,5800,6200]);
   assert.equal(order.payments[0].paymentStage,'auction_deposit');
 
   form=root.querySelector('#orderForm');
@@ -101,26 +101,26 @@ test('validated client to handoff workflow preserves all business rules',async()
   set(form,'[name="vin"]','WAUZZZTEST1234567');
   set(form,'[name="eta"]','2026-10-25');
   set(form,'[name="location"]','Long Beach, CA');
-  set(form,'[name="paymentAmount"]','16000');
+  set(form,'[name="paymentAmount"]','17000');
   set(form,'[name="paymentDate"]','2026-09-13');
   set(form,'[name="paymentMethod"]','Банк');
   submit(dom,form);
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
   assert.equal(order.stage,'Подготовка к отправке');
   assert.equal(order.vin,'WAUZZZTEST1234567');
-  assert.equal(order.paid,26000);
+  assert.equal(order.paid,27000);
   assert.equal(order.payments[1].paymentStage,'auction_balance');
 
   form=root.querySelector('#orderForm');
   set(form,'[name="stage"]','В пути');
   set(form,'[name="location"]','Atlantic Ocean');
-  set(form,'[name="paymentAmount"]','6500');
+  set(form,'[name="paymentAmount"]','5800');
   set(form,'[name="paymentDate"]','2026-09-13');
   set(form,'[name="paymentMethod"]','Банк');
   submit(dom,form);
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
   assert.equal(order.stage,'В пути');
-  assert.equal(order.paid,32500);
+  assert.equal(order.paid,32800);
   assert.equal(order.payments.length,4);
   assert.equal(order.payments[2].paymentStage,'logistics_legalization');
 
@@ -130,7 +130,7 @@ test('validated client to handoff workflow preserves all business rules',async()
   set(form,'[name="riskType"]','Документы');
   form.querySelector('#riskType').dispatchEvent(new dom.window.Event('change',{bubbles:true}));
   set(form,'[name="riskNote"]','Проверяется комплект документов.');
-  set(form,'[name="paymentAmount"]','6500');
+  set(form,'[name="paymentAmount"]','6200');
   set(form,'[name="paymentDate"]','2026-10-23');
   set(form,'[name="paymentMethod"]','Банк');
   submit(dom,form);
