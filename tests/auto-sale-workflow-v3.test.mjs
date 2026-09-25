@@ -21,6 +21,7 @@ test('validated client to handoff workflow preserves all business rules',async()
   set(form,'[name="name"]','Тестовый клиент');
   set(form,'[name="contact"]','@validated_client');
   set(form,'[name="model"]','Audi Q5 2023');
+  set(form,'[name="origin"]','США');
   set(form,'[name="budget"]','41000');
   set(form,'[name="yearFrom"]','2022');
   set(form,'[name="yearTo"]','2024');

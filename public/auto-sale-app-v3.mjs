@@ -18,7 +18,7 @@ const SOURCE_OPTIONS=[...new Set([...SOURCES,'Mini App','Телефон','Офи
 const ORIGIN_OPTIONS=['США','Грузия','США / Грузия','Уточняется'];
 const CLIENT_ORIGINS=['США','Грузия'];
 const TRANSPORT_MODES=['Море','Автовоз','Не требуется','Другое'];
-const carOrigin=car=>String(car?.origin||'').trim()||((car?.auctionDate||car?.lot)?'США':'Уточняется');
+const carOrigin=car=>String(car?.origin||'').trim()||((car?.auctionDate||car?.lot||car?.auction)?'США':'Уточняется');
 const purchaseScenarioLabel=origin=>origin==='США'?'Аукцион США':origin==='Грузия'?'Авто в Грузии':String(origin||'Уточняется');
 const supportedClientOrigin=origin=>CLIENT_ORIGINS.includes(String(origin||'').trim());
 const managerOriginOptions=current=>[...new Set([...(current&&!ORIGIN_OPTIONS.includes(current)?[current]:[]),...ORIGIN_OPTIONS])];
@@ -221,9 +221,9 @@ let orders=parse(localStorage,KEYS.orders,null)||[];
 let notes=parse(localStorage,KEYS.notes,{});
 const storedCatalog=parse(localStorage,KEYS.catalog,null);
 let cars=Array.isArray(storedCatalog)&&storedCatalog.length?storedCatalog.map(car=>({...car,active:car.active!==false})):defaultCars.map(car=>({...car}));
-leads=leads.map(x=>({...x,yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
-quotes=quotes.map(x=>({...x,version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7)}));
-orders=orders.map(x=>{const payments=normalizePayments(x);const riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое');const riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');return{...x,payments,paid:paymentsTotal(payments),riskType,riskNote}});
+leads=leads.map(x=>({...x,origin:String(x.origin||''),yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
+quotes=quotes.map(x=>{const origin=String(x.origin||'').trim()||(Number(x.auction)>0?'США':'Грузия');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7)}});
+orders=orders.map(x=>{const payments=normalizePayments(x),origin=String(x.origin||'').trim()||(x.lot?'США':'Уточняется'),riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое'),riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),payments,paid:paymentsTotal(payments),riskType,riskNote}});
 const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};saveAll();
 
 const roleLabels={client:'Клиент',manager:'Менеджер',owner:'Директор'};

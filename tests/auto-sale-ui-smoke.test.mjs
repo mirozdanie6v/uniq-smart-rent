@@ -102,12 +102,13 @@ test('completed auctions are marked and cannot request a calculation',()=>{
 test('catalog and quote UI support USA and Georgia without forcing sea delivery',()=>{
   assert.match(app,/ORIGIN_OPTIONS=\['США','Грузия'/);
   assert.match(app,/id="originFilter"/);
-  assert.match(app,/\['inland','Доставка'\]/);
-  assert.match(app,/Международная перевозка/);
+  assert.match(app,/Логистика по Грузии/);
+  assert.match(app,/Доставка по США/);
+  assert.match(app,/Морская перевозка/);
   assert.match(app,/TRANSPORT_MODES=\['Море','Автовоз','Не требуется','Другое'\]/);
   assert.match(app,/Автомобили<br>из <span>США<\/span> и <em>Грузии<\/em><br>с доставкой в Россию/);
   assert.doesNotMatch(app,/auto-market-route|Поставка автомобилей из США и Грузии в Россию/);
-  assert.doesNotMatch(app,/Доставка по США|Доставка США|Аукцион → порт → море → таможня/);
+  assert.doesNotMatch(app,/Доставка США|Аукцион → порт → море → таможня/);
   assert.match(core,/Подготовка к отправке/);
   assert.match(core,/В пути/);
 });
