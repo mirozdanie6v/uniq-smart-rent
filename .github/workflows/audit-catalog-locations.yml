@@ -1,0 +1,98 @@
+name: Audit AUTO SALE catalog locations
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.audit-catalog-locations'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Audit source, normalized catalog and live YDB
+        env:
+          STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs';
+          const source=JSON.parse(fs.readFileSync('data/autoworld-georgia/cars.json','utf8'));
+          const normalized=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import.json','utf8'));
+          const live=await (await fetch(process.env.STATE_URL,{headers:{accept:'application/json'}})).json();
+          const liveImported=(live.catalog||[]).filter(x=>x.source==='AutoWorld_Georgia');
+          const bySource=new Map(source.map(x=>[String(x.sourcePostId||''),x]));
+          const byNorm=new Map(normalized.map(x=>[String(x.id||''),x]));
+          const byLive=new Map(liveImported.map(x=>[String(x.id||''),x]));
+
+          const mismatch=[];
+          for(const row of normalized){
+            const liveRow=byLive.get(String(row.id));
+            if(!liveRow){mismatch.push({id:row.id,issue:'missing_live'});continue}
+            if(String(liveRow.origin||'')!==String(row.origin||'')){
+              mismatch.push({id:row.id,issue:'origin_mismatch',normalized:row.origin,live:liveRow.origin});
+            }
+          }
+          for(const row of liveImported){
+            if(!byNorm.has(String(row.id)))mismatch.push({id:row.id,issue:'live_not_in_normalized',origin:row.origin});
+          }
+
+          const rows=normalized.map(row=>{
+            const src=bySource.get(String(row.sourcePostId||''))||{};
+            const method=src.originDetection?.method||'';
+            const evidence=src.originDetection?.evidence||'';
+            const raw=String(src.rawText||'');
+            const textAuction=Boolean(String(row.auctionDate||'').trim()||String(row.lot||'').trim()||/\bторги\b|buy\s*now|расч[её]тная\s+ставка/i.test(raw));
+            const explicitGeorgia=/авто\s+в\s+грузии|уже\s+в\s+грузии|находится\s+в\s+грузии|грузия/i.test(raw);
+            const authoritative=['custom-emoji-sequence','image-ocr'].includes(method);
+            const supported=['США','Грузия'].includes(String(row.origin||''));
+            let issue='';
+            if(!supported)issue='unsupported_origin';
+            else if(!authoritative && row.origin==='Грузия' && textAuction)issue='heuristic_georgia_with_auction_markers';
+            else if(!authoritative && row.origin==='США' && explicitGeorgia)issue='heuristic_usa_with_georgia_text';
+            return{
+              id:row.id,post:String(row.sourcePostId||''),car:`${row.brand} ${row.model} ${row.year}`,
+              origin:row.origin,method,evidence,auctionDate:row.auctionDate||'',lot:row.lot||'',
+              authoritative,supported,issue
+            };
+          });
+
+          const counts=(items,key)=>items.reduce((a,x)=>(a[x[key]||'(empty)']=(a[x[key]||'(empty)']||0)+1,a),{});
+          const issues=rows.filter(x=>x.issue);
+          const low=rows.filter(x=>!x.authoritative);
+          const report={
+            sourceRows:source.length,
+            normalizedRows:normalized.length,
+            liveImported:liveImported.length,
+            liveRevision:live.revision,
+            originCounts:counts(rows,'origin'),
+            methodCounts:counts(rows,'method'),
+            mismatches:mismatch,
+            issues,
+            lowConfidenceCount:low.length,
+            lowConfidence:low
+          };
+          fs.writeFileSync('/tmp/location-audit.json',JSON.stringify(report,null,2));
+          console.log('CATALOG_LOCATION_AUDIT',JSON.stringify({
+            sourceRows:report.sourceRows,
+            normalizedRows:report.normalizedRows,
+            liveImported:report.liveImported,
+            liveRevision:report.liveRevision,
+            originCounts:report.originCounts,
+            methodCounts:report.methodCounts,
+            mismatchCount:mismatch.length,
+            issueCount:issues.length,
+            lowConfidenceCount:low.length
+          }));
+          console.log('CATALOG_LOCATION_MISMATCHES',JSON.stringify(mismatch));
+          console.log('CATALOG_LOCATION_ISSUES',JSON.stringify(issues));
+          console.log('CATALOG_LOCATION_LOW_CONFIDENCE',JSON.stringify(low));
+          NODE
