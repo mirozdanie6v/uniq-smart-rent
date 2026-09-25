@@ -18,14 +18,16 @@ test('client order cards become openable detailed cards',()=>{
 test('client can contact assigned manager in Telegram',()=>{
   assert.ok(source.includes('data-tg-manager'));
   assert.ok(source.includes('managerTelegramUsername'));
-  assert.ok(source.includes('Написать менеджеру в Telegram'));
+  assert.ok(source.includes('Открыть чат менеджера'));
+  assert.ok(source.includes('data-tg-target="manager"'));
 });
 
 test('manager can contact client from lead using Telegram username or id',()=>{
   assert.ok(source.includes('data-tg-client'));
   assert.ok(source.includes('clientTelegram'));
   assert.ok(source.includes('telegramUserId'));
-  assert.ok(source.includes('Написать клиенту в Telegram'));
+  assert.ok(source.includes('Открыть чат клиента'));
+  assert.ok(source.includes('data-tg-target="client"'));
 });
 
 test('manager Telegram contact is persisted inside lead payload',()=>{
@@ -34,4 +36,14 @@ test('manager Telegram contact is persisted inside lead payload',()=>{
 
 test('catalog module loads Telegram integration in current bootstrap chain',()=>{
   assert.ok(catalog.includes("await import('./auto-sale-telegram.mjs')"));
+});
+
+test('manual bot messages use verified Telegram initData instead of exposing bot token',()=>{
+  for(const token of ['x-telegram-init-data','tg.initData','/api/auto-sale/telegram/message','sendBotMessage','telegramMessageForm'])assert.ok(source.includes(token),token);
+  assert.equal(source.includes('AUTO_SALE_TELEGRAM_BOT_TOKEN'),false);
+});
+
+test('manager order screen can send a bot message to the linked client',()=>{
+  assert.ok(source.includes('enhanceManagerOrder'));
+  assert.ok(source.includes('Сообщение клиенту через бота'));
 });
