@@ -66,7 +66,7 @@ try{
   await mutate(state=>{
     const lead=state.leads.find(x=>x.id===leadId);lead.status='Расчёт';
     state.quotes.push({
-      id:quoteId,leadId,model:'BMW X5 xDrive40i 2022',lot:25000,auction:1000,inland:1000,ocean:2500,
+      id:quoteId,leadId,model:'BMW X5 xDrive40i 2022',origin:'США',transportMode:'Море',lot:25000,auction:1000,inland:1000,ocean:2500,
       customs:6500,repair:1500,service:1500,total,status:'Черновик',version:1,validUntil:addDays(7),
       updatedAt:new Date().toISOString()
     });
@@ -83,15 +83,21 @@ try{
 
   await mutate(state=>{
     const lead=state.leads.find(x=>x.id===leadId);
-    lead.status='Сделка';lead.deposit=5000;lead.depositDate=today;lead.paymentMethod='Банк';
+    lead.status='Сделка';lead.origin='США';lead.deposit=10000;lead.depositDate=today;lead.paymentMethod='Банк';
   });
 
   await mutate(state=>{
     state.orders.push({
-      id:orderId,leadId,customer:'Yandex E2E Client',model:'BMW X5 xDrive40i 2022',manager:'Дмитрий',source:'Mini App',
-      total,cost:37500,paid:5000,stage:'Выкуп',eta:addDays(45),lot:'',vin:'',location:'',risk:'Нет',riskType:'Нет',riskNote:'',
-      updatedAt:new Date().toISOString(),
-      payments:[{id:payment1,amount:5000,date:today,method:'Банк',note:'Депозит',createdAt:new Date().toISOString()}]
+      id:orderId,leadId,customer:'Yandex E2E Client',model:'BMW X5 xDrive40i 2022',origin:'США',transportMode:'Море',manager:'Дмитрий',source:'Mini App',
+      total,cost:37500,paid:10000,stage:'Выкуп',eta:addDays(45),lot:'',vin:'',location:'',risk:'Нет',riskType:'Нет',riskNote:'',
+      paymentPlan:[
+        {id:'auction_deposit',title:'1. Аукционный аванс',due:'До начала торгов',amount:10000},
+        {id:'auction_balance',title:'2. Автомобиль + аукционные сборы',due:'После победы на торгах',amount:16000},
+        {id:'logistics_legalization',title:'3. Логистика и легализация',due:'За несколько дней до прибытия в порт назначения',amount:6500},
+        {id:'customs_fts',title:'4. Таможенные платежи ФТС',due:'За 1–2 дня до пересечения границы РФ',amount:6500}
+      ],
+      paymentPlanNeedsReview:false,updatedAt:new Date().toISOString(),
+      payments:[{id:payment1,amount:10000,date:today,method:'Банк',paymentStage:'auction_deposit',note:'Аукционный аванс',createdAt:new Date().toISOString()}]
     });
   });
 
@@ -104,7 +110,11 @@ try{
 
   await mutate(state=>{
     const order=state.orders.find(x=>x.id===orderId);
-    order.payments.push({id:payment2,amount:34000,date:today,method:'Банк',note:'Финальная оплата',createdAt:new Date().toISOString()});
+    order.payments.push(
+      {id:payment2+'-A',amount:16000,date:today,method:'Банк',paymentStage:'auction_balance',note:'После победы на торгах',createdAt:new Date().toISOString()},
+      {id:payment2+'-B',amount:6500,date:today,method:'Банк',paymentStage:'logistics_legalization',note:'Логистика и легализация',createdAt:new Date().toISOString()},
+      {id:payment2+'-C',amount:6500,date:today,method:'Банк',paymentStage:'customs_fts',note:'Платежи ФТС',createdAt:new Date().toISOString()}
+    );
     order.paid=total;order.stage='Выдача';order.location='Пункт выдачи';order.updatedAt=new Date().toISOString();
   });
 
