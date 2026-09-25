@@ -1,1 +1,1 @@
-incremental refresh after 3969; import latest Georgia posts and preserve all history
+import posts 3980 3990 4000 after fixing month-year parsing; preserve full history
