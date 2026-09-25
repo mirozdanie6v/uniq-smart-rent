@@ -105,7 +105,8 @@ test('catalog and quote UI support USA and Georgia without forcing sea delivery'
   assert.match(app,/\['inland','Доставка'\]/);
   assert.match(app,/Международная перевозка/);
   assert.match(app,/TRANSPORT_MODES=\['Море','Автовоз','Не требуется','Другое'\]/);
-  assert.match(app,/Автомобили из <span>США<\/span><br>и <em>Грузии<\/em>/);
+  assert.match(app,/Автомобили<br>из <span>США<\/span> и <em>Грузии<\/em><br>с доставкой в Россию/);
+  assert.doesNotMatch(app,/auto-market-route|Поставка автомобилей из США и Грузии в Россию/);
   assert.doesNotMatch(app,/Доставка по США|Доставка США|Аукцион → порт → море → таможня/);
   assert.match(core,/Подготовка к отправке/);
   assert.match(core,/В пути/);
