@@ -84,7 +84,8 @@ test('entry page never renders a literal backslash-n artifact',()=>{
 });
 
 test('catalog auction date label keeps explicit visible spacing before value',()=>{
-  assert.match(app,/Дата аукциона&nbsp;<\/span><b>\$\{esc\(auctionDateText\(c\.auctionDate\)\)\}<\/b>/);
+  assert.match(app,/ended\?'Аукцион завершён':'Дата аукциона&nbsp;'/);
+  assert.match(app,/<b>\$\{esc\(auctionDateText\(c\.auctionDate\)\)\}<\/b>/);
 });
 
 test('completed auctions are marked and cannot request a calculation',()=>{
