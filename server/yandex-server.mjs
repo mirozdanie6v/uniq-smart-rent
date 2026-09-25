@@ -6,6 +6,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {createYdbStateStore} from './ydb-state.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
+import {createTelegramService} from './telegram-bot.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -18,12 +19,13 @@ if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
 if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
 const store=await createYdbStateStore({connectionString});
 const media=createObjectStorage({bucket:mediaBucket});
+const telegram=createTelegramService();
 
 const apiHeaders={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
   'access-control-allow-origin':'*',
-  'access-control-allow-headers':'content-type,x-auto-sale-key',
+  'access-control-allow-headers':'content-type,x-auto-sale-key,x-telegram-init-data',
   'access-control-allow-methods':'GET,PUT,POST,DELETE,OPTIONS'
 };
 const json=(res,data,status=200)=>{
@@ -81,7 +83,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(url.pathname==='/api/health'){
       await store.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:3,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
@@ -93,8 +95,36 @@ const server=http.createServer(async(req,res)=>{
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const input=await parseJson(req);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const before=telegram.enabled?await store.loadState():null;
       const result=await syncYdbState(store,input);
+      if(result.status>=200&&result.status<300&&telegram.enabled){
+        try{
+          const deliveries=await telegram.notifyStateChanges(before,{...input,initialized:true});
+          if(deliveries.some(x=>!x.ok))console.warn('AUTO SALE Telegram partial delivery',deliveries.filter(x=>!x.ok));
+        }catch(error){console.error('AUTO SALE Telegram state notification failed',error)}
+      }
       json(res,result.data,result.status);
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/telegram/message'&&req.method==='POST'){
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
+      if(!auth.ok){json(res,{error:auth.error},401);return}
+      const input=await parseJson(req,50_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      try{
+        const state=await store.loadState();
+        const result=await telegram.sendManual(state,{
+          leadId:input.leadId,
+          target:input.target,
+          text:input.text,
+          senderId:auth.user.id
+        });
+        json(res,result,201);
+      }catch(error){
+        const status=Number(error?.statusCode)||500;
+        json(res,{error:String(error?.message||'telegram_send_failed')},status);
+      }
       return;
     }
     if(url.pathname==='/api/auto-sale/media'&&req.method==='POST'){
