@@ -241,7 +241,7 @@ function hero(){
     <div class="auto-hero-copy">
       <h1>Автомобили<br>из <span>США</span> и <em>Грузии</em><br>с доставкой в Россию</h1>
       <p>Подбор и проверка лота, прозрачный расчёт, выкуп и доставка под ключ — со статусом заказа в приложении.</p>
-      <div class="auto-actions auto-hero-actions"><button class="auto-btn primary" data-open-request>Подобрать автомобиль <span aria-hidden="true">→</span></button><button class="auto-btn ghost" data-go="catalog">Смотреть каталог</button></div>
+      <div class="auto-actions auto-hero-actions"><button class="auto-btn ghost" data-go="catalog">Смотреть каталог</button><button class="auto-btn primary" data-open-request>Подобрать автомобиль <span aria-hidden="true">→</span></button></div>
     </div>
   </section>`
 }
