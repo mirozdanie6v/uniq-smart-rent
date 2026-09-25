@@ -107,6 +107,12 @@ async def one_viewport(browser, vp):
     page=await context.new_page()
     await page.route("https://dashboard.viiversion.com/**", lambda route: route.abort())
     await page.route("https://telegram.org/**", lambda route: route.abort())
+    async def state_route(route):
+        if route.request.method.upper()=="PUT":
+            await route.abort()
+        else:
+            await route.continue_()
+    await page.route("**/api/auto-sale/state", state_route)
     console_errors=[]
     page.on("pageerror", lambda exc: console_errors.append("pageerror:"+str(exc)))
     page.on("console", lambda msg: console_errors.append("console:"+msg.text) if msg.type=="error" else None)
