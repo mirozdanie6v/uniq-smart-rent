@@ -116,3 +116,22 @@ test('client detail exposes vehicle location',()=>{
   assert.match(details,/Локация автомобиля/);
   assert.doesNotMatch(details,/аукционному лоту до покупки/);
 });
+
+test('client business path exposes only canonical USA auction and Georgia purchase scenarios',()=>{
+  assert.match(app,/const CLIENT_ORIGINS=\['США','Грузия'\]/);
+  assert.match(app,/Аукцион США/);
+  assert.match(app,/Авто в Грузии/);
+  assert.match(app,/Способ покупки<select name="origin" required>/);
+  assert.match(app,/supportedClientOrigin\(carOrigin\(c\)\)/);
+  assert.doesNotMatch(app,/REQUEST_ORIGIN_OPTIONS/);
+  assert.doesNotMatch(app,/\['США','Грузия','Корея','Европа'/);
+});
+
+test('quote UI separates USA auction costs from Georgia purchase costs',()=>{
+  assert.match(app,/id="quoteOrigin"/);
+  assert.match(app,/quoteAuctionField/);
+  assert.match(app,/Стоимость автомобиля в Грузии/);
+  assert.match(app,/Доставка по США/);
+  assert.match(app,/Доставка из Грузии в Россию/);
+  assert.match(app,/origin==='США'\?Number\(data\.auction\)\|\|0:0/);
+});

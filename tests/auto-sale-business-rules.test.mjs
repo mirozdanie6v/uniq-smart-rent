@@ -10,7 +10,8 @@ const LEAD_STATUSES=['Новый','В работе','Расчёт','Ожидае
 test('client request requires contact model realistic budget and valid year range',()=>{
   assert.ok(validateClientRequest({name:'A',contact:'',model:'BMW X5',budget:40000}).length>0);
   assert.ok(validateClientRequest({name:'A',contact:'@a',model:'BMW X5',budget:40000,yearFrom:2025,yearTo:2021}).length>0);
-  assert.equal(validateClientRequest({name:'A',contact:'@a',model:'BMW X5',budget:40000,yearFrom:2021,yearTo:2024}).length,0);
+  assert.equal(validateClientRequest({name:'A',contact:'@a',model:'BMW X5',origin:'США',budget:40000,yearFrom:2021,yearTo:2024}).length,0);
+  assert.ok(validateClientRequest({name:'A',contact:'@a',model:'BMW X5',origin:'Корея',budget:40000,yearFrom:2021,yearTo:2024}).length>0);
 });
 
 test('manager-created lead requires manager source and next action',()=>{
@@ -56,7 +57,7 @@ test('active lead requires next action while terminal refusal does not',()=>{
 
 test('sent quote requires complete cost structure and validity date',()=>{
   assert.ok(validateQuote({leadId:'L-1',model:'BMW',status:'Отправлен',lot:20000}).length>0);
-  assert.equal(validateQuote({leadId:'L-1',model:'BMW',status:'Отправлен',lot:20000,auction:1000,inland:700,ocean:2500,customs:6000,service:1500,repair:0,validUntil:'2026-09-20'}).length,0);
+  assert.equal(validateQuote({leadId:'L-1',model:'BMW',origin:'США',status:'Отправлен',lot:20000,auction:1000,inland:700,ocean:2500,customs:6000,service:1500,repair:0,validUntil:'2026-09-20'}).length,0);
 });
 
 test('order creation requires agreed quote plus recorded deposit',()=>{
