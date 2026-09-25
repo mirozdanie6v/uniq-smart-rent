@@ -1,0 +1,152 @@
+name: Deploy completed auction state
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .deploy-completed-auction-state
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  DEPLOY_SHA: 8747357994f6271d9904f0a91e58f357a60b6bfb
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
+  YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
+  YC_CONTAINER_NAME: ${{ vars.YC_CONTAINER_NAME }}
+  YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
+  AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Revalidate pinned source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+          npm install
+          npm run check
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const app=fs.readFileSync('public/auto-sale-app-v3.mjs','utf8');
+          const details=fs.readFileSync('public/auto-sale-car-details.mjs','utf8');
+          const css=fs.readFileSync('public/auto-sale.css','utf8');
+          for(const token of ['Аукцион завершён','auctionEnded(c)','disabled aria-disabled="true" title="Аукцион завершён"'])if(!app.includes(token))throw new Error('missing_app_'+token);
+          if(!details.includes('request.disabled||!car||auctionEnded(car)'))throw new Error('detail_guard_missing');
+          if(!css.includes('.auto-auction-date.ended'))throw new Error('ended_style_missing');
+          console.log('COMPLETED_AUCTION_SOURCE_OK');
+          NODE
+
+      - name: Validate Yandex configuration
+        run: |
+          set -euo pipefail
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YC_CONTAINER_NAME YDB_CONNECTION_STRING AUTO_SALE_MEDIA_BUCKET; do
+            test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
+          done
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY"; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Build and push image
+        run: |
+          set -euo pipefail
+          IMAGE="cr.yandex/${YC_REGISTRY_ID}/auto-sale:auction-ended-${DEPLOY_SHA}"
+          echo "$YC_IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
+          docker build -f Dockerfile.yandex -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "AUTO_SALE_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Generate API credential
+        run: |
+          AUTO_SALE_API_KEY=$(openssl rand -hex 32)
+          echo "::add-mask::$AUTO_SALE_API_KEY"
+          echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
+
+      - name: Deploy pinned revision
+        run: |
+          set -euo pipefail
+          yc serverless container revision deploy \
+            --container-name "$YC_CONTAINER_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --image "$AUTO_SALE_IMAGE" \
+            --cores 1 \
+            --memory 512MB \
+            --execution-timeout 30s \
+            --service-account-id "$YC_RUNTIME_SA_ID" \
+            --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
+            --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
+            --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true" \
+            --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET"
+
+      - name: Verify live read-only
+        run: |
+          set -euo pipefail
+          URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
+          RAW_URL="$URL" node --input-type=module <<'NODE'
+          const bases=[process.env.RAW_URL.replace(/\/$/,''),'https://auto-sale-demo.viiversion.com'];
+          for(const base of bases){
+            let ok=false;
+            for(let attempt=0;attempt<20;attempt++){
+              const q='?v='+Date.now();
+              const [appR,cssR,stateR]=await Promise.all([
+                fetch(base+'/auto-sale-app-v3.mjs'+q,{cache:'no-store'}),
+                fetch(base+'/auto-sale.css'+q,{cache:'no-store'}),
+                fetch(base+'/api/auto-sale/state',{cache:'no-store'})
+              ]);
+              if(appR.ok&&cssR.ok&&stateR.ok){
+                const app=await appR.text(),css=await cssR.text(),state=await stateR.json();
+                const past=(state.catalog||[]).find(x=>String(x.sourcePostId)==='3902');
+                const future=(state.catalog||[]).find(x=>String(x.sourcePostId)==='3912');
+                if(app.includes('Аукцион завершён')&&app.includes('auctionEnded(c)')&&app.includes('disabled aria-disabled="true" title="Аукцион завершён"')&&css.includes('.auto-auction-date.ended')&&past?.auctionDate==='24.09.2026'&&future?.auctionDate==='29.09.2026'){
+                  console.log('COMPLETED_AUCTION_LIVE_OK',JSON.stringify({base,revision:state.revision,catalog:(state.catalog||[]).length,past:past.auctionDate,future:future.auctionDate}));
+                  ok=true;break;
+                }
+              }
+              await new Promise(r=>setTimeout(r,5000));
+            }
+            if(!ok)throw new Error('live_completed_auction_state_missing_'+base);
+          }
+          NODE
