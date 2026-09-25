@@ -7,7 +7,8 @@ import {
 import {
   QUOTE_STATUSES,RISK_TYPES,PAYMENT_METHODS,leadTransitionAllowed,
   validateClientRequest,validateManagerLead,validateLeadUpdate,validateQuote,
-  canCreateOrder,validateOrderUpdate,normalizePayments,paymentsTotal,nextPaymentId
+  canCreateOrder,validateOrderUpdate,normalizePayments,paymentsTotal,nextPaymentId,
+  PAYMENT_STAGE_DEFS,auctionDepositRange,buildUsPaymentPlan,paymentStageState,nextPaymentStage,migratePaymentsToPlan,validatePaymentStageEntry
 } from './auto-sale-business-rules.mjs';
 
 const root=document.querySelector('#app');
@@ -223,7 +224,7 @@ const storedCatalog=parse(localStorage,KEYS.catalog,null);
 let cars=Array.isArray(storedCatalog)&&storedCatalog.length?storedCatalog.map(car=>({...car,active:car.active!==false})):defaultCars.map(car=>({...car}));
 leads=leads.map(x=>({...x,origin:String(x.origin||''),yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
 quotes=quotes.map(x=>{const origin=String(x.origin||'').trim()||(Number(x.auction)>0?'США':'Грузия');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7)}});
-orders=orders.map(x=>{const payments=normalizePayments(x),origin=String(x.origin||'').trim()||(x.lot?'США':'Уточняется'),riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое'),riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),payments,paid:paymentsTotal(payments),riskType,riskNote}});
+orders=orders.map(x=>{const rawPayments=normalizePayments(x),origin=String(x.origin||'').trim()||(x.lot?'США':'Уточняется'),lead=leads.find(l=>l.id===x.leadId),quote=quotes.filter(q=>q.leadId===x.leadId).sort((a,b)=>(b.version||1)-(a.version||1))[0],riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое'),riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');let paymentPlan=Array.isArray(x.paymentPlan)?x.paymentPlan:[],paymentPlanNeedsReview=Boolean(x.paymentPlanNeedsReview);if(origin==='США'&&quote&&paymentPlan.length!==4){const range=auctionDepositRange(x.total||quote.total),knownDeposit=Number(lead?.deposit)||0,deposit=knownDeposit||Math.round((range.min+range.max)/2);paymentPlan=buildUsPaymentPlan({...quote,origin,total:Number(x.total)||Number(quote.total)||0},deposit,{needsReview:!knownDeposit});paymentPlanNeedsReview=!knownDeposit;}const payments=paymentPlan.length?migratePaymentsToPlan(rawPayments,paymentPlan):rawPayments;return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),paymentPlan,paymentPlanNeedsReview,payments,paid:paymentsTotal(payments),riskType,riskNote}});
 const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};saveAll();
 
 const roleLabels={client:'Клиент',manager:'Менеджер',owner:'Директор'};
