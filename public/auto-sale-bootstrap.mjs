@@ -72,7 +72,8 @@ function normalizeSettledPaymentField(){
   const form=document.querySelector('#orderForm');if(!form)return;
   const amount=form.elements?.paymentAmount,id=form.elements?.id?.value;if(!amount||!id)return;
   const order=readCache(DATA_KEYS.orders,[]).find(x=>x.id===id);if(!order)return;
-  const remaining=Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0));
+  const stageId=form.elements?.paymentStage?.value||'',plan=Array.isArray(order.paymentPlan)?order.paymentPlan:[],stage=plan.find(x=>x.id===stageId),stagePaid=stageId?(Array.isArray(order.payments)?order.payments:[]).filter(x=>x.paymentStage===stageId).reduce((sum,x)=>sum+(Number(x.amount)||0),0):0;
+  const remaining=stage?Math.max(0,(Number(stage.amount)||0)-stagePaid):Math.max(0,(Number(order.total)||0)-(Number(order.paid)||0));
   if(remaining<=0){
     amount.value='0';
     amount.removeAttribute('max');
