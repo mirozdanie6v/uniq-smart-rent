@@ -2,8 +2,6 @@ name: Deploy AUTO SALE to Yandex staging
 
 on:
   workflow_dispatch:
-    paths:
-      - .deploy-yandex-once
   push:
     branches:
       - prototype/auto-sale-usa
