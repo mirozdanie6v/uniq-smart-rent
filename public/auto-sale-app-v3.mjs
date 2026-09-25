@@ -231,31 +231,14 @@ function brand(){return `<button class="auto-brand auto-brand-premium" data-go="
 function shell(content){const d=dashboard(),f=finances();return `<div class="auto-shell"><header class="auto-topbar">${brand()}<div class="auto-role-switch">${Object.entries(roleLabels).map(([id,label])=>`<button data-role="${id}" class="${state.role===id?'active':''}">${label}</button>`).join('')}</div></header>${state.role!=='client'?`<div class="auto-role-strip"><span>${state.role==='manager'?'Рабочая панель менеджера':'Панель директора'}</span><b>${state.role==='manager'?`${d.activeLeads} активных лидов · ${d.risky} риска`:`${money(f.turnover)} оборот · ${d.conversion}% конверсия`}</b><small>Рабочие данные · бизнес-правила включены</small></div>`:''}<main class="auto-main">${content}</main><nav class="auto-bottom ${state.role==='manager'?'manager-five':''}">${nav[state.role].map(([id,label,ico])=>`<button data-go="${id}" class="${state.route===id?'active':''}"><strong>${ico}</strong><span>${label}</span></button>`).join('')}</nav>${state.modal?modal():''}</div>`}
 
 function hero(){
-  const featured=sortedByAuction(cars.filter(c=>c.active!==false&&c.image)).slice(0,2);
-  const carVisual=(car,kind)=>car?`<figure class="auto-hero-car ${kind}"><img src="${esc(car.image)}" alt="${esc(car.brand+' '+car.model)}"><figcaption><span>${esc(car.year||'')}</span><b>${esc(car.brand+' '+car.model)}</b></figcaption></figure>`:'';
-  return `<section class="auto-hero auto-hero-premium">
+  return `<section class="auto-hero auto-hero-premium auto-hero-simple">
     <div class="auto-hero-copy">
-      <span class="auto-eyebrow auto-hero-kicker">НАДЁЖНЫЕ АВТО · ПРОВЕРЕННЫЕ АУКЦИОНЫ</span>
       <h1>Автомобили из <span>США</span><br>через <em>Грузию</em> в Россию</h1>
       <p>Подбор и проверка лота, прозрачный расчёт, выкуп и доставка под ключ — со статусом заказа в приложении.</p>
       <div class="auto-market-route" aria-label="Маршрут поставки: США, Грузия, Россия">
         <span><i>🇺🇸</i><b>США</b></span><strong>→</strong><span><i>🇬🇪</i><b>Грузия</b></span><strong>→</strong><span><i>🇷🇺</i><b>Россия</b></span>
       </div>
       <div class="auto-actions auto-hero-actions"><button class="auto-btn primary" data-open-request>Подобрать автомобиль <span aria-hidden="true">→</span></button><button class="auto-btn ghost" data-go="catalog">Смотреть каталог</button></div>
-      <div class="auto-hero-features" aria-label="Преимущества">
-        <span><i>✓</i><b>Проверенные<br>аукционы</b></span>
-        <span><i>◇</i><b>Доставка<br>под ключ</b></span>
-        <span><i>◎</i><b>Прозрачная<br>история авто</b></span>
-      </div>
-    </div>
-    <div class="auto-hero-visual" aria-hidden="true">
-      <div class="auto-hero-glow"></div>
-      <div class="auto-flag-sweep auto-flag-sweep-us"></div>
-      <div class="auto-flag-sweep auto-flag-sweep-ge"></div>
-      <div class="auto-flag-sweep auto-flag-sweep-ru"></div>
-      <div class="auto-hero-market-label"><span>ПРЕМИАЛЬНЫЙ ПОДБОР</span><b>США · Грузия · Россия</b></div>
-      ${carVisual(featured[1],'secondary')}
-      ${carVisual(featured[0],'primary')}
     </div>
   </section>`
 }
