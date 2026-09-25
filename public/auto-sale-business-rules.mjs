@@ -2,6 +2,13 @@ export const ACTIVE_LEAD_STATUSES=['Новый','В работе','Расчёт'
 export const QUOTE_STATUSES=['Черновик','Отправлен','На согласовании','Согласован','Отказ'];
 export const RISK_TYPES=['Нет','Ожидает судно','Документы','Повреждение','Задержка','Оплата','Другое'];
 export const PAYMENT_METHODS=['Наличные','Банк','Карта','Другое'];
+export const PAYMENT_STAGE_DEFS=[
+  {id:'auction_deposit',title:'1. Аукционный аванс',due:'До начала торгов'},
+  {id:'auction_balance',title:'2. Автомобиль + аукционные сборы',due:'После победы на торгах'},
+  {id:'logistics_legalization',title:'3. Логистика и легализация',due:'За несколько дней до прибытия в порт назначения'},
+  {id:'customs_fts',title:'4. Таможенные платежи ФТС',due:'За 1–2 дня до пересечения границы РФ'}
+];
+export const PAYMENT_STAGE_IDS=PAYMENT_STAGE_DEFS.map(x=>x.id);
 const n=v=>Number(v)||0;
 const text=v=>String(v??'').trim();
 const QUOTE_FIELD_LABELS={lot:'Стоимость автомобиля / лота',auction:'Сбор аукциона',inland:'Доставка',ocean:'Международная перевозка',customs:'Таможня / оформление',service:'Услуга компании'};
@@ -12,9 +19,51 @@ export function validateClientRequest(data={}){const e=[];if(!text(data.name))e.
 export function validateManagerLead(data={}){const e=[];if(!text(data.name))e.push('Укажите имя клиента.');if(!text(data.contact))e.push('Укажите контакт клиента.');if(!text(data.model))e.push('Укажите интересующий автомобиль.');if(n(data.budget)<0)e.push('Бюджет не может быть отрицательным.');if(!text(data.manager))e.push('Назначьте менеджера.');if(!text(data.source))e.push('Укажите источник.');if(!text(data.nextAction))e.push('Укажите следующее действие.');return e;}
 export function validateLeadUpdate(data={},current={},context={}){let e=validateManagerLead(data);if(!ACTIVE_LEAD_STATUSES.includes(data.status))e=e.filter(x=>x!=='Укажите следующее действие.');if(data.status==='Отказ'&&!text(data.lostReason))e.push('Для отказа обязательна причина.');if(ACTIVE_LEAD_STATUSES.includes(data.status)&&!text(data.nextAction))e.push('Для активного лида обязательна дата следующего действия.');if(!leadTransitionAllowed(current.status,data.status,context))e.push(`Переход «${current.status}» → «${data.status}» сейчас недоступен.`);return[...new Set(e)];}
 export function validateQuote(data={}){const e=[];if(!text(data.leadId))e.push('Выберите лида.');if(!text(data.model))e.push('Укажите автомобиль.');if(data.status!=='Черновик'){if(!['США','Грузия'].includes(text(data.origin)))e.push('Выберите сценарий покупки: аукцион США или авто в Грузии.');for(const key of ['lot','service'])if(n(data[key])<=0)e.push(`Для отправки расчёта заполните «${QUOTE_FIELD_LABELS[key]}».`);for(const key of ['auction','inland','ocean','customs','repair'])if(n(data[key])<0)e.push(`Поле «${QUOTE_FIELD_LABELS[key]||key}» не может быть отрицательным.`);if(!text(data.validUntil))e.push('Укажите срок действия расчёта.');}if(n(data.repair)<0)e.push('Ремонт не может быть отрицательным.');return[...new Set(e)];}
-export function canCreateOrder({quote,deposit}={}){if(!quote)return{ok:false,reason:'Сначала создайте расчёт.'};if(quote.status!=='Согласован')return{ok:false,reason:'Заказ можно создать только после согласования расчёта.'};if(n(deposit)<=0)return{ok:false,reason:'Перед созданием заказа зафиксируйте полученный депозит.'};return{ok:true,reason:''};}
+export function canCreateOrder({quote,deposit}={}){if(!quote)return{ok:false,reason:'Сначала создайте расчёт.'};if(quote.status!=='Согласован')return{ok:false,reason:'Заказ можно создать только после согласования расчёта.'};if(text(quote.origin)==='США'){const range=auctionDepositRange(quote.total);if(n(deposit)<range.min||n(deposit)>range.max)return{ok:false,reason:`Для аукциона США аванс должен быть 25–30% от согласованной стоимости: ${range.min}–${range.max} $.`};}else if(n(deposit)<=0)return{ok:false,reason:'Перед созданием заказа зафиксируйте полученный депозит.'};return{ok:true,reason:''};}
 export function orderRequiredFields(stage){const normalized=stage==='Порт США'?'Подготовка к отправке':stage==='В море'?'В пути':stage;const map={'Подготовка к отправке':['vin','eta','location'],'В пути':['vin','eta','location'],'Таможня':['vin','eta','location'],'Доставка':['vin','eta','location'],'Выдача':['vin','eta','location']};return map[normalized]||[];}
 export function validateOrderUpdate(data={},currentStage='Выкуп',allowedStages=[]){const e=[];if(allowedStages.length&&!allowedStages.includes(data.stage))e.push('Нельзя перескакивать через этапы логистики.');for(const key of orderRequiredFields(data.stage))if(!text(data[key]))e.push(`Для этапа «${data.stage}» заполните «${ORDER_FIELD_LABELS[key]||key}».`);if(data.riskType&&data.riskType!=='Нет'&&!text(data.riskNote))e.push('Опишите риск или блокер.');if(n(data.paymentAmount)<0)e.push('Платёж не может быть отрицательным.');if(n(data.paymentAmount)>0&&!text(data.paymentDate))e.push('Укажите дату платежа.');if(currentStage==='Выдача'&&data.stage!=='Выдача')e.push('Выданный автомобиль нельзя вернуть на предыдущий этап обычным редактированием.');return e;}
 export function normalizePayments(order={}){if(Array.isArray(order.payments))return order.payments;const paid=n(order.paid);return paid>0?[{id:'PAY-LEGACY',amount:paid,date:'2026-09-12',method:'Банк',note:'Перенесено из прежнего поля оплаты'}]:[];}
 export function paymentsTotal(payments=[]){return payments.reduce((s,p)=>s+n(p.amount),0);}
 export function nextPaymentId(payments=[]){const max=payments.reduce((m,p)=>{const hit=String(p.id||'').match(/(\d+)$/);return hit?Math.max(m,Number(hit[1])):m;},0);return `PAY-${max+1}`;}
+
+export function auctionDepositRange(total=0){const t=Math.max(0,n(total));return{min:Math.ceil(t*.25),max:Math.floor(t*.30)};}
+export function buildUsPaymentPlan(quote={},deposit=0,{needsReview=false}={}){
+  if(text(quote.origin)!=='США')return[];
+  const total=Math.max(0,n(quote.total));if(!total)return[];
+  const stage1=Math.max(0,Math.min(total,Math.round(n(deposit))));
+  const customs=Math.max(0,Math.min(total-stage1,Math.round(n(quote.customs))));
+  const logisticsBase=n(quote.inland)+n(quote.ocean)+n(quote.repair)+n(quote.service);
+  const logistics=Math.max(0,Math.min(total-stage1-customs,Math.round(logisticsBase)));
+  const auctionBalance=Math.max(0,total-stage1-logistics-customs);
+  const amounts=[stage1,auctionBalance,logistics,customs];
+  return PAYMENT_STAGE_DEFS.map((def,i)=>({...def,amount:amounts[i],needsReview:Boolean(needsReview)}));
+}
+export function paymentPlanTotal(plan=[]){return plan.reduce((sum,x)=>sum+n(x.amount),0);}
+export function paymentStagePaid(payments=[],stageId=''){return payments.filter(x=>text(x.paymentStage)===stageId).reduce((sum,x)=>sum+n(x.amount),0);}
+export function paymentStageState(stage={},payments=[]){const amount=Math.max(0,n(stage.amount)),paid=Math.min(amount,paymentStagePaid(payments,stage.id)),remaining=Math.max(0,amount-paid);return{...stage,amount,paid,remaining,status:remaining<=0?'Оплачено':paid>0?'Частично':'Ожидает'};}
+export function nextPaymentStage(plan=[],payments=[]){return plan.map(x=>paymentStageState(x,payments)).find(x=>x.remaining>0)||null;}
+export function migratePaymentsToPlan(payments=[],plan=[]){
+  const valid=new Set(plan.map(x=>x.id));if(!plan.length)return payments.map(x=>({...x}));
+  const staged=payments.filter(x=>valid.has(text(x.paymentStage))).map(x=>({...x}));
+  const unassigned=payments.filter(x=>!valid.has(text(x.paymentStage)));
+  const remaining=new Map(plan.map(stage=>[stage.id,Math.max(0,n(stage.amount)-paymentStagePaid(staged,stage.id))]));
+  const out=[...staged];
+  for(const payment of unassigned){
+    let left=Math.max(0,n(payment.amount)),part=0;
+    for(const stage of plan){
+      const cap=Math.max(0,remaining.get(stage.id)||0);if(left<=0)break;if(cap<=0)continue;
+      const amount=Math.min(left,cap);part+=1;
+      out.push({...payment,id:part===1&&amount===n(payment.amount)?payment.id:(String(payment.id||'PAY-LEGACY')+'-M'+part),amount,paymentStage:stage.id,migratedStage:true});
+      remaining.set(stage.id,cap-amount);left-=amount;
+    }
+    if(left>0)out.push({...payment,id:String(payment.id||'PAY-LEGACY')+'-REST',amount:left,paymentStage:'legacy',migratedStage:true});
+  }
+  return out;
+}
+export function validatePaymentStageEntry({plan=[],payments=[],stageId='',amount=0}={}){
+  const value=n(amount);if(value<=0||!plan.length)return[];
+  const stage=plan.find(x=>x.id===stageId);if(!stage)return['Выберите этап оплаты.'];
+  const next=nextPaymentStage(plan,payments);if(next&&next.id!==stageId)return['Сначала завершите «'+next.title+'».'];
+  const state=paymentStageState(stage,payments);if(value>state.remaining)return['Платёж больше остатка этапа оплаты ('+state.remaining+' $).'];
+  return[];
+}
