@@ -15,6 +15,8 @@ env:
   YC_CONTAINER_NAME: ${{ vars.YC_CONTAINER_NAME }}
   YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
   AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
+  AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+  AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
 
 jobs:
   deploy:
@@ -98,6 +100,14 @@ jobs:
           set -euo pipefail
           yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
             yc serverless container create --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          EXTRA_ENV=()
+          if [ -n "${AUTO_SALE_TELEGRAM_BOT_TOKEN:-}" ]; then
+            echo "::add-mask::$AUTO_SALE_TELEGRAM_BOT_TOKEN"
+            EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN")
+          fi
+          if [ -n "${AUTO_SALE_MANAGER_CHAT_IDS:-}" ]; then
+            EXTRA_ENV+=(--environment "AUTO_SALE_MANAGER_CHAT_IDS=$AUTO_SALE_MANAGER_CHAT_IDS")
+          fi
           yc serverless container revision deploy \
             --container-name "$YC_CONTAINER_NAME" \
             --folder-id "$YC_FOLDER_ID" \
@@ -109,7 +119,8 @@ jobs:
             --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
             --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true" \
-            --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET"
+            --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
+            "${EXTRA_ENV[@]}"
 
       - name: Verify public demo read/write boundary
         run: |
@@ -118,7 +129,7 @@ jobs:
           test -n "$URL" && test "$URL" != "null"
           echo "STAGING_URL=$URL" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET' >/dev/null; then
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
               break
             fi
             test "$attempt" -lt 20 || exit 1
