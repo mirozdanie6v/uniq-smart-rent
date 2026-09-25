@@ -14,10 +14,12 @@ import requests
 from bs4 import BeautifulSoup
 
 CHANNEL = "AutoWorld_Georgia"
-START_URL = f"https://t.me/s/{CHANNEL}"
+START_BEFORE = os.environ.get("START_BEFORE", "").strip()
+START_URL = f"https://t.me/s/{CHANNEL}" + (f"?before={START_BEFORE}" if START_BEFORE else "")
 MEDIA_API = os.environ.get("AUTO_SALE_MEDIA_API", "https://auto-sale-demo.viiversion.com/api/auto-sale/media")
 OUT_DIR = Path(os.environ.get("OUT_DIR", "data/autoworld-georgia"))
 MAX_PAGES = int(os.environ.get("MAX_PAGES", "260"))
+ONLY_POST_IDS = {x.strip() for x in os.environ.get("ONLY_POST_IDS", "").split(",") if x.strip()}
 REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "0.20"))
 MEDIA_INDEX_PATH = os.environ.get("MEDIA_INDEX_PATH", "").strip()
 UPLOAD_MISSING_PHOTOS = os.environ.get("UPLOAD_MISSING_PHOTOS", "true").lower() in {"1","true","yes"}
@@ -213,6 +215,8 @@ def scrape_all():
             if post_id in seen_posts:
                 continue
             seen_posts.add(post_id)
+            if ONLY_POST_IDS and post_id not in ONLY_POST_IDS:
+                continue
             text_node = msg.select_one(".tgme_widget_message_text")
             text = clean_text(text_node)
             if not text or not looks_like_car(text):
@@ -224,6 +228,8 @@ def scrape_all():
             cars.append(parse_car(post_id, source_url, text, photos, published_at))
             page_new += 1
         page_count += 1
+        if ONLY_POST_IDS and ONLY_POST_IDS.issubset({x["sourcePostId"] for x in cars}):
+            break
         prev = soup.select_one('link[rel="prev"]')
         if not prev:
             prev = soup.select_one(".tme_messages_more[href*='before=']")
@@ -234,6 +240,10 @@ def scrape_all():
         print(f"page={page_count} cars={len(cars)} next={url}", flush=True)
         time.sleep(REQUEST_DELAY)
     cars.sort(key=lambda x: int(x["sourcePostId"]))
+    if ONLY_POST_IDS:
+        missing = sorted(ONLY_POST_IDS - {x["sourcePostId"] for x in cars}, key=int)
+        if missing:
+            raise RuntimeError(f"target_posts_not_found: {','.join(missing)}")
     return cars, page_count
 
 def existing_manifest():
