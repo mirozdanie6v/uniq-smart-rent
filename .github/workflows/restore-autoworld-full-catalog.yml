@@ -127,6 +127,7 @@ jobs:
           },null,2)+'\n');
 
           console.log('AUTOWORLD_FULL_RESTORE_OK',JSON.stringify(report));
+          })().catch(error=>{console.error(error);process.exit(1)});
           NODE
 
       - name: Commit restored catalog record
