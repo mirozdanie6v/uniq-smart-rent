@@ -92,25 +92,25 @@ test('validated client to handoff workflow preserves all business rules',async()
   assert.equal(order.payments.length,1);
 
   form=root.querySelector('#orderForm');
-  set(form,'[name="stage"]','Порт США');
+  set(form,'[name="stage"]','Подготовка к отправке');
   set(form,'[name="lot"]','998877');
   set(form,'[name="vin"]','WAUZZZTEST1234567');
   set(form,'[name="eta"]','2026-10-25');
   set(form,'[name="location"]','Long Beach, CA');
   submit(dom,form);
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
-  assert.equal(order.stage,'Порт США');
+  assert.equal(order.stage,'Подготовка к отправке');
   assert.equal(order.vin,'WAUZZZTEST1234567');
 
   form=root.querySelector('#orderForm');
-  set(form,'[name="stage"]','В море');
+  set(form,'[name="stage"]','В пути');
   set(form,'[name="location"]','Atlantic Ocean');
   set(form,'[name="paymentAmount"]','15000');
   set(form,'[name="paymentDate"]','2026-09-13');
   set(form,'[name="paymentMethod"]','Банк');
   submit(dom,form);
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
-  assert.equal(order.stage,'В море');
+  assert.equal(order.stage,'В пути');
   assert.equal(order.paid,20000);
   assert.equal(order.payments.length,2);
 
