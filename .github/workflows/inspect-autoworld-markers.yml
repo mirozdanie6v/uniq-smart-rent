@@ -17,29 +17,21 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install --quiet requests beautifulsoup4
-      - name: Inspect latest post markup
+      - name: Diagnose latest public archive parsing
         run: |
           python - <<'PY'
-          import requests
+          import re,requests
           from bs4 import BeautifulSoup
-          html=requests.get('https://t.me/s/AutoWorld_Georgia?before=3970',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
+          html=requests.get('https://t.me/s/AutoWorld_Georgia?cachebust=202609252240',headers={'User-Agent':'Mozilla/5.0'},timeout=30).text
           soup=BeautifulSoup(html,'html.parser')
           msgs=soup.select('.tgme_widget_message')
+          print('MESSAGE_COUNT',len(msgs))
           for msg in msgs:
               pid=msg.get('data-post','')
               node=msg.select_one('.tgme_widget_message_text')
-              print('\n===== POST',pid,'=====')
-              if not node:
-                  print('NO TEXT')
-                  continue
-              print('TEXT',node.get_text(' ',strip=True)[:700])
-              found=[]
-              for el in node.find_all(True):
-                  attrs=' '.join(f'{k}={v}' for k,v in el.attrs.items())
-                  markup=str(el)
-                  if 'emoji' in attrs.lower() or 'emoji' in markup.lower() or 'custom' in attrs.lower():
-                      found.append(markup[:700])
-              print('EMOJI_NODES',len(found))
-              for x in found[:40]:
-                  print('EMOJI',x)
+              text=node.get_text('\n',strip=True) if node else ''
+              score=sum(1 for token in ['Пробег','Двигатель','Привод','Коробка','Торги','Цена','комплектация','VIN','Повреждения'] if token.lower() in text.lower())
+              year=bool(re.search(r'\\b20\\d{2}\\b|\\b(?:0[1-9]|1[0-2])[/.-]\\d{2}\\b',text))
+              ids=[x.get('emoji-id') for x in node.select('tg-emoji[emoji-id]')] if node else []
+              print('POST',pid,'score',score,'year',year,'emoji',','.join(ids[:8]),'text',re.sub(r'\\s+',' ',text)[:260])
           PY
