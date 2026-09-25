@@ -37,7 +37,7 @@ jobs:
       - name: Recover any announcements lost from the current dataset
         run: python scripts/recover-autoworld-history.py
 
-      - name: Scrape fresh posts and merge with saved archive
+      - name: Scrape fresh posts after the newest saved announcement
         env:
           AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
           OUT_DIR: data/autoworld-georgia
@@ -46,7 +46,15 @@ jobs:
           REQUEST_DELAY: '0.15'
           MERGE_EXISTING: 'true'
           UPLOAD_MISSING_PHOTOS: 'true'
-        run: python scripts/scrape-autoworld-georgia.py
+        run: |
+          LAST_ID=$(python - <<'PY'
+          import json
+          data=json.load(open('data/autoworld-georgia/cars.json',encoding='utf-8'))
+          print(max(int(str(x.get('sourcePostId') or '0')) for x in data))
+          PY
+          )
+          echo "Newest saved post: $LAST_ID"
+          START_AFTER="$LAST_ID" python scripts/scrape-autoworld-georgia.py
 
       - name: Rescan full public archive for Telegram location markers
         env:
