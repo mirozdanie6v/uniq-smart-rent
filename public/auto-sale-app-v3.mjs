@@ -227,10 +227,38 @@ const finances=()=>financeStats(orders);
 const taskDue=l=>l.nextAction&&l.nextAction<=today&&!['Сделка','Отказ'].includes(l.status);
 const orderRisk=o=>(o.riskType||o.risk||'Нет')==='Нет'?'Нет':(o.riskNote||o.riskType||o.risk);
 const statusClass=v=>/Отказ|риск|Документ|ожида|Новый|Черновик|уточ|Задерж/i.test(v||'')?'warn':/Сделка|Согласован|В море|Тамож|Выдача|Нет/i.test(v||'')?'good':'';
-function brand(){return `<button class="auto-brand" data-go="${nav[state.role][0][0]}"><span class="auto-brand-mark">АМ</span><span><b>АвтоМир Грузия 🇬🇪 🇷🇺</b><small>Автомобили из США под заказ</small></span></button>`}
+function brand(){return `<button class="auto-brand auto-brand-premium" data-go="${nav[state.role][0][0]}" aria-label="Авто Мир — на главную"><span class="auto-brand-mark auto-brand-mark-premium" aria-hidden="true">AM</span><span class="auto-brand-copy"><b>Авто <em>Мир</em></b><small>Автомобили без границ</small></span></button>`}
 function shell(content){const d=dashboard(),f=finances();return `<div class="auto-shell"><header class="auto-topbar">${brand()}<div class="auto-role-switch">${Object.entries(roleLabels).map(([id,label])=>`<button data-role="${id}" class="${state.role===id?'active':''}">${label}</button>`).join('')}</div></header>${state.role!=='client'?`<div class="auto-role-strip"><span>${state.role==='manager'?'Рабочая панель менеджера':'Панель директора'}</span><b>${state.role==='manager'?`${d.activeLeads} активных лидов · ${d.risky} риска`:`${money(f.turnover)} оборот · ${d.conversion}% конверсия`}</b><small>Рабочие данные · бизнес-правила включены</small></div>`:''}<main class="auto-main">${content}</main><nav class="auto-bottom ${state.role==='manager'?'manager-five':''}">${nav[state.role].map(([id,label,ico])=>`<button data-go="${id}" class="${state.route===id?'active':''}"><strong>${ico}</strong><span>${label}</span></button>`).join('')}</nav>${state.modal?modal():''}</div>`}
 
-function hero(){return `<section class="auto-hero"><div><span class="auto-eyebrow">АВТОМИР ГРУЗИЯ · США → ПОД ЗАКАЗ</span><h1>Автомобиль из США под ключ.</h1><p>Подбор, проверка, согласованный расчёт, выкуп, доставка и прозрачный статус заказа в одном приложении.</p><div class="auto-actions"><button class="auto-btn primary" data-open-request>Получить расчёт</button><button class="auto-btn ghost" data-go="catalog">Смотреть варианты</button></div></div><div class="auto-hero-stats"><div class="auto-stat"><span>Расчёт до покупки</span><b>под ключ</b></div><div class="auto-stat"><span>Проверка истории</span><b>VIN + фото</b></div><div class="auto-stat"><span>Срок поставки</span><b>7–12 нед.</b></div><div class="auto-stat"><span>Статус заказа</span><b>онлайн</b></div></div></section>`}
+function hero(){
+  const featured=sortedByAuction(cars.filter(c=>c.active!==false&&c.image)).slice(0,2);
+  const carVisual=(car,kind)=>car?`<figure class="auto-hero-car ${kind}"><img src="${esc(car.image)}" alt="${esc(car.brand+' '+car.model)}"><figcaption><span>${esc(car.year||'')}</span><b>${esc(car.brand+' '+car.model)}</b></figcaption></figure>`:'';
+  return `<section class="auto-hero auto-hero-premium">
+    <div class="auto-hero-copy">
+      <span class="auto-eyebrow auto-hero-kicker">НАДЁЖНЫЕ АВТО · ПРОВЕРЕННЫЕ АУКЦИОНЫ</span>
+      <h1>Автомобили из <span>США</span><br>через <em>Грузию</em> в Россию</h1>
+      <p>Подбор и проверка лота, прозрачный расчёт, выкуп и доставка под ключ — со статусом заказа в приложении.</p>
+      <div class="auto-market-route" aria-label="Маршрут поставки: США, Грузия, Россия">
+        <span><i>🇺🇸</i><b>США</b></span><strong>→</strong><span><i>🇬🇪</i><b>Грузия</b></span><strong>→</strong><span><i>🇷🇺</i><b>Россия</b></span>
+      </div>
+      <div class="auto-actions auto-hero-actions"><button class="auto-btn primary" data-open-request>Подобрать автомобиль <span aria-hidden="true">→</span></button><button class="auto-btn ghost" data-go="catalog">Смотреть каталог</button></div>
+      <div class="auto-hero-features" aria-label="Преимущества">
+        <span><i>✓</i><b>Проверенные<br>аукционы</b></span>
+        <span><i>◇</i><b>Доставка<br>под ключ</b></span>
+        <span><i>◎</i><b>Прозрачная<br>история авто</b></span>
+      </div>
+    </div>
+    <div class="auto-hero-visual" aria-hidden="true">
+      <div class="auto-hero-glow"></div>
+      <div class="auto-flag-sweep auto-flag-sweep-us"></div>
+      <div class="auto-flag-sweep auto-flag-sweep-ge"></div>
+      <div class="auto-flag-sweep auto-flag-sweep-ru"></div>
+      <div class="auto-hero-market-label"><span>ПРЕМИАЛЬНЫЙ ПОДБОР</span><b>США · Грузия · Россия</b></div>
+      ${carVisual(featured[1],'secondary')}
+      ${carVisual(featured[0],'primary')}
+    </div>
+  </section>`
+}
 function process(){const steps=[['01','Запрос','Фиксируем требования и бюджет.'],['02','Подбор','Находим и проверяем подходящие лоты.'],['03','Расчёт','Согласуем полную стоимость и депозит.'],['04','Выкуп и доставка','Аукцион → порт → море → таможня.'],['05','Выдача','Документы, финальный расчёт и передача авто.']];return `<section class="auto-section"><div class="auto-section-head"><div><span class="auto-eyebrow">ПРОЦЕСС</span><h2>Каждый этап фиксируется в системе</h2></div><p>Следующий шаг доступен только когда заполнены данные предыдущего.</p></div><div class="auto-process">${steps.map(s=>`<article class="auto-step"><i>${s[0]}</i><b>${s[1]}</b><span>${s[2]}</span></article>`).join('')}</div></section>`}
 function carCard(c){const ended=auctionEnded(c);return `<article class="auto-car${ended?' auction-ended':''}"><div class="auto-car-media"><img src="${c.image}" alt="${esc(c.brand+' '+c.model)}"><span class="auto-chip">${esc(c.tag||'Авто')}</span></div><div class="auto-car-body"><div class="auto-car-top"><div><small>${c.year} · ${esc(c.auction||'—')}</small><h3>${esc(c.brand+' '+c.model)}</h3></div><div class="auto-price"><b>${catalogPriceText(c)}</b><span>${catalogPriceSub(c)}</span></div></div><div class="auto-auction-date${ended?' ended':''}"><span>${ended?'Аукцион завершён':'Дата аукциона&nbsp;'}</span><b>${esc(auctionDateText(c.auctionDate))}</b></div><div class="auto-specs"><span>${esc(c.mileage||'—')}</span><span>${esc(c.engine||'—')}</span><span>${esc(c.drive||'—')}</span></div><div class="auto-card-actions"><button class="auto-btn primary" data-request-car="${c.id}" ${ended?'disabled aria-disabled="true" title="Аукцион завершён"':''}>Рассчитать</button><button class="auto-btn ghost" data-detail="${c.id}">Подробнее</button></div></div></article>`}
 function home(){const publicCars=sortedByAuction(cars.filter(c=>c.active!==false));return hero()+process()+`<section class="auto-section"><div class="auto-section-head"><div><span class="auto-eyebrow">КАТАЛОГ</span><h2>Автомобили в каталоге</h2></div><button class="auto-btn ghost" data-go="catalog">Весь каталог →</button></div><div class="auto-grid">${publicCars.slice(0,3).map(carCard).join('')}</div></section>`}
