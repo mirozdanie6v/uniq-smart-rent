@@ -144,3 +144,12 @@ test('USA orders expose the four promised payment stages',()=>{
   assert.match(app,/auctionDepositRange/);
   assert.match(app,/validatePaymentStageEntry/);
 });
+
+test('USA quote approval exposes the promised verification dossier',()=>{
+  for(const token of ['VERIFICATION_RESULTS','normalizeVehicleVerification','validateVehicleVerification','LOT / номер лота','VIN','Фото до покупки','История / краткое заключение','Одобрен к покупке'])assert.ok(app.includes(token)||businessRules.includes(token),token);
+  assert.match(app,/vehicleVerificationView/);
+  assert.match(app,/data-verification-photo-upload/);
+  assert.match(app,/verificationReportUrl/);
+  assert.match(app,/verificationCheckedAt/);
+  assert.match(clientCss,/auto-verification-card/);
+});
