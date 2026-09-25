@@ -1,12 +1,13 @@
 {
   "generatedAt": "2026-09-25",
-  "batch": "2026-09-25",
-  "count": 3,
-  "posts": [
+  "batch": "full-restore-plus-fresh",
+  "count": 136,
+  "oldCatalogCount": 133,
+  "freshCount": 3,
+  "freshPosts": [
     {
       "sourcePostId": "3980",
       "sourceUrl": "https://t.me/AutoWorld_Georgia/3980",
-      "publishedAt": "2026-09-25T12:43:54+00:00",
       "brand": "Buick",
       "model": "Encore",
       "year": 2022,
@@ -17,7 +18,6 @@
     {
       "sourcePostId": "3990",
       "sourceUrl": "https://t.me/AutoWorld_Georgia/3990",
-      "publishedAt": "2026-09-25T12:58:26+00:00",
       "brand": "Nissan",
       "model": "Kicks",
       "year": 2023,
@@ -28,7 +28,6 @@
     {
       "sourcePostId": "4000",
       "sourceUrl": "https://t.me/AutoWorld_Georgia/4000",
-      "publishedAt": "2026-09-25T13:11:07+00:00",
       "brand": "Chevrolet",
       "model": "Trax",
       "year": 2023,
@@ -36,5 +35,6 @@
       "priceRub": 1970000,
       "photos": 7
     }
-  ]
+  ],
+  "liveRevision": 858
 }
