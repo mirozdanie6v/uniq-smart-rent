@@ -1,11 +1,14 @@
 {
   "channel": "AutoWorld_Georgia",
-  "generatedAt": "2026-09-25T14:27:31Z",
-  "pagesScraped": 172,
-  "carsFound": 170,
+  "generatedAt": "2026-09-25T15:49:04Z",
+  "pagesScraped": 16,
+  "carsFound": 178,
+  "previousCars": 178,
+  "changedOrNewCars": 13,
+  "mergeExisting": true,
   "photosUploaded": 0,
-  "photosReused": 1497,
-  "carsWithRecoveredPhotos": 170,
+  "photosReused": 135,
+  "carsWithRecoveredPhotos": 19,
   "photoFailures": 0,
   "failures": []
 }

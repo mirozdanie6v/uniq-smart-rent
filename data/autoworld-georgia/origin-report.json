@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-09-25T15:56:11Z",
+  "rows": 178,
+  "scannedThisRun": 178,
+  "changed": 178,
+  "imageOcr": 12,
+  "textHeuristic": 166,
+  "originCounts": {
+    "США": 90,
+    "Грузия": 84,
+    "Корея": 1,
+    "Европа": 1,
+    "США / Грузия": 2
+  }
+}
