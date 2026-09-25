@@ -40,3 +40,18 @@ test('Object Storage rejects unsupported image payloads',async()=>{
     error=>error?.message==='unsupported_image'&&error?.statusCode===400
   );
 });
+
+test('Object Storage keeps verification photos in a dedicated path',async()=>{
+  const fetchImpl=async(url,options={})=>{
+    if(String(url).includes('169.254.169.254'))return new Response(JSON.stringify({access_token:'iam-test',expires_in:3600}),{status:200,headers:{'content-type':'application/json'}});
+    return new Response('',{status:200});
+  };
+  const storage=createObjectStorage({bucket:'viiversion-auto-sale-media',fetchImpl});
+  const result=await storage.upload({
+    carId:'VERIFY-Q-1',
+    category:'verification',
+    dataUrl:'data:image/jpeg;base64,SGVsbG8=',
+    fileName:'before.jpg'
+  });
+  assert.match(result.url,/\/cars\/VERIFY-Q-1\/verification-/);
+});
