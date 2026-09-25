@@ -61,7 +61,7 @@ test('quote fields that become mandatory by business status are highlighted imme
 test('logistics fields and risk description are highlighted when they block the selected stage',async()=>{
   const dom=await setup(`<form class="auto-form" id="orderForm">
     <input type="hidden" name="id" value="O-1">
-    <label>Этап<select name="stage"><option selected>Порт США</option></select></label>
+    <label>Этап<select name="stage"><option selected>Подготовка к отправке</option></select></label>
     <label>LOT<input name="lot"></label>
     <label>VIN<input name="vin"></label>
     <label>ETA<input name="eta" type="date"></label>
@@ -72,7 +72,8 @@ test('logistics fields and risk description are highlighted when they block the 
     <label>Дата<input name="paymentDate" type="date"></label>
   </form>`,'order-business');
   const form=document.querySelector('#orderForm');
-  for(const name of ['lot','vin','eta','location','riskNote']){
+  assert.equal(form.elements.lot.classList.contains('auto-required-field'),false,'lot');
+  for(const name of ['vin','eta','location','riskNote']){
     assert.equal(form.elements[name].classList.contains('auto-required-field'),true,name);
     assert.equal(form.elements[name].classList.contains('auto-field-blocked'),true,name);
   }
