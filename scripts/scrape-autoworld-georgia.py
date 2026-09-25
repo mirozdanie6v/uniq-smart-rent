@@ -161,7 +161,7 @@ def looks_like_car(text):
     for token in ["Пробег", "Двигатель", "Привод", "Коробка", "Торги", "Цена", "комплектация", "VIN", "Повреждения"]:
         if token.lower() in text.lower():
             score += 1
-    return score >= 3 and bool(re.search(r"\b20\d{2}\b|\b(?:0[1-9]|1[0-2])[/.-]\d{2}\b", text))
+    return score >= 3 and bool(re.search(r"\b20\d{2}\b|\b(?:0[1-9]|1[0-2])[/.-](?:20)?\d{2}(?:\s*г\.?)?", text, re.I))
 
 def parse_car(post_id, source_url, text, photos, published_at, emoji_ids=None):
     title, brand, model, year = parse_title(text)
