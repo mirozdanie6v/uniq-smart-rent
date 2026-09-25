@@ -10,6 +10,7 @@ const text=v=>typeof v==='string'?v.trim():'';
 const num=v=>Number(v)||0;
 const records=v=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object'):[];
 const quoteSum=q=>['lot','auction','inland','ocean','customs','repair','service'].reduce((sum,key)=>sum+num(q[key]),0);
+const PAYMENT_STAGE_IDS=['auction_deposit','auction_balance','logistics_legalization','customs_fts'];
 
 export function leadTransitionAllowed(from,to,{hasAgreedQuote=false,deposit=0}={}){
   if(from===to)return true;
@@ -73,13 +74,26 @@ export function validateOrder(order,previousStage=''){
     if(!text(order.location))errors.push('location_required');
   }
   if(text(order.riskType)&&text(order.riskType)!=='Нет'&&!text(order.riskNote))errors.push('risk_note_required');
-  const payments=records(order.payments);let paid=0;
+  const payments=records(order.payments),plan=records(order.paymentPlan);let paid=0;
+  const stageTotals=new Map(PAYMENT_STAGE_IDS.map(id=>[id,0]));
+  if(plan.length){
+    if(text(order.origin)!=='США'||plan.length!==4||plan.some((x,i)=>text(x.id)!==PAYMENT_STAGE_IDS[i]||num(x.amount)<0))errors.push('invalid_payment_plan');
+    if(Math.round(plan.reduce((sum,x)=>sum+num(x.amount),0))!==Math.round(num(order.total)))errors.push('payment_plan_total_mismatch');
+  }
   for(const payment of payments){
     const amount=num(payment.amount);
     if(amount<=0)errors.push('payment_amount_positive_required');
     if(!text(payment.date))errors.push('payment_date_required');
     if(!text(payment.method))errors.push('payment_method_required');
+    if(plan.length&&!PAYMENT_STAGE_IDS.includes(text(payment.paymentStage)))errors.push('payment_stage_required');
+    if(plan.length&&PAYMENT_STAGE_IDS.includes(text(payment.paymentStage)))stageTotals.set(text(payment.paymentStage),(stageTotals.get(text(payment.paymentStage))||0)+Math.max(0,amount));
     paid+=Math.max(0,amount);
+  }
+  if(plan.length){
+    for(let i=0;i<plan.length;i++){
+      const stage=plan[i],stagePaid=stageTotals.get(stage.id)||0;if(stagePaid>num(stage.amount)+0.001)errors.push('payment_stage_exceeded');
+      if(i>0&&stagePaid>0){const previous=plan[i-1],previousPaid=stageTotals.get(previous.id)||0;if(previousPaid+0.001<num(previous.amount))errors.push('payment_stage_out_of_order');}
+    }
   }
   if(num(order.total)>0&&paid>num(order.total))errors.push('payment_total_exceeds_order');
   if(stage==='Выдача'&&num(order.total)>0&&paid<num(order.total))errors.push('full_payment_required_for_handoff');
