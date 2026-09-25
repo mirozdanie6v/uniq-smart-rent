@@ -33,6 +33,35 @@ session.headers.update({"User-Agent": UA, "Accept-Language": "ru,en;q=0.8"})
 VIN_RE = re.compile(r"\b[A-HJ-NPR-Z0-9]{17}\b")
 MONEY_RE = re.compile(r"([0-9]+(?:[.,][0-9]+)?)")
 
+GEORGIA_MARKER_IDS = [
+    "5470042538272385378","5469637046115002486","5469756377486353033",
+    "5469831380500245288","5469742856929308893","5469731127373620510"
+]
+USA_MARKER_IDS = [
+    "5330198729532144649","5330405661056465376","5330305442289577204",
+    "5330171795792230870","5339094096428429945","5330117086498813131",
+    "5330068338620002952"
+]
+
+def custom_emoji_ids(message):
+    node = message.select_one(".tgme_widget_message_text")
+    if node is None:
+        return []
+    return [str(x.get("emoji-id")) for x in node.select("tg-emoji[emoji-id]") if x.get("emoji-id")]
+
+def contains_sequence(values, sequence):
+    if not values or not sequence or len(values) < len(sequence):
+        return False
+    width = len(sequence)
+    return any(values[i:i+width] == sequence for i in range(0, len(values)-width+1))
+
+def origin_from_custom_emoji(ids):
+    if contains_sequence(ids, GEORGIA_MARKER_IDS):
+        return "Грузия", {"method":"custom-emoji-sequence","evidence":"ГРУЗИЯ"}
+    if contains_sequence(ids, USA_MARKER_IDS):
+        return "США", {"method":"custom-emoji-sequence","evidence":"USA/America"}
+    return "", {}
+
 def clean_text(node):
     if node is None:
         return ""
@@ -128,7 +157,7 @@ def looks_like_car(text):
             score += 1
     return score >= 3 and bool(re.search(r"\b20\d{2}\b|\b(?:0[1-9]|1[0-2])[/.-]\d{2}\b", text))
 
-def parse_car(post_id, source_url, text, photos, published_at):
+def parse_car(post_id, source_url, text, photos, published_at, emoji_ids=None):
     title, brand, model, year = parse_title(text)
     vin_m = VIN_RE.search(text)
     vin = vin_m.group(0) if vin_m else ""
@@ -158,12 +187,16 @@ def parse_car(post_id, source_url, text, photos, published_at):
         r"bid\.cars/[^/]+/(?:\d+-)?([0-9]{6,12})/",
     ], text)
 
+    detected_origin, origin_detection = origin_from_custom_emoji(emoji_ids or [])
     return {
         "source": "AutoWorld_Georgia",
         "sourcePostId": str(post_id),
         "sourceUrl": source_url,
         "publishedAt": published_at,
         "rawText": text,
+        "customEmojiIds": emoji_ids or [],
+        "origin": detected_origin,
+        "originDetection": origin_detection,
         "title": title,
         "brand": brand,
         "model": model,
@@ -226,7 +259,8 @@ def scrape_all():
             published_at = date.get("datetime", "") if date else ""
             source_url = f"https://t.me/{CHANNEL}/{post_id}"
             photos = photo_urls(msg)
-            cars.append(parse_car(post_id, source_url, text, photos, published_at))
+            emoji_ids = custom_emoji_ids(msg)
+            cars.append(parse_car(post_id, source_url, text, photos, published_at, emoji_ids))
             page_new += 1
         page_count += 1
         if ONLY_POST_IDS and ONLY_POST_IDS.issubset({x["sourcePostId"] for x in cars}):
@@ -362,7 +396,7 @@ def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, fai
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "cars.json").write_text(json.dumps(cars, ensure_ascii=False, indent=2), "utf-8")
     fields = [
-        "sourcePostId","sourceUrl","publishedAt","brand","model","year","trim","mileage","engine","powerHp",
+        "sourcePostId","sourceUrl","publishedAt","origin","brand","model","year","trim","mileage","engine","powerHp",
         "consumption","transmission","drive","safety","interior","damage","vin","auctionDate","estimatedBidUsd",
         "priceRub","customsRub","lot","calculationDate","photos","rawText"
     ]
