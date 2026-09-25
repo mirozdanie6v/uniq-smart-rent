@@ -121,7 +121,7 @@ test('validated client to handoff workflow preserves all business rules',async()
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
   assert.equal(order.stage,'В пути');
   assert.equal(order.paid,32800);
-  assert.equal(order.payments.length,4);
+  assert.equal(order.payments.length,3);
   assert.equal(order.payments[2].paymentStage,'logistics_legalization');
 
   form=root.querySelector('#orderForm');
@@ -158,7 +158,7 @@ test('validated client to handoff workflow preserves all business rules',async()
   order=JSON.parse(localStorage.getItem('auto-sale-orders-v2')).find(x=>x.id===order.id);
   assert.equal(order.stage,'Выдача');
   assert.equal(order.paid,39000);
-  assert.equal(order.payments.length,3);
+  assert.equal(order.payments.length,4);
   assert.equal(root.querySelector(`[data-order-next="${order.id}"]`),null);
 
   root.querySelector('[data-role="owner"]').click();
