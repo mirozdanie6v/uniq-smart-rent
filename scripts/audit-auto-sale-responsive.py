@@ -105,11 +105,13 @@ async def one_viewport(browser, vp):
         user_agent=("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1" if vp["mobile"] and BROWSER=="webkit" else None)
     )
     page=await context.new_page()
+    await page.route("https://dashboard.viiversion.com/**", lambda route: route.abort())
+    await page.route("https://telegram.org/**", lambda route: route.abort())
     console_errors=[]
     page.on("pageerror", lambda exc: console_errors.append("pageerror:"+str(exc)))
     page.on("console", lambda msg: console_errors.append("console:"+msg.text) if msg.type=="error" else None)
-    await page.goto(BASE+"?responsiveAudit="+str(int(time.time()*1000)), wait_until="domcontentloaded", timeout=45000)
-    await page.wait_for_selector("#app .auto-shell", timeout=30000)
+    await page.goto(BASE+"?responsiveAudit="+str(int(time.time()*1000)), wait_until="commit", timeout=20000)
+    await page.wait_for_selector("#app .auto-shell", timeout=20000)
     await page.wait_for_timeout(800)
 
     results=[]
