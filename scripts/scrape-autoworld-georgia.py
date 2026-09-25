@@ -23,6 +23,7 @@ ONLY_POST_IDS = {x.strip() for x in os.environ.get("ONLY_POST_IDS", "").split(",
 REQUEST_DELAY = float(os.environ.get("REQUEST_DELAY", "0.20"))
 MEDIA_INDEX_PATH = os.environ.get("MEDIA_INDEX_PATH", "").strip()
 UPLOAD_MISSING_PHOTOS = os.environ.get("UPLOAD_MISSING_PHOTOS", "true").lower() in {"1","true","yes"}
+MERGE_EXISTING = os.environ.get("MERGE_EXISTING", "false").lower() in {"1","true","yes"}
 TIMEOUT = 40
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/126 Safari/537.36"
 
@@ -246,15 +247,18 @@ def scrape_all():
             raise RuntimeError(f"target_posts_not_found: {','.join(missing)}")
     return cars, page_count
 
-def existing_manifest():
+def existing_rows():
     p = OUT_DIR / "cars.json"
     if not p.exists():
-        return {}
+        return []
     try:
         data = json.loads(p.read_text("utf-8"))
-        return {str(x.get("sourcePostId")): x for x in data if x.get("sourcePostId")}
+        return data if isinstance(data, list) else []
     except Exception:
-        return {}
+        return []
+
+def existing_manifest():
+    return {str(x.get("sourcePostId")): x for x in existing_rows() if x.get("sourcePostId")}
 
 def download_photo(url):
     r = session.get(url, timeout=TIMEOUT)
@@ -338,7 +342,23 @@ def enrich_photos(cars):
         print(f"photos {n}/{len(cars)} post={car['sourcePostId']} uploaded={len(photos)}", flush=True)
     return uploaded_count, reused_count, recovered_cars, failed
 
-def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed):
+def merge_existing_cars(cars):
+    if not MERGE_EXISTING:
+        return cars, 0, len(cars)
+    previous = existing_rows()
+    merged = {str(x.get("sourcePostId")): x for x in previous if x.get("sourcePostId")}
+    changed = 0
+    for car in cars:
+        key = str(car.get("sourcePostId") or "")
+        if not key:
+            continue
+        if merged.get(key) != car:
+            changed += 1
+        merged[key] = car
+    rows = sorted(merged.values(), key=lambda x: int(str(x.get("sourcePostId") or "0")))
+    return rows, len(previous), changed
+
+def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed, previous_count=0, changed_count=0):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     (OUT_DIR / "cars.json").write_text(json.dumps(cars, ensure_ascii=False, indent=2), "utf-8")
     fields = [
@@ -362,6 +382,9 @@ def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, fai
         "generatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "pagesScraped": pages,
         "carsFound": len(cars),
+        "previousCars": previous_count,
+        "changedOrNewCars": changed_count,
+        "mergeExisting": MERGE_EXISTING,
         "photosUploaded": uploaded_count,
         "photosReused": reused_count,
         "carsWithRecoveredPhotos": recovered_cars,
@@ -374,7 +397,8 @@ def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, fai
 def main():
     cars, pages = scrape_all()
     uploaded_count, reused_count, recovered_cars, failed = enrich_photos(cars)
-    write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed)
+    cars, previous_count, changed_count = merge_existing_cars(cars)
+    write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, failed, previous_count, changed_count)
     if not cars:
         print("No car posts found", file=sys.stderr)
         sys.exit(2)
