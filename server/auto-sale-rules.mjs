@@ -1,6 +1,9 @@
 export const LEAD_STATUSES=['Новый','В работе','Расчёт','Ожидает клиента','Сделка','Отказ'];
 export const QUOTE_STATUSES=['Черновик','Отправлен','На согласовании','Согласован','Отказ'];
-export const ORDER_STAGES=['Запрос','Подбор','Расчёт','Согласование','Выкуп','Порт США','В море','Таможня','Доставка','Выдача'];
+export const ORDER_STAGES=['Запрос','Подбор','Расчёт','Согласование','Выкуп','Подготовка к отправке','В пути','Таможня','Доставка','Выдача'];
+const LEGACY_ORDER_STAGES={'Порт США':'Подготовка к отправке','В море':'В пути'};
+const normalizeStage=stage=>LEGACY_ORDER_STAGES[stage]||stage;
+const stageIndex=stage=>ORDER_STAGES.indexOf(normalizeStage(stage));
 
 const ACTIVE_LEAD_STATUSES=['Новый','В работе','Расчёт','Ожидает клиента'];
 const text=v=>typeof v==='string'?v.trim():'';
@@ -25,7 +28,7 @@ export function quoteTransitionAllowed(from,to){
 }
 
 export function nextStageAllowed(from,to){
-  const a=ORDER_STAGES.indexOf(from),b=ORDER_STAGES.indexOf(to);
+  const a=stageIndex(from),b=stageIndex(to);
   return a>=0&&b>=0&&(b===a||b===a+1);
 }
 
@@ -48,8 +51,8 @@ export function validateQuote(quote){
   if(!text(quote.model))errors.push('model_required');
   if(!QUOTE_STATUSES.includes(status))errors.push('invalid_quote_status');
   if(status!=='Черновик'){
-    for(const key of ['lot','auction','inland','ocean','customs','service'])if(num(quote[key])<=0)errors.push(`${key}_positive_required`);
-    if(num(quote.repair)<0)errors.push('repair_nonnegative_required');
+    for(const key of ['lot','service'])if(num(quote[key])<=0)errors.push(`${key}_positive_required`);
+    for(const key of ['auction','inland','ocean','customs','repair'])if(num(quote[key])<0)errors.push(`${key}_nonnegative_required`);
     if(num(quote.total)<=0)errors.push('positive_total_required');
     if(num(quote.total)!==quoteSum(quote))errors.push('quote_total_mismatch');
     if(!text(quote.validUntil))errors.push('valid_until_required');
@@ -59,12 +62,12 @@ export function validateQuote(quote){
 
 export function validateOrder(order,previousStage=''){
   const errors=[];
-  const stage=text(order.stage);
+  const rawStage=text(order.stage),stage=normalizeStage(rawStage);
   if(!text(order.leadId))errors.push('lead_required');
   if(!ORDER_STAGES.includes(stage))errors.push('invalid_order_stage');
   if(previousStage&&!nextStageAllowed(previousStage,stage))errors.push('invalid_stage_transition');
-  if(ORDER_STAGES.indexOf(stage)>=ORDER_STAGES.indexOf('Порт США')){
-    if(!text(order.lot))errors.push('lot_required');
+  if(stageIndex(stage)>=stageIndex('Подготовка к отправке')){
+    if(text(order.origin)==='США'&&!text(order.lot))errors.push('lot_required');
     if(!text(order.vin))errors.push('vin_required');
     if(!text(order.eta))errors.push('eta_required');
     if(!text(order.location))errors.push('location_required');
