@@ -1,0 +1,45 @@
+name: Import AUTO MIR hero assets
+
+on:
+  push:
+    branches:
+      - asset/auto-mir-hero-clean-v3
+    paths:
+      - '.import-auto-mir-hero'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: asset/auto-mir-hero-clean-v3
+
+      - name: Download clean hero assets
+        shell: bash
+        env:
+          MOBILE_URL: 'https://dnznrvs05pmza.cloudfront.net/gpt_image_2_5_sunburst/286862d4-e6bf-49c0-9016-8e4655727499/Edit__input_into_a_clean_production_hero_background__Preserve_the_composition_and_visual_hierarchy_a_0.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiMjVhZjhmZjdhZmYyNDRkOCIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc5MDQ1NDY0N30.qhw-HALXiqYEp9b_JS5blcWTdzorE7-zvaozm54SzVY'
+          DESKTOP_URL: 'https://dnznrvs05pmza.cloudfront.net/gpt_image_2_5_sunburst/ff6ee7f8-aadc-4746-8718-06c4fae28c81/Recompose__input_into_a_wide_16_9_production_website_hero_background_while_preserving_the_same_scene_0.png?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiZTMzMDhmZjllZGI4ZDhiNSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc5MDQ1NTQxN30.XakoqjiDA3KguLjkWzrFsWW73UgSFU4sWxBo4kRUAQY'
+        run: |
+          set -euo pipefail
+          mkdir -p public/assets
+          curl -LfsS "$MOBILE_URL" -o public/assets/auto-mir-hero-mobile-v3.png
+          curl -LfsS "$DESKTOP_URL" -o public/assets/auto-mir-hero-desktop-v3.png
+          file public/assets/auto-mir-hero-mobile-v3.png
+          file public/assets/auto-mir-hero-desktop-v3.png
+          test -s public/assets/auto-mir-hero-mobile-v3.png
+          test -s public/assets/auto-mir-hero-desktop-v3.png
+
+      - name: Commit imported assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "VIIVERSION Asset Bot"
+          git config user.email "49186663+mirozdanie6v@users.noreply.github.com"
+          git add public/assets/auto-mir-hero-mobile-v3.png public/assets/auto-mir-hero-desktop-v3.png
+          git commit -m "Import clean AUTO MIR hero assets" || exit 0
+          git push origin HEAD:asset/auto-mir-hero-clean-v3
