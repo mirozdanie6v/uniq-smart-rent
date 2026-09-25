@@ -73,8 +73,9 @@ async def inspect_page(page, label, mobile):
     return {"label":label,"metrics":data,"issues":sorted(set(issues)),"warnings":sorted(set(warnings))}
 
 async def route(page, role, route_name):
-    if role!="client":
-        await page.locator(f'[data-role="{role}"]').click()
+    role_button=page.locator(f'[data-role="{role}"]')
+    if await role_button.count():
+        await role_button.first.click()
         await page.wait_for_timeout(120)
     loc=page.locator(f'[data-go="{route_name}"]')
     if await loc.count():
