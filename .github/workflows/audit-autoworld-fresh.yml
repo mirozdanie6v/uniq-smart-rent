@@ -1,0 +1,87 @@
+name: Audit fresh AutoWorld Georgia posts
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.audit-autoworld-fresh'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install scraper dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Read current live AutoWorld boundary
+        run: |
+          set -euo pipefail
+          curl -fsS https://auto-sale-demo.viiversion.com/api/auto-sale/state > /tmp/state.json
+          CURRENT_MAX=$(jq '[.catalog[]? | select(.source=="AutoWorld_Georgia") | (.sourcePostId|tonumber? // 0)] | max // 0' /tmp/state.json)
+          echo "CURRENT_MAX=$CURRENT_MAX" | tee -a "$GITHUB_ENV"
+          echo "Current live AutoWorld max sourcePostId: $CURRENT_MAX"
+
+      - name: Scrape latest public channel pages
+        env:
+          AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
+          OUT_DIR: data/autoworld-georgia-fresh
+          MAX_PAGES: '8'
+          MAX_PHOTOS_PER_CAR: '8'
+          REQUEST_DELAY: '0.15'
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Select only posts newer than live catalog
+        run: |
+          set -euo pipefail
+          IDS=$(jq -r --argjson max "$CURRENT_MAX" '[.[] | select((.sourcePostId|tonumber) > $max) | .sourcePostId] | unique | sort_by(tonumber) | join(",")' data/autoworld-georgia-fresh/cars.json)
+          echo "FRESH_IDS=$IDS" | tee -a "$GITHUB_ENV"
+          echo "Fresh post IDs: $IDS"
+          test -n "$IDS" || { echo "NO_FRESH_AUTOWORLD_POSTS"; exit 0; }
+
+      - name: Normalize fresh posts against current catalog schema
+        if: env.FRESH_IDS != ''
+        env:
+          SOURCE_PATH: data/autoworld-georgia-fresh/cars.json
+          OUTPUT_PATH: data/autoworld-georgia-fresh/catalog-import.json
+          AUDIT_PATH: data/autoworld-georgia-fresh/catalog-import-audit.json
+          AUTO_SALE_STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+          ONLY_POST_IDS: ${{ env.FRESH_IDS }}
+          DRY_RUN: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Enforce pre-import format audit
+        if: env.FRESH_IDS != ''
+        run: |
+          set -euo pipefail
+          cat data/autoworld-georgia-fresh/catalog-import-audit.json
+          jq -e '.normalizedCount > 0' data/autoworld-georgia-fresh/catalog-import-audit.json
+          jq -e '.withPhotos == .normalizedCount' data/autoworld-georgia-fresh/catalog-import-audit.json
+          jq -e '.skippedInvalidCount == 0' data/autoworld-georgia-fresh/catalog-import-audit.json
+
+      - name: Commit fresh audit dataset
+        if: env.FRESH_IDS != ''
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin prototype/auto-sale-usa
+          git add data/autoworld-georgia-fresh
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Audit fresh AutoWorld Georgia posts"
+          git push origin HEAD:prototype/auto-sale-usa
