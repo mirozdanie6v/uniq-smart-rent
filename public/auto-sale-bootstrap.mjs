@@ -92,7 +92,7 @@ function normalizeSettledPaymentField(){
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
-await import('./auto-sale-app-v3.mjs?v=20260925-origin-logistics-1');
+await import('./auto-sale-app-v3.mjs?v=20260925-hero-copy-focus-v4');
 await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-lead-serialization.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
