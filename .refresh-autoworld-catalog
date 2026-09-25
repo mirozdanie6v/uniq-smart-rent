@@ -1,1 +1,1 @@
-refresh latest through post 4000, restore history, decode Telegram location markers
+incremental refresh after 3969; import latest Georgia posts and preserve all history
