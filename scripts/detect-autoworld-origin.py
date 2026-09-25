@@ -141,7 +141,7 @@ def main():
         existing=clean(row.get("origin"))
         detection=row.get("originDetection") or {}
         # Do not OCR again when the image has already supplied the location.
-        if existing in {"США","Грузия"} and detection.get("method")=="image-ocr":
+        if existing in {"США","Грузия"} and detection.get("method") in {"image-ocr","custom-emoji-sequence"}:
             counts[existing]=counts.get(existing,0)+1
             continue
         origin,meta=scan_row(row)
