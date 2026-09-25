@@ -35,58 +35,85 @@ jobs:
           AUTO_SALE_MEDIA_API: https://auto-sale-demo.viiversion.com/api/auto-sale/media
         run: |
           python - <<'PY'
-          import importlib.util, json, os, re
+          import importlib.util, json, time
           from pathlib import Path
           import requests
           from bs4 import BeautifulSoup
 
-          target={'3980','3990','4000'}
+          target=['3980','3990','4000']
           spec=importlib.util.spec_from_file_location('awg','scripts/scrape-autoworld-georgia.py')
           awg=importlib.util.module_from_spec(spec)
           spec.loader.exec_module(awg)
 
-          r=requests.get(
-              'https://t.me/s/AutoWorld_Georgia',
-              headers={'User-Agent':'Mozilla/5.0','Cache-Control':'no-cache','Pragma':'no-cache'},
-              timeout=40
-          )
-          r.raise_for_status()
-          soup=BeautifulSoup(r.text,'html.parser')
+          headers={'User-Agent':'Mozilla/5.0','Cache-Control':'no-cache','Pragma':'no-cache'}
           cars=[]
-          for msg in soup.select('.tgme_widget_message'):
-              data=msg.get('data-post','')
-              if '/' not in data:
-                  continue
-              pid=data.rsplit('/',1)[-1]
-              if pid not in target:
-                  continue
-              node=msg.select_one('.tgme_widget_message_text')
-              text=awg.clean_text(node)
+          diagnostics=[]
+
+          def load_exact(pid):
+              urls=[
+                  f'https://t.me/s/AutoWorld_Georgia?before={int(pid)+1}',
+                  'https://t.me/s/AutoWorld_Georgia'
+              ]
+              for page_url in urls:
+                  r=requests.get(page_url,headers=headers,timeout=40)
+                  r.raise_for_status()
+                  soup=BeautifulSoup(r.text,'html.parser')
+                  for msg in soup.select('.tgme_widget_message'):
+                      data=msg.get('data-post','')
+                      if data.rsplit('/',1)[-1]!=pid:
+                          continue
+                      node=msg.select_one('.tgme_widget_message_text')
+                      text=awg.clean_text(node)
+                      dt=msg.select_one('time[datetime]')
+                      published=dt.get('datetime','') if dt else ''
+                      photos=awg.photo_urls(msg)
+                      return text,published,photos,page_url
+              raise RuntimeError(f'missing_target_post_{pid}')
+
+          for pid in target:
+              text,published,urls,page_url=load_exact(pid)
               if not text:
                   raise RuntimeError(f'missing_text_{pid}')
-              dt=msg.select_one('time[datetime]')
-              published=dt.get('datetime','') if dt else ''
-              urls=awg.photo_urls(msg)
               car=awg.parse_car(pid,f'https://t.me/AutoWorld_Georgia/{pid}',text,urls,published)
+              diagnostics.append({
+                  'sourcePostId':pid,
+                  'pageUrl':page_url,
+                  'title':car.get('title',''),
+                  'vin':car.get('vin',''),
+                  'auctionDate':car.get('auctionDate',''),
+                  'estimatedBidUsd':car.get('estimatedBidUsd'),
+                  'priceRub':car.get('priceRub'),
+                  'sourcePhotoCount':len(urls),
+                  'rawText':text
+              })
+
               uploaded=[]
+              failures=[]
               for i,url in enumerate(urls[:10]):
-                  uploaded_url=awg.upload_photo(pid,i,url)
-                  if uploaded_url:
-                      uploaded.append(uploaded_url)
+                  last=None
+                  for attempt in range(3):
+                      try:
+                          uploaded_url=awg.upload_photo(pid,i,url)
+                          if uploaded_url:
+                              uploaded.append(uploaded_url)
+                          last=None
+                          break
+                      except Exception as e:
+                          last=e
+                          time.sleep(1.0*(attempt+1))
+                  if last is not None:
+                      failures.append({'photo':i,'url':url,'error':str(last)})
               if not uploaded:
                   raise RuntimeError(f'no_uploaded_photos_{pid}')
               car['photos']=uploaded
+              car['photoFailures']=failures
               cars.append(car)
 
-          found={x['sourcePostId'] for x in cars}
-          missing=sorted(target-found,key=int)
-          if missing:
-              raise RuntimeError('missing_target_posts_'+','.join(missing))
           cars.sort(key=lambda x:int(x['sourcePostId']))
-
           out=Path('data/autoworld-georgia-fresh-2026-09-25')
           out.mkdir(parents=True,exist_ok=True)
           (out/'cars.json').write_text(json.dumps(cars,ensure_ascii=False,indent=2)+'\n','utf-8')
+          (out/'source-audit.json').write_text(json.dumps(diagnostics,ensure_ascii=False,indent=2)+'\n','utf-8')
           (out/'posts.txt').write_text('\n\n'.join(
               f"===== {x['sourcePostId']} | {x['sourceUrl']} =====\n{x['rawText']}" for x in cars
           )+'\n','utf-8')
@@ -95,10 +122,18 @@ jobs:
               'source':'AutoWorld_Georgia',
               'count':len(cars),
               'postIds':[x['sourcePostId'] for x in cars],
-              'photos':{x['sourcePostId']:len(x['photos']) for x in cars}
+              'photos':{x['sourcePostId']:len(x['photos']) for x in cars},
+              'photoFailures':{x['sourcePostId']:len(x.get('photoFailures',[])) for x in cars}
           }
           (out/'report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n','utf-8')
           print('FRESH_SOURCE_OK '+json.dumps(report,ensure_ascii=False))
+          print('FRESH_SOURCE_FORMAT '+json.dumps([
+              {
+                  'post':x['sourcePostId'],'title':x['title'],'vin':x['vin'],
+                  'auctionDate':x['auctionDate'],'bid':x['estimatedBidUsd'],
+                  'priceRub':x['priceRub'],'photos':len(x['photos'])
+              } for x in cars
+          ],ensure_ascii=False))
           PY
 
       - name: Normalize fresh batch dry-run
