@@ -68,6 +68,12 @@ try{
     state.quotes.push({
       id:quoteId,leadId,model:'BMW X5 xDrive40i 2022',origin:'США',transportMode:'Море',lot:25000,auction:1000,inland:1000,ocean:2500,
       customs:6500,repair:1500,service:1500,total,status:'Черновик',version:1,validUntil:addDays(7),
+      verification:{
+        lotNumber:'E2E-LOT-001',vin:'E2E-VIN-00000000001',year:2022,mileage:32000,
+        damage:'Косметические повреждения',photos:['https://example.com/e2e-before.jpg'],
+        reportUrl:'https://example.com/e2e-report',history:'Yandex E2E vehicle history checked.',
+        result:'Одобрен к покупке',checkedAt:today
+      },
       updatedAt:new Date().toISOString()
     });
   });
