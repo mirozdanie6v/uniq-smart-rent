@@ -1,0 +1,143 @@
+name: Restore full AutoWorld catalog with fresh cars
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - '.restore-autoworld-full-catalog'
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Merge old and fresh AutoWorld cars and restore live YDB catalog
+        env:
+          STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+
+          const oldCars=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import.json','utf8'));
+          const freshCars=JSON.parse(fs.readFileSync('data/autoworld-georgia-fresh-2026-09-25/live-catalog.json','utf8'));
+
+          const key=car=>{
+            const vin=String(car&&car.vin||'').trim().toUpperCase();
+            return vin ? 'vin:'+vin : 'id:'+String(car&&car.id||'');
+          };
+
+          const merged=new Map();
+          for(const car of oldCars) merged.set(key(car),car);
+          for(const car of freshCars) merged.set(key(car),car);
+          const autoWorld=[...merged.values()].sort((a,b)=>Number(b.sourcePostId||0)-Number(a.sourcePostId||0));
+
+          if(oldCars.length!==133) throw new Error('unexpected_old_catalog_count_'+oldCars.length);
+          for(const id of ['AWG-3980','AWG-3990','AWG-4000']){
+            if(!autoWorld.some(x=>x.id===id)) throw new Error('missing_fresh_'+id);
+          }
+          if(autoWorld.length<136) throw new Error('merged_catalog_too_small_'+autoWorld.length);
+
+          async function getState(){
+            const r=await fetch(process.env.STATE_URL,{headers:{accept:'application/json'}});
+            if(!r.ok) throw new Error('state_read_'+r.status);
+            return r.json();
+          }
+
+          async function putState(state,catalog){
+            return fetch(process.env.STATE_URL,{
+              method:'PUT',
+              headers:{'content-type':'application/json'},
+              body:JSON.stringify({
+                baseRevision:Number(state.revision)||0,
+                leads:state.leads||[],
+                quotes:state.quotes||[],
+                orders:state.orders||[],
+                notes:state.notes||{},
+                team:state.team||[],
+                catalog
+              })
+            });
+          }
+
+          let final=null;
+          for(let attempt=0;attempt<10;attempt++){
+            const state=await getState();
+            const nonAuto=(state.catalog||[]).filter(x=>String(x.source||'')!=='AutoWorld_Georgia');
+            const catalog=[...nonAuto,...autoWorld];
+            const r=await putState(state,catalog);
+            if(r.ok){
+              const data=await r.json();
+              final={revision:data.revision,catalogCount:catalog.length,autoWorldCount:autoWorld.length,nonAutoCount:nonAuto.length};
+              break;
+            }
+            if(r.status!==409) throw new Error('state_write_'+r.status+'_'+(await r.text()).slice(0,500));
+            await new Promise(resolve=>setTimeout(resolve,250));
+          }
+          if(!final) throw new Error('state_write_conflict_exhausted');
+
+          const state=await getState();
+          const liveAuto=(state.catalog||[]).filter(x=>String(x.source||'')==='AutoWorld_Georgia');
+          const ids=new Set(liveAuto.map(x=>x.id));
+          for(const id of ['AWG-3980','AWG-3990','AWG-4000']) if(!ids.has(id)) throw new Error('live_missing_'+id);
+          if(liveAuto.length!==autoWorld.length) throw new Error('live_count_mismatch_'+liveAuto.length+'_'+autoWorld.length);
+
+          const outDir='data/autoworld-georgia-restored-2026-09-25';
+          fs.mkdirSync(outDir,{recursive:true});
+          fs.writeFileSync(path.join(outDir,'catalog.json'),JSON.stringify(autoWorld,null,2)+'\n');
+          const report={
+            generatedAt:new Date().toISOString(),
+            oldCatalogCount:oldCars.length,
+            freshCatalogCount:freshCars.length,
+            restoredAutoWorldCount:autoWorld.length,
+            liveCatalogCount:(state.catalog||[]).length,
+            preservedNonAutoCount:(state.catalog||[]).length-liveAuto.length,
+            freshIds:['3980','3990','4000'],
+            revision:state.revision
+          };
+          fs.writeFileSync(path.join(outDir,'report.json'),JSON.stringify(report,null,2)+'\n');
+          fs.writeFileSync('data/autoworld-georgia/latest-import.json',JSON.stringify({
+            generatedAt:'2026-09-25',
+            batch:'full-restore-plus-fresh',
+            count:autoWorld.length,
+            freshCount:freshCars.length,
+            freshPosts:freshCars.map(x=>({
+              sourcePostId:x.sourcePostId,
+              sourceUrl:x.sourceUrl,
+              publishedAt:x.publishedAt,
+              brand:x.brand,
+              model:x.model,
+              year:x.year,
+              vin:x.vin,
+              priceRub:x.priceRub,
+              photos:[x.image,...(x.interiorPhotos||[]),...(x.otherPhotos||[])].filter(Boolean).length
+            }))
+          },null,2)+'\n');
+
+          console.log('AUTOWORLD_FULL_RESTORE_OK',JSON.stringify(report));
+          NODE
+
+      - name: Commit restored catalog record
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin prototype/auto-sale-usa
+          git add data/autoworld-georgia-restored-2026-09-25 data/autoworld-georgia/latest-import.json
+          if git diff --cached --quiet; then
+            echo "No restore record changes"
+            exit 0
+          fi
+          git commit -m "Restore full AutoWorld catalog and keep fresh cars"
+          git push origin HEAD:prototype/auto-sale-usa
