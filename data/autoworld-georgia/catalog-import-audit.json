@@ -1,25 +1,25 @@
 {
   "sourceCount": 391,
-  "candidateCount": 155,
-  "normalizedCount": 147,
-  "skippedInvalidCount": 236,
+  "candidateCount": 157,
+  "normalizedCount": 149,
+  "skippedInvalidCount": 234,
   "duplicateVinCount": 8,
-  "excludedTotal": 244,
-  "pricedRub": 72,
+  "excludedTotal": 242,
+  "pricedRub": 74,
   "pricedBid": 59,
   "noPrice": 75,
-  "withPhotos": 147,
+  "withPhotos": 149,
   "originCounts": {
-    "Грузия": 57,
+    "Грузия": 59,
     "США": 88,
     "США / Грузия": 2
   },
   "brandCounts": {
+    "Chevrolet": 17,
+    "Nissan": 9,
     "Buick": 3,
     "Subaru": 8,
-    "Chevrolet": 16,
     "Mercedes-Benz": 16,
-    "Nissan": 8,
     "Toyota": 8,
     "Kia": 17,
     "Hyundai": 19,
@@ -1742,20 +1742,6 @@
       "title": "Ford EcoSport 12/2021",
       "vin": "",
       "reason": "invalid_or_missing_vin"
-    },
-    {
-      "sourcePostId": "3990",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/3990",
-      "title": "Nissan Kicks 01/2023",
-      "vin": "3N1CP5CV9PL499300",
-      "reason": "missing_recovered_photos"
-    },
-    {
-      "sourcePostId": "4000",
-      "sourceUrl": "https://t.me/AutoWorld_Georgia/4000",
-      "title": "Chevrolet Trax 03/2023",
-      "vin": "KL77LGE22RC035835",
-      "reason": "missing_recovered_photos"
     }
   ]
 }
