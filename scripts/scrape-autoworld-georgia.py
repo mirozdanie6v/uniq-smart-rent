@@ -15,7 +15,13 @@ from bs4 import BeautifulSoup
 
 CHANNEL = "AutoWorld_Georgia"
 START_BEFORE = os.environ.get("START_BEFORE", "").strip()
-START_URL = f"https://t.me/s/{CHANNEL}" + (f"?before={START_BEFORE}" if START_BEFORE else "")
+START_AFTER = os.environ.get("START_AFTER", "").strip()
+if START_AFTER:
+    START_URL = f"https://t.me/s/{CHANNEL}?after={START_AFTER}"
+elif START_BEFORE:
+    START_URL = f"https://t.me/s/{CHANNEL}?before={START_BEFORE}"
+else:
+    START_URL = f"https://t.me/s/{CHANNEL}"
 MEDIA_API = os.environ.get("AUTO_SALE_MEDIA_API", "https://auto-sale-demo.viiversion.com/api/auto-sale/media")
 OUT_DIR = Path(os.environ.get("OUT_DIR", "data/autoworld-georgia"))
 MAX_PAGES = int(os.environ.get("MAX_PAGES", "260"))
