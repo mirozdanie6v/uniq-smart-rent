@@ -111,6 +111,7 @@ test('manager catalog form supports local main, interior and other photo sets',a
   form.elements.brand.value='Ford';
   form.elements.model.value='Bronco Photo Demo';
   form.elements.year.value='2024';
+  form.elements.origin.value='США';
   form.elements.mileage.value='9 000 км';
   form.elements.engine.value='2.7 бензин';
   form.elements.drive.value='4WD';
@@ -216,5 +217,32 @@ test('client catalog filters vehicles by origin',async()=>{
   filter.value='Грузия';filter.dispatchEvent(new dom.window.Event('change',{bubbles:true}));await tick();
   assert.ok(root.querySelector('[data-detail="GE-1"]'));
   assert.equal(root.querySelector('[data-detail="USA-1"]'),null);
+  dom.window.close();
+});
+
+test('new published catalog records require a canonical USA or Georgia scenario',async()=>{
+  const {dom,root}=await setup('canonical-origin',{emptyCatalog:true});
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  root.querySelector('[data-catalog-add]').click();await tick();
+  const form=root.querySelector('#catalogCarForm');
+  form.elements.brand.value='BMW';
+  form.elements.model.value='X5 Canon';
+  form.elements.year.value='2024';
+  form.elements.mileage.value='10 000 км';
+  form.elements.engine.value='3.0';
+  form.elements.drive.value='AWD';
+  form.elements.delivery.value='Срок по запросу';
+  form.elements.image.value='data:image/jpeg;base64,MAIN';
+  form.elements.origin.value='';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  assert.equal(JSON.parse(localStorage.getItem('auto-sale-catalog-v1')).some(x=>x.model==='X5 Canon'),false);
+  form.elements.origin.value='Грузия';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  const car=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')).find(x=>x.model==='X5 Canon');
+  assert.ok(car);
+  assert.equal(car.origin,'Грузия');
   dom.window.close();
 });
