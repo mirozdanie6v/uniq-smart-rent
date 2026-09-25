@@ -12,6 +12,7 @@ const core=await readFile(new URL('../public/auto-sale-core.mjs',import.meta.url
 const details=await readFile(new URL('../public/auto-sale-car-details.mjs',import.meta.url),'utf8');
 const clientCss=await readFile(new URL('../public/auto-sale.css',import.meta.url),'utf8');
 const team=await readFile(new URL('../public/auto-sale-director-team.mjs',import.meta.url),'utf8');
+const businessRules=await readFile(new URL('../public/auto-sale-business-rules.mjs',import.meta.url),'utf8');
 
 test('entry page boots the current v3 AUTO SALE chain',()=>{
   assert.match(html,/auto-sale-bootstrap\.mjs/);
@@ -138,7 +139,8 @@ test('quote UI separates USA auction costs from Georgia purchase costs',()=>{
 });
 
 test('USA orders expose the four promised payment stages',()=>{
-  for(const token of ['auction_deposit','auction_balance','logistics_legalization','customs_fts','Аукционный аванс','Автомобиль + аукционные сборы','Логистика и легализация','Таможенные платежи ФТС','paymentPlanView'])assert.ok(app.includes(token),token);
+  for(const token of ['auction_deposit','auction_balance','logistics_legalization','customs_fts','Аукционный аванс','Автомобиль + аукционные сборы','Логистика и легализация','Таможенные платежи ФТС'])assert.ok(businessRules.includes(token),token);
+  assert.match(app,/paymentPlanView/);
   assert.match(app,/auctionDepositRange/);
   assert.match(app,/validatePaymentStageEntry/);
 });
