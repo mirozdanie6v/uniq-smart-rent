@@ -47,7 +47,7 @@ export function createObjectStorage({bucket,fetchImpl=fetch,metadataUrl=METADATA
   async function upload({carId,category,dataUrl,fileName}){
     if(!bucketName)throw Object.assign(new Error('media_storage_not_configured'),{statusCode:503});
     const car=safeSegment(carId);
-    const kind=['main','interior','other'].includes(category)?category:'other';
+    const kind=['main','interior','other','verification'].includes(category)?category:'other';
     if(!car)throw Object.assign(new Error('invalid_car_id'),{statusCode:400});
     const {body,mime,ext}=parseDataUrl(dataUrl);
     const sourceBase=safeSegment(String(fileName||'').replace(/\.[^.]+$/,''))||kind;
