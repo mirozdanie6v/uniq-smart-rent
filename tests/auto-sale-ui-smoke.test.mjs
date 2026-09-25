@@ -101,7 +101,7 @@ test('completed auctions are marked and cannot request a calculation',()=>{
 });
 
 test('catalog and quote UI support USA and Georgia without forcing sea delivery',()=>{
-  assert.match(app,/ORIGIN_OPTIONS=\['США','Грузия'/);
+  assert.match(app,/const CLIENT_ORIGINS=\['США','Грузия'\]/);
   assert.match(app,/id="originFilter"/);
   assert.match(app,/Логистика по Грузии/);
   assert.match(app,/Доставка по США/);
@@ -152,4 +152,18 @@ test('USA quote approval exposes the promised verification dossier',()=>{
   assert.match(app,/verificationReportUrl/);
   assert.match(app,/verificationCheckedAt/);
   assert.match(clientCss,/auto-verification-card/);
+});
+
+test('client canon contains only USA and Georgia and legacy values cannot create new published catalog records',()=>{
+  assert.match(app,/const CLIENT_ORIGINS=\['США','Грузия'\]/);
+  assert.doesNotMatch(app,/const ORIGIN_OPTIONS=/);
+  assert.match(app,/managerOriginOptions=current=>\[\.\.\.new Set\(\[\.\.\.\(current&&!CLIENT_ORIGINS\.includes\(current\)\?\[current\]:\[\]\),\.\.\.CLIENT_ORIGINS\]\)\]/);
+  assert.match(app,/Для нового или публикуемого автомобиля выберите сценарий США или Грузия\./);
+  assert.match(app,/managerMode&&!supportedClientOrigin\(data\.origin\)/);
+  assert.doesNotMatch(app,/Корея|Европа/);
+});
+
+test('client canon does not publish unverified partner market-share or brand-exclusion claims',()=>{
+  for(const token of ['Кавказус','Глобал авто импорт','80% всего автомобильного мира','никаких совместных производств','Китайщины'])assert.equal(app.includes(token),false,token);
+  assert.doesNotMatch(app,/ALLOWED_BRANDS|BLOCKED_BRANDS|BRAND_WHITELIST|BRAND_BLACKLIST/);
 });
