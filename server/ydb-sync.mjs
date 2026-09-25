@@ -1,4 +1,4 @@
-import {leadTransitionAllowed,quoteTransitionAllowed,validateLead,validateOrder,validateQuote} from './auto-sale-rules.mjs';
+import {leadTransitionAllowed,quoteTransitionAllowed,validateLead,validateOrder,validateQuote,validateVehicleVerification} from './auto-sale-rules.mjs';
 
 const arr=v=>Array.isArray(v)?v.filter(x=>x&&typeof x==='object'):[];
 const text=v=>String(v??'').trim();
@@ -70,6 +70,10 @@ export async function syncYdbState(store,input){
       if(!same(before.leadId,quote.leadId))return bad('quote_lead_locked',{id:quote.id});
       if(!quoteTransitionAllowed(text(before.status),text(quote.status))){
         return bad('invalid_quote_transition',{id:quote.id,from:before.status,to:quote.status});
+      }
+      if(text(before.status)!=='Согласован'&&text(quote.status)==='Согласован'&&text(quote.origin)==='США'){
+        const verificationErrors=validateVehicleVerification(quote);
+        if(verificationErrors.length)return bad('invalid_quote',{id:quote.id,details:verificationErrors});
       }
       if(['Согласован','Отказ'].includes(text(before.status))){
         for(const key of ['leadId','model','lot','auction','inland','ocean','customs','repair','service','total','version','validUntil']){
