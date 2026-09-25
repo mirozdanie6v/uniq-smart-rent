@@ -27,7 +27,7 @@ jobs:
           STATE_URL: https://auto-sale-demo.viiversion.com/api/auto-sale/state
         run: |
           node <<'NODE'
-          const fs=require('fs');
+          (async()=>{\n          const fs=require('fs');
           const path=require('path');
 
           const oldCars=JSON.parse(fs.readFileSync('data/autoworld-georgia/catalog-import.json','utf8'));
