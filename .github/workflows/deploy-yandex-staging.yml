@@ -162,9 +162,12 @@ jobs:
           URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
         run: |
           set -euo pipefail
-          result=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-manager-delivery")
-          echo "$result" | jq '{ok,member,messageId}'
-          echo "$result" | jq -e '.ok == true and (.messageId != null)' >/dev/null
+          response=$(curl -sS --connect-timeout 10 --max-time 30 -w '\n%{http_code}' -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-manager-delivery")
+          code=$(printf '%s' "$response" | tail -n1)
+          body=$(printf '%s' "$response" | sed '$d')
+          echo "$body" | jq .
+          test "$code" = "201"
+          echo "$body" | jq -e '.ok == true and (.messageId != null)' >/dev/null
           echo "AUTO_SALE_TELEGRAM_MANAGER_DELIVERY_OK"
 
       - name: Run reversible client-to-handoff Yandex E2E
