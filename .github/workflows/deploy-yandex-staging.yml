@@ -157,5 +157,15 @@ jobs:
           echo "Revision network configuration:"
           yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
 
+      - name: Send real Telegram manager delivery test
+        env:
+          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
+        run: |
+          set -euo pipefail
+          result=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-manager-delivery")
+          echo "$result" | jq '{ok,member,messageId}'
+          echo "$result" | jq -e '.ok == true and (.messageId != null)' >/dev/null
+          echo "AUTO_SALE_TELEGRAM_MANAGER_DELIVERY_OK"
+
       - name: Run reversible client-to-handoff Yandex E2E
         run: node scripts/e2e-yandex-workflow.mjs
