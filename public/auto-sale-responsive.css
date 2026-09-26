@@ -15,3 +15,13 @@ html,body{max-width:100%;overflow-x:clip}.auto-shell,.auto-main,.auto-section,.a
 }
 
 @media(max-width:720px){.auto-brand{min-height:44px}.auto-btn.small{min-height:44px}.auto-modal-bg{padding-left:max(8px,var(--safe-left));padding-right:max(8px,var(--safe-right))}}
+
+@media(max-width:720px){
+  .auto-role-switch{gap:5px;padding:5px;border-radius:15px}
+  .auto-role-switch button{gap:5px;min-height:46px;padding:0 5px;border-radius:10px}
+  .auto-role-icon{width:15px;height:15px;flex-basis:15px}
+  .auto-bottom{gap:4px;padding:5px;border-radius:18px}
+  .auto-bottom button{grid-template-rows:23px auto;gap:3px;min-height:56px;padding:6px 2px 5px;border-radius:12px}
+  .auto-bottom button strong.auto-tab-icon{width:22px;height:22px}
+  .auto-bottom button .auto-ui-icon{width:20px;height:20px}
+}
