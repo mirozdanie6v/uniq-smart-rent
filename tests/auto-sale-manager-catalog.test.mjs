@@ -246,3 +246,51 @@ test('new published catalog records require a canonical USA or Georgia scenario'
   assert.equal(car.origin,'Грузия');
   dom.window.close();
 });
+
+
+test('client catalog shows crossed source price and current discounted price',async()=>{
+  const discounted=[{
+    id:'AWG-3990',brand:'Nissan',model:'Kicks',year:2023,origin:'Грузия',
+    mileage:'59 000 км',engine:'1.6L',drive:'FWD',auction:'AutoWorld Georgia',
+    price:0,priceBeforeDiscountRub:1870000,priceAfterDiscountRub:1720000,priceRub:1720000,
+    delivery:'Срок по запросу',tag:'SV',image:'https://example.com/kicks.jpg',
+    interiorPhotos:[],otherPhotos:[],active:true,source:'AutoWorld_Georgia'
+  }];
+  const {dom,root}=await setup('discount-price',{catalogSeed:discounted});
+  root.querySelector('[data-role="client"]').click();await tick();
+  root.querySelector('[data-go="catalog"]').click();await tick();
+  const card=root.querySelector('[data-detail="AWG-3990"]').closest('.auto-car');
+  assert.ok(card);
+  const old=card.querySelector('s.auto-price-old');
+  assert.ok(old);
+  assert.match(old.textContent,/1\s*870\s*000/);
+  assert.match(card.querySelector('.auto-price b').textContent,/1\s*720\s*000/);
+  assert.match(card.querySelector('.auto-price span').textContent,/цена со скидкой/i);
+  dom.window.close();
+});
+
+test('manager can edit before and after discount prices',async()=>{
+  const discounted=[{
+    id:'AWG-3990',brand:'Nissan',model:'Kicks',year:2023,origin:'Грузия',
+    mileage:'59 000 км',engine:'1.6L',drive:'FWD',auction:'AutoWorld Georgia',
+    price:0,priceBeforeDiscountRub:1870000,priceAfterDiscountRub:1720000,priceRub:1720000,
+    delivery:'Срок по запросу',tag:'SV',image:'https://example.com/kicks.jpg',
+    interiorPhotos:[],otherPhotos:[],active:true,source:'AutoWorld_Georgia'
+  }];
+  const {dom,root}=await setup('discount-edit',{catalogSeed:discounted});
+  root.querySelector('[data-role="manager"]').click();await tick();
+  root.querySelector('[data-go="catalogAdmin"]').click();await tick();
+  root.querySelector('[data-catalog-edit="AWG-3990"]').click();await tick();
+  const form=root.querySelector('#catalogCarForm');assert.ok(form);
+  assert.equal(form.elements.priceBeforeDiscountRub.value,'1870000');
+  assert.equal(form.elements.priceRub.value,'1720000');
+  form.elements.priceBeforeDiscountRub.value='1900000';
+  form.elements.priceRub.value='1690000';
+  form.dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));
+  await tick();
+  const updated=JSON.parse(localStorage.getItem('auto-sale-catalog-v1')).find(x=>x.id==='AWG-3990');
+  assert.equal(updated.priceBeforeDiscountRub,1900000);
+  assert.equal(updated.priceRub,1690000);
+  assert.equal(updated.priceAfterDiscountRub,1690000);
+  dom.window.close();
+});
