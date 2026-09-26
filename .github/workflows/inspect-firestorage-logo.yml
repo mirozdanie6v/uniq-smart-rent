@@ -13,17 +13,16 @@ jobs:
   inspect:
     runs-on: ubuntu-24.04
     steps:
-      - name: Inspect firestorage download client
+      - name: Inspect firestorage download API
         run: |
-          set -e
-          curl -sSL 'https://firestorage.ai/ja/f/HHHASdPMz_Ov' -o page.html
-          grep -o 'src="[^"]*\.js"' page.html | sed 's/^src="//;s/"$//' > js.txt
-          cat js.txt
-          while IFS= read -r p; do
-            case "$p" in
-              /*) ;;
-              *) continue ;;
-            esac
-            echo "CHUNK $p"
-            curl -sSL "https://firestorage.ai$p" | tr ';' '\n' | grep -E -i 'download|/api/' | head -80 || true
-          done < js.txt
+          python - <<'PY'
+          import requests
+          u='https://firestorage.ai/_next/static/chunks/4899-d89df949f2dbd5af.js'
+          t=requests.get(u,timeout=30).text
+          needles=['/files/','publicId','shareId','subdir','api/']
+          for n in needles:
+              i=t.find(n)
+              if i>=0:
+                  print('\nNEEDLE',n,'AT',i)
+                  print(t[max(0,i-1800):i+2600])
+          PY
