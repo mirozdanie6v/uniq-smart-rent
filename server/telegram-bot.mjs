@@ -85,7 +85,8 @@ export function createTelegramService({
       const payload=JSON.stringify({chatId:id,text:body,disableWebPagePreview});
       const timestamp=String(now());
       const signature=createHmac('sha256',botToken).update(timestamp+'.'+payload).digest('hex');
-      const response=await fetchImpl(telegramRelayUrl,{method:'POST',headers:{'content-type':'application/json','x-relay-timestamp':timestamp,'x-relay-signature':signature},body:payload});
+      const response=await fetchImpl(telegramRelayUrl,{method:'POST',headers:{'content-type':'application/json','x-relay-timestamp':timestamp,'x-relay-signature':signature,
+          'x-telegram-bot-token':botToken},body:payload});
       let data={};try{data=await response.json()}catch{}
       if(!response.ok||data?.ok===false){const error=new Error('telegram_relay_error');error.statusCode=502;error.telegramDescription=clean(data?.description)||clean(data?.error)||`HTTP ${response.status}`;throw error}
       return{message_id:data?.messageId||null};
