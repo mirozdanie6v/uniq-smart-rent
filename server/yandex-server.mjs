@@ -112,6 +112,14 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
+      if(!auth.ok){json(res,{error:auth.error},401);return}
+      json(res,{ok:true,telegramUserId:String(auth.user.id),firstName:String(auth.user.first_name||''),instructions:'Add this Telegram user ID to AUTO_SALE_MANAGER_CHAT_IDS for manager notifications.'});
+      return;
+    }
+
     if(req.method==='POST'&&telegram.isWebhookPath(url.pathname)){
       const input=await parseJson(req,100_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
