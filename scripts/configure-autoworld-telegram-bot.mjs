@@ -37,11 +37,20 @@ await api('setChatMenuButton',{menu_button:{
 
 const webhookKey=createHmac('sha256',token).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32);
 const webhookUrl=new URL(`/api/auto-sale/telegram/webhook/${webhookKey}`,appUrl).toString();
+await api('deleteWebhook',{drop_pending_updates:false});
 await api('setWebhook',{
   url:webhookUrl,
   allowed_updates:['message'],
   drop_pending_updates:false
 });
+const webhookProbe=await fetch(webhookUrl,{
+  method:'POST',
+  headers:{'content-type':'application/json'},
+  body:JSON.stringify({update_id:-1})
+});
+if(!webhookProbe.ok)throw new Error(`Webhook endpoint probe failed: HTTP ${webhookProbe.status}`);
+const webhookProbeBody=await webhookProbe.json().catch(()=>({}));
+if(webhookProbeBody?.ok!==true)throw new Error('Webhook endpoint probe did not return ok=true');
 
 const [actualBot,name,description,shortDescription,commands,button,webhook]=await Promise.all([
   api('getMe'),
@@ -60,5 +69,5 @@ console.log(JSON.stringify({
   commands,
   appUrl,
   menuButton:button,
-  webhook:{configured:Boolean(webhook.url),pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
+  webhook:{configured:Boolean(webhook.url),endpointProbe:true,pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
 },null,2));
