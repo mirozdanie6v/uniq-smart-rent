@@ -116,7 +116,20 @@ const server=http.createServer(async(req,res)=>{
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
       if(!auth.ok){json(res,{error:auth.error},401);return}
-      json(res,{ok:true,telegramUserId:String(auth.user.id),firstName:String(auth.user.first_name||''),instructions:'Add this Telegram user ID to AUTO_SALE_MANAGER_CHAT_IDS for manager notifications.'});
+      const input=await parseJson(req,20_000);
+      const memberId=String(input?.memberId||'').trim();
+      const memberName=String(input?.memberName||'').trim();
+      const state=await store.loadState();
+      const team=Array.isArray(state.team)?state.team.map(item=>({...item})):[];
+      let index=memberId?team.findIndex(item=>String(item?.id||'')===memberId):-1;
+      if(index<0&&memberName)index=team.findIndex(item=>String(item?.name||'').trim()===memberName);
+      if(index<0){json(res,{error:'manager_team_member_required',team:team.filter(item=>item?.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item?.role||''))).map(item=>({id:item.id,name:item.name,role:item.role}))},409);return}
+      const telegramUserId=String(auth.user.id);
+      const username=String(auth.user.username||'').replace(/^@/,'');
+      team[index]={...team[index],telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()};
+      const replaced=await store.replaceState({...state,team},{expectedRevision:state.revision});
+      if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
+      json(res,{ok:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:replaced.data.revision});
       return;
     }
 
