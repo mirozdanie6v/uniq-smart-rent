@@ -290,7 +290,23 @@ orders=orders.map(x=>{const rawPayments=normalizePayments(x),origin=String(x.ori
 const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};saveAll();
 
 const roleLabels={client:'Клиент',manager:'Менеджер',owner:'Директор'};
-const nav={client:[['home','Главная','⌂'],['catalog','Авто','▦'],['orders','Мои заказы','◫'],['about','Как работаем','◎']],manager:[['work','Работа','⌘'],['leads','Лиды','◫'],['quotes','Расчёты','▤'],['catalogAdmin','Каталог','▦'],['shipping','Логистика','↔']],owner:[['overview','Обзор','◉'],['pipeline','Продажи','▥'],['finance','Финансы','$'],['ordersAdmin','Заказы','◆']]};
+const roleIcons={client:'user',manager:'briefcase',owner:'crown'};
+const nav={client:[['home','Главная','home'],['catalog','Авто','car'],['orders','Мои заказы','clipboard'],['about','Как работаем','route']],manager:[['work','Работа','dashboard'],['leads','Лиды','users'],['quotes','Расчёты','calculator'],['catalogAdmin','Каталог','car'],['shipping','Логистика','truck']],owner:[['overview','Обзор','dashboard'],['pipeline','Продажи','chart'],['finance','Финансы','wallet'],['ordersAdmin','Заказы','clipboard']]};
+function uiIcon(name){const icons={
+home:'<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-5h5v5"/>',
+car:'<path d="m5 11 1.8-4h10.4L19 11"/><path d="M4 11h16v6H4z"/><path d="M6.5 17v2M17.5 17v2"/><circle cx="7.5" cy="14" r="1"/><circle cx="16.5" cy="14" r="1"/>',
+clipboard:'<path d="M9 5h6"/><path d="M9 3h6v4H9z"/><path d="M7 5H5v16h14V5h-2"/><path d="m8 13 2 2 5-5"/>',
+route:'<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3"/>',
+dashboard:'<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+calculator:'<path d="M5 3h14v18H5z"/><path d="M8 7h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01"/>',
+truck:'<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
+chart:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+wallet:'<path d="M4 6h14a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2V6z"/><path d="M4 6V4h12v2M16 12h4"/><circle cx="16" cy="12" r=".8"/>',
+user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+briefcase:'<path d="M4 7h16v12H4z"/><path d="M9 7V4h6v3M4 12h16M10 12v2h4v-2"/>',
+crown:'<path d="m4 8 4 4 4-7 4 7 4-4-2 10H6z"/><path d="M7 21h10"/>'
+};return '<svg class="auto-ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(icons[name]||icons.home)+'</svg>'}
 const savedRole=sessionStorage.getItem(KEYS.role);
 const state={role:nav[savedRole]?savedRole:'client',route:'home',query:'',brand:'all',origin:'all',budget:'all',leadQuery:'',leadStatus:'all',leadSource:'all',leadManager:'all',orderQuery:'',orderStage:'all',orderManager:'all',orderRisk:'all',modal:null};
 state.route=nav[state.role][0][0];
@@ -300,7 +316,7 @@ const taskDue=l=>l.nextAction&&l.nextAction<=today&&!['Сделка','Отказ
 const orderRisk=o=>(o.riskType||o.risk||'Нет')==='Нет'?'Нет':(o.riskNote||o.riskType||o.risk);
 const statusClass=v=>/Отказ|риск|Документ|ожида|Новый|Черновик|уточ|Задерж/i.test(v||'')?'warn':/Сделка|Согласован|В пути|В море|Тамож|Выдача|Нет/i.test(v||'')?'good':'';
 function brand(){return `<button class="auto-brand auto-brand-image" data-go="${nav[state.role][0][0]}" aria-label="АвтоМир Грузия — на главную"><img class="auto-brand-logo" src="./auto-sale-logo-automir-v5.webp?v=20260926-brand-v5" alt="" decoding="async"></button>`}
-function shell(content){const d=dashboard(),f=finances();return `<div class="auto-shell"><header class="auto-topbar">${brand()}<div class="auto-role-switch">${Object.entries(roleLabels).map(([id,label])=>`<button data-role="${id}" class="${state.role===id?'active':''}">${label}</button>`).join('')}</div></header>${state.role!=='client'?`<div class="auto-role-strip"><span>${state.role==='manager'?'Рабочая панель менеджера':'Панель директора'}</span><b>${state.role==='manager'?`${d.activeLeads} активных лидов · ${d.risky} риска`:`${money(f.turnover)} оборот · ${d.conversion}% конверсия`}</b><small>Рабочие данные · бизнес-правила включены</small></div>`:''}<main class="auto-main">${content}</main><nav class="auto-bottom ${state.role==='manager'?'manager-five':''}">${nav[state.role].map(([id,label,ico])=>`<button data-go="${id}" class="${state.route===id?'active':''}"><strong>${ico}</strong><span>${label}</span></button>`).join('')}</nav>${state.modal?modal():''}</div>`}
+function shell(content){const d=dashboard(),f=finances();return `<div class="auto-shell"><header class="auto-topbar">${brand()}<div class="auto-role-switch">${Object.entries(roleLabels).map(([id,label])=>`<button data-role="${id}" class="${state.role===id?'active':''}"><span class="auto-role-icon">${uiIcon(roleIcons[id])}</span><span>${label}</span></button>`).join('')}</div></header>${state.role!=='client'?`<div class="auto-role-strip"><span>${state.role==='manager'?'Рабочая панель менеджера':'Панель директора'}</span><b>${state.role==='manager'?`${d.activeLeads} активных лидов · ${d.risky} риска`:`${money(f.turnover)} оборот · ${d.conversion}% конверсия`}</b><small>Рабочие данные · бизнес-правила включены</small></div>`:''}<main class="auto-main">${content}</main><nav class="auto-bottom ${state.role==='manager'?'manager-five':''}">${nav[state.role].map(([id,label,ico])=>`<button data-go="${id}" class="${state.route===id?'active':''}"><strong class="auto-tab-icon">${uiIcon(ico)}</strong><span>${label}</span></button>`).join('')}</nav>${state.modal?modal():''}</div>`}
 
 function hero(){
   return `<section class="auto-hero auto-hero-premium auto-hero-simple">
