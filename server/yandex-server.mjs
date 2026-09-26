@@ -95,9 +95,9 @@ const server=http.createServer(async(req,res)=>{
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const input=await parseJson(req);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
-      const before=telegram.enabled?await store.loadState():null;
-      const result=await syncYdbState(store,input);
+      const result=await syncYdbState(store,input,{includePrevious:telegram.enabled});
       if(result.status>=200&&result.status<300&&telegram.enabled){
+        const before=result.previous;
         const nextState={...input,initialized:true};
         setImmediate(()=>{
           telegram.notifyStateChanges(before,nextState)
