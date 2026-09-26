@@ -33,7 +33,7 @@ test('Telegram WebApp initData is verified server-side',()=>{
 
 test('manual manager message can only target the linked client',async()=>{
   const sent=[];
-  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'900'});
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'900',relayUrl:''});
   const state={leads:[{
     id:'L-1',name:'Client',model:'BMW X5',telegramUserId:'700',
     managerTelegramUserId:'800'
@@ -48,7 +48,7 @@ test('manual manager message can only target the linked client',async()=>{
 
 test('fallback manager chat ids receive new client request notifications',async()=>{
   const sent=[];
-  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'900,901'});
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'900,901',relayUrl:''});
   const previous={initialized:true,leads:[],quotes:[],orders:[]};
   const next={initialized:true,leads:[{
     id:'L-NEW',name:'Anna',model:'Audi Q5',budget:40000,contact:'@anna',
