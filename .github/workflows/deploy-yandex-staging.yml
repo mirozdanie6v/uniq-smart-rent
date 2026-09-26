@@ -126,6 +126,7 @@ jobs:
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
             --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true" \
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
+            --environment "NODE_OPTIONS=--dns-result-order=ipv4first" \
             "${EXTRA_ENV[@]}"
 
       - name: Verify public demo read/write boundary
