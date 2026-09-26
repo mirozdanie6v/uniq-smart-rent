@@ -21,6 +21,7 @@ env:
   AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
   AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
   AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
+  AUTO_SALE_TELEGRAM_APP_URL: https://autoworld.viiversion.com/
 
 jobs:
   deploy:
@@ -108,6 +109,7 @@ jobs:
           if [ -n "${AUTO_SALE_TELEGRAM_BOT_TOKEN:-}" ]; then
             echo "::add-mask::$AUTO_SALE_TELEGRAM_BOT_TOKEN"
             EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN")
+            EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_APP_URL=$AUTO_SALE_TELEGRAM_APP_URL")
           fi
           if [ -n "${AUTO_SALE_MANAGER_CHAT_IDS:-}" ]; then
             EXTRA_ENV+=(--environment "AUTO_SALE_MANAGER_CHAT_IDS=$AUTO_SALE_MANAGER_CHAT_IDS")
