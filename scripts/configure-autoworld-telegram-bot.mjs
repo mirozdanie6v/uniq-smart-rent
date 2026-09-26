@@ -6,7 +6,7 @@ if(!token)throw new Error('AUTO_SALE_TELEGRAM_BOT_TOKEN is required');
 if(!/^https:\/\//i.test(appUrl))throw new Error('AUTO_SALE_TELEGRAM_APP_URL must be HTTPS');
 
 const sleep=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
-const api=async(method,payload={})=>{
+const api=async(method,payload={},options={})=>{
   for(let attempt=1;attempt<=3;attempt++){
     const response=await fetch(`https://api.telegram.org/bot${token}/${method}`,{
       method:'POST',
@@ -16,6 +16,10 @@ const api=async(method,payload={})=>{
     const data=await response.json().catch(()=>({}));
     if(response.status===429||data?.error_code===429){
       const retryAfter=Math.max(1,Number(data?.parameters?.retry_after)||1);
+      if(options.skipLongRateLimit&&retryAfter>60){
+        console.log(`${method}: Telegram rate limit ${retryAfter}s; skipping non-critical update`);
+        return null;
+      }
       if(attempt<3){
         console.log(`${method}: Telegram rate limit, retrying after ${retryAfter}s`);
         await sleep((retryAfter+1)*1000);
@@ -32,7 +36,7 @@ if(String(me.username||'').toLowerCase()!=='autoworld_georgia_bot'){
   throw new Error(`Wrong bot token: expected @AutoWorld_Georgia_bot, got @${me.username||'unknown'}`);
 }
 
-await api('setMyName',{name:'AUTO МИР | AutoWorld Georgia'});
+await api('setMyName',{name:'AUTO МИР | AutoWorld Georgia'},{skipLongRateLimit:true});
 await api('setMyDescription',{description:'Автомобили из США и Грузии с доставкой в Россию. Каталог, прозрачный расчёт, заявка, этапы оплаты и отслеживание заказа — в одном приложении.'});
 await api('setMyShortDescription',{short_description:'Автомобили из США и Грузии · каталог и заказ'});
 await api('setMyCommands',{commands:[
