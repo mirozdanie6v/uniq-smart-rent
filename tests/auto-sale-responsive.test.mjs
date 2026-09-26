@@ -5,6 +5,7 @@ import fs from 'node:fs';
 const index = fs.readFileSync('index.html','utf8');
 const base = fs.readFileSync('public/auto-sale-responsive.css','utf8');
 const admin = fs.readFileSync('public/auto-sale-mobile-admin.css','utf8');
+const clientBase = fs.readFileSync('public/auto-sale.css','utf8');
 
 test('responsive hardening styles are loaded after base/admin styles',()=>{
   const basePos=index.indexOf('./auto-sale.css');
@@ -44,10 +45,10 @@ test('very narrow and landscape breakpoints are explicitly covered',()=>{
 });
 
 test('safe areas cover all screen edges and iPhone landscape fields avoid zoom',()=>{
-  assert.match(base,/--safe-top:env\(safe-area-inset-top,0px\)/);
-  assert.match(base,/--safe-right:env\(safe-area-inset-right,0px\)/);
-  assert.match(base,/--safe-bottom:env\(safe-area-inset-bottom,0px\)/);
-  assert.match(base,/--safe-left:env\(safe-area-inset-left,0px\)/);
+  assert.match(clientBase,/--safe-top:env\(safe-area-inset-top,0px\)/);
+  assert.match(clientBase,/--safe-right:env\(safe-area-inset-right,0px\)/);
+  assert.match(clientBase,/--safe-bottom:env\(safe-area-inset-bottom,0px\)/);
+  assert.match(clientBase,/--safe-left:env\(safe-area-inset-left,0px\)/);
   assert.match(base,/max\(12px,var\(--safe-left\)\)/);
   assert.match(base,/orientation:landscape/);
   assert.match(base,/orientation:landscape[^}]*\}[\s\S]*?\.auto-form input,.auto-form select,.auto-form textarea\{font-size:16px\}/);
