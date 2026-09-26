@@ -57,71 +57,133 @@
 .auto-bottom button.active:after{content:"";position:absolute;left:24%;right:24%;bottom:3px;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,#c99b4f 22%,#f2d69b 50%,#c99b4f 78%,transparent);box-shadow:0 0 8px rgba(224,184,105,.34)}
 
 /* Premium calculate CTA */
-.auto-btn.primary[data-request-car]{
+.auto-calc-btn{
   position:relative;
   isolation:isolate;
   overflow:hidden;
-  min-height:46px;
-  border:1px solid rgba(95,196,255,.72);
-  border-radius:12px;
-  background:linear-gradient(180deg,#118cf2 0%,#0875db 58%,#075dbb 100%);
-  color:#fff;
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) 22px;
+  align-items:center;
+  gap:10px;
+  min-height:48px;
+  padding:5px 12px 5px 7px;
+  border:1px solid transparent;
+  border-radius:14px;
+  background:
+    linear-gradient(180deg,#0b2d57 0%,#0a2444 100%) padding-box,
+    linear-gradient(110deg,#1fc5ff 0%,#5bdcff 42%,#88e9ff 58%,#168cff 100%) border-box;
+  color:#f7fcff;
   font-weight:900;
-  letter-spacing:.008em;
-  text-shadow:0 1px 0 rgba(0,38,84,.34);
+  letter-spacing:.005em;
+  text-shadow:0 1px 0 rgba(0,20,46,.42);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.20),
-    inset 0 -1px 0 rgba(0,45,102,.38),
-    0 7px 18px rgba(0,95,196,.22);
-  transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,filter .16s ease;
+    inset 0 1px 0 rgba(255,255,255,.08),
+    inset 0 -12px 28px rgba(0,12,32,.22),
+    0 8px 20px rgba(0,65,138,.24);
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
 }
-.auto-btn.primary[data-request-car]::before{
+.auto-calc-btn::before{
   content:"";
   position:absolute;
-  inset:0;
-  z-index:0;
-  border-radius:inherit;
-  background:linear-gradient(115deg,rgba(255,255,255,.08),transparent 30%,transparent 72%,rgba(110,220,255,.06));
+  inset:1px;
+  z-index:-1;
+  border-radius:12px;
+  background:
+    radial-gradient(circle at 14% 50%,rgba(24,187,255,.18),transparent 28%),
+    linear-gradient(110deg,rgba(255,255,255,.05),transparent 35%,transparent 72%,rgba(26,160,255,.08));
   pointer-events:none;
 }
-.auto-btn.primary[data-request-car]::after{
+.auto-calc-btn::after{
   content:"";
   position:absolute;
-  z-index:1;
-  top:-35%;
-  bottom:-35%;
-  left:-26%;
-  width:14%;
-  transform:translateX(-260%) skewX(-16deg);
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),rgba(245,252,255,.86),rgba(255,255,255,.18),transparent);
+  z-index:3;
+  top:-40%;
+  bottom:-40%;
+  left:-30%;
+  width:12%;
+  transform:translateX(-260%) skewX(-15deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),rgba(246,253,255,.92),rgba(255,255,255,.16),transparent);
   opacity:0;
   pointer-events:none;
-  animation:autoCalcSweep 10.2s cubic-bezier(.22,.72,.24,1) infinite;
+  animation:autoCalcSweep 10.5s cubic-bezier(.22,.72,.24,1) infinite;
 }
-.auto-car:nth-child(3n+2) .auto-btn.primary[data-request-car]::after{animation-delay:1.8s}
-.auto-car:nth-child(3n+3) .auto-btn.primary[data-request-car]::after{animation-delay:3.6s}
-.auto-btn.primary[data-request-car]:hover:not(:disabled){
+.auto-calc-icon{
+  position:relative;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  border:1px solid rgba(115,225,255,.52);
+  border-radius:10px;
+  background:linear-gradient(180deg,rgba(13,132,217,.72),rgba(7,77,150,.82));
+  color:#c9f3ff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 0 12px rgba(25,184,255,.12);
+}
+.auto-calc-icon .auto-ui-icon{width:17px;height:17px;stroke-width:1.9}
+.auto-calc-label{
+  position:relative;
+  z-index:2;
+  text-align:left;
+  white-space:nowrap;
+}
+.auto-calc-arrow{
+  position:relative;
+  z-index:2;
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  background:rgba(64,194,255,.12);
+  color:#9fe9ff;
+  font-size:16px;
+  line-height:1;
+  transition:transform .16s ease,background .16s ease;
+}
+.auto-calc-btn:hover:not(:disabled){
   transform:translateY(-1px);
-  border-color:rgba(134,218,255,.92);
   filter:brightness(1.035);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.24),
-    inset 0 -1px 0 rgba(0,45,102,.34),
-    0 9px 22px rgba(0,105,214,.26),
-    0 0 16px rgba(28,171,245,.10);
+    inset 0 1px 0 rgba(255,255,255,.11),
+    inset 0 -12px 28px rgba(0,12,32,.18),
+    0 10px 24px rgba(0,78,164,.28),
+    0 0 18px rgba(30,187,255,.10);
 }
-.auto-btn.primary[data-request-car]:active:not(:disabled){transform:translateY(1px) scale(.996)}
-.auto-btn.primary[data-request-car]:disabled::before,
-.auto-btn.primary[data-request-car][aria-disabled="true"]::before,
-.auto-btn.primary[data-request-car]:disabled::after,
-.auto-btn.primary[data-request-car][aria-disabled="true"]::after{content:none;animation:none}
+.auto-calc-btn:hover:not(:disabled) .auto-calc-arrow{
+  transform:translateX(2px);
+  background:rgba(64,194,255,.18);
+}
+.auto-calc-btn:active:not(:disabled){transform:translateY(1px) scale(.996)}
+.auto-car:nth-child(3n+2) .auto-calc-btn::after{animation-delay:1.8s}
+.auto-car:nth-child(3n+3) .auto-calc-btn::after{animation-delay:3.6s}
+.auto-calc-btn:disabled,
+.auto-calc-btn[aria-disabled="true"]{
+  border-color:rgba(255,255,255,.10);
+  background:#272f39;
+  color:#8f99a6;
+  box-shadow:none;
+}
+.auto-calc-btn:disabled .auto-calc-icon,
+.auto-calc-btn[aria-disabled="true"] .auto-calc-icon{
+  border-color:rgba(255,255,255,.10);
+  background:#303741;
+  color:#7d8792;
+  box-shadow:none;
+}
+.auto-calc-btn:disabled .auto-calc-arrow,
+.auto-calc-btn[aria-disabled="true"] .auto-calc-arrow{background:transparent;color:#737c87}
+.auto-calc-btn:disabled::before,
+.auto-calc-btn[aria-disabled="true"]::before,
+.auto-calc-btn:disabled::after,
+.auto-calc-btn[aria-disabled="true"]::after{content:none;animation:none}
 @keyframes autoCalcSweep{
-  0%,84%{transform:translateX(-260%) skewX(-16deg);opacity:0}
-  86%{opacity:0}
-  88%{opacity:.78}
-  93%{transform:translateX(760%) skewX(-16deg);opacity:.72}
-  95%,100%{transform:translateX(760%) skewX(-16deg);opacity:0}
+  0%,86%{transform:translateX(-260%) skewX(-15deg);opacity:0}
+  88%{opacity:0}
+  89%{opacity:.74}
+  93%{transform:translateX(860%) skewX(-15deg);opacity:.68}
+  95%,100%{transform:translateX(860%) skewX(-15deg);opacity:0}
 }
 @media(prefers-reduced-motion:reduce){
-  .auto-btn.primary[data-request-car]::after{animation:none;opacity:0}
+  .auto-calc-btn::after{animation:none;opacity:0}
 }
