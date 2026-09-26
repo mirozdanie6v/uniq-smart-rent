@@ -118,7 +118,7 @@ jobs:
             --image "$AUTO_SALE_IMAGE" \
             --cores 1 \
             --memory 512MB \
-            --execution-timeout 30s \
+            --execution-timeout 60s \
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
