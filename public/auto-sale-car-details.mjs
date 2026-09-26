@@ -113,7 +113,7 @@ document.addEventListener('keydown',event=>{
   if(!['Enter',' '].includes(event.key))return;const media=event.target.closest?.('[data-car-photo-detail]');if(!media)return;event.preventDefault();openDetail(media.dataset.carPhotoDetail);
 });
 
-window.__AUTO_SALE_CAR_DETAILS__=carDetails;
+window.__AUTO_SALE_CAR_DETAILS__={open:openDetail,close:closeDetail,currentCar,currentGallery,setSliderIndex};
 decorate();
 const root=document.getElementById('app');if(root){let scheduled=false;new MutationObserver(()=>{if(scheduled)return;scheduled=true;queueMicrotask(()=>{scheduled=false;decorate(root)})}).observe(root,{childList:true,subtree:true})}
 window.addEventListener('load',()=>decorate());
