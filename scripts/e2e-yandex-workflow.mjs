@@ -3,7 +3,7 @@ const apiKey=String(process.env.AUTO_SALE_API_KEY||'');
 if(!base)throw new Error('STAGING_URL is required');
 if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
 
-const headers={'content-type':'application/json','x-auto-sale-key':apiKey};
+const headers={'content-type':'application/json','x-auto-sale-key':apiKey,'x-auto-sale-skip-telegram':'1'};
 const clone=value=>JSON.parse(JSON.stringify(value));
 const today=new Date().toISOString().slice(0,10);
 const addDays=(days)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
