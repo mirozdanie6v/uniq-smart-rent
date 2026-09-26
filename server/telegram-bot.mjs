@@ -47,7 +47,7 @@ export function createTelegramService({
   const botToken=clean(token);
   const fallbackManagers=parseManagerIds(managerChatIds);
   const enabled=Boolean(botToken&&fetchImpl);
-  const webhookKey=botToken?createHmac('sha256',botToken).update('auto-sale-telegram-webhook').digest('hex').slice(0,32):'';
+  const webhookKey=botToken?createHmac('sha256',botToken).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32):'';
   const webhookPath=webhookKey?`/api/auto-sale/telegram/webhook/${webhookKey}`:'';
 
   async function api(method,payload){
