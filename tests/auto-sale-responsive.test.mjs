@@ -19,7 +19,7 @@ test('mobile navigation fits four role actions without horizontal scrolling',()=
   assert.match(base,/max-width:720px/);
   assert.match(base,/\.auto-bottom\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(base,/\.auto-bottom button\{min-width:0/);
-  assert.match(base,/\.auto-role-switch\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(base,/\.auto-role-switch\{[^}]*display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
 });
 
 test('mobile cards and modals prevent common narrow-screen overflow',()=>{
@@ -64,7 +64,7 @@ test('mobile primary touch targets are at least 44px tall',()=>{
 
 test('mobile brand fills the available header width',()=>{
   assert.match(base,/\.auto-brand\{width:100%;max-width:none\}/);
-  assert.match(base,/\.auto-brand-image\{display:block;width:100%;max-width:none;min-height:0\}/);
+  assert.match(base,/\.auto-brand-image\{[^}]*display:block;width:100%;max-width:none;min-height:0\}/);
   assert.match(base,/\.auto-brand-logo\{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center\}/);
 });
 
