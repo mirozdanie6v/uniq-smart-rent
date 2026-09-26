@@ -88,6 +88,22 @@ function extractBid(car){
   return m?Number(m[1].replace(/\D/g,''))||0:0;
 }
 
+function extractPromoPriceRub(source){
+  if(Number(source?.priceAfterDiscountRub)>0)return Number(source.priceAfterDiscountRub);
+  const raw=String(source?.rawText||'');
+  const m=raw.match(/([0-9])️⃣\s*\n\s*🤩\s*\n\s*([0-9])️⃣\s*\n\s*([0-9])️⃣\s*\n\s*🔤\s*\n\s*🔤\s*\n\s*🔤/u);
+  return m?Number(`${m[1]}${m[2]}${m[3]}`)*10_000:0;
+}
+function sourceRubPrices(source){
+  const rawVisible=Number(source?.priceBeforeDiscountRub)||Number(source?.priceRub)||0;
+  const promo=extractPromoPriceRub(source);
+  if(rawVisible>0&&promo>0&&rawVisible>promo){
+    return{priceBeforeDiscountRub:rawVisible,priceAfterDiscountRub:promo,priceRub:promo};
+  }
+  const current=promo||Number(source?.priceRub)||0;
+  return{priceBeforeDiscountRub:Number(source?.priceBeforeDiscountRub)||0,priceAfterDiscountRub:promo||0,priceRub:current};
+}
+
 const BRAND_MAP=new Map([
   ['KIA','Kia'],['HYUNDAI','Hyundai'],['TOYOTA','Toyota'],['NISSAN','Nissan'],
   ['HONDA','Honda'],['FORD','Ford'],['AUDI','Audi'],['ACURA','Acura'],
@@ -202,7 +218,8 @@ function normalizeCar(source){
   const safetyText=sourceSafety||(/Безопасность[\s\S]{0,50}?завод/i.test(raw)?'завод':field(raw,'Безопасность').replace(/^[\"']+|[\"']+$/g,'').trim());
   const trim=clean(source.trim)||field(source.rawText,'комплектация');
   const bid=extractBid(source);
-  const priceRub=Number(source.priceRub)||0;
+  const prices=sourceRubPrices(source);
+  const priceRub=prices.priceRub;
   const customsRub=Number(source.customsRub)||0;
   const drive=normalizeDrive(source.drive,source.rawText);
   const highlights=[
@@ -229,6 +246,8 @@ function normalizeCar(source){
     drive,
     auction:'AutoWorld Georgia',
     price:0,
+    priceBeforeDiscountRub:prices.priceBeforeDiscountRub,
+    priceAfterDiscountRub:prices.priceAfterDiscountRub,
     priceRub,
     estimatedBidUsd:bid,
     delivery:'Срок по запросу',
@@ -319,6 +338,7 @@ async function main(){
     duplicateVinCount:candidates.length-imported.length,
     excludedTotal:source.length-imported.length,
     pricedRub:imported.filter(x=>Number(x.priceRub)>0).length,
+    discountedRub:imported.filter(x=>Number(x.priceBeforeDiscountRub)>Number(x.priceRub)&&Number(x.priceRub)>0).length,
     pricedBid:imported.filter(x=>Number(x.estimatedBidUsd)>0).length,
     noPrice:imported.filter(x=>!Number(x.priceRub)&&!Number(x.estimatedBidUsd)).length,
     withPhotos:imported.filter(x=>x.image).length,
