@@ -58,6 +58,10 @@ await api('setWebhook',{
   allowed_updates:['message'],
   drop_pending_updates:false
 });
+const webhookAfterSet=await api('getWebhookInfo');
+if(webhookAfterSet?.url!==webhookUrl)throw new Error(`Webhook URL mismatch: expected ${webhookUrl}, got ${webhookAfterSet?.url||'empty'}`);
+if(webhookAfterSet?.last_error_message)throw new Error(`Telegram webhook error: ${webhookAfterSet.last_error_message}`);
+
 const webhookProbe=await fetch(webhookUrl,{
   method:'POST',
   headers:{'content-type':'application/json'},
@@ -76,6 +80,9 @@ const [actualBot,name,description,shortDescription,commands,button,webhook]=awai
   api('getChatMenuButton'),
   api('getWebhookInfo')
 ]);
+if(webhook.url!==webhookUrl)throw new Error(`Final webhook URL mismatch: expected ${webhookUrl}, got ${webhook.url||'empty'}`);
+if(webhook.last_error_message)throw new Error(`Final Telegram webhook error: ${webhook.last_error_message}`);
+
 console.log(JSON.stringify({
   ok:true,
   bot:{id:actualBot.id,username:actualBot.username,name:name?.name||actualBot.first_name},
@@ -84,5 +91,5 @@ console.log(JSON.stringify({
   commands,
   appUrl,
   menuButton:button,
-  webhook:{configured:Boolean(webhook.url),endpointProbe:true,pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
+  webhook:{configured:Boolean(webhook.url),urlMatches:webhook.url===webhookUrl,endpointProbe:true,pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null,last_error_date:webhook.last_error_date||null}
 },null,2));
