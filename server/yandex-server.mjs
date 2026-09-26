@@ -106,6 +106,18 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='POST'&&telegram.isWebhookPath(url.pathname)){
+      const input=await parseJson(req,100_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      try{
+        const result=await telegram.handleWebhookUpdate(input,{appUrl:process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/'});
+        json(res,result,200);
+      }catch(error){
+        const status=Number(error?.statusCode)||500;
+        json(res,{error:String(error?.message||'telegram_webhook_failed')},status);
+      }
+      return;
+    }
     if(url.pathname==='/api/auto-sale/telegram/message'&&req.method==='POST'){
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
