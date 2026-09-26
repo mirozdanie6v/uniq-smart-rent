@@ -149,5 +149,14 @@ jobs:
           curl -fsS "${URL%/}/api/auto-sale/state" | jq -e '.initialized == true and (.revision|tonumber) >= 1' >/dev/null
           echo "Yandex public demo staging verified: $URL"
 
+      - name: Diagnose Yandex outbound Telegram connectivity
+        run: |
+          set -euo pipefail
+          URL=${STAGING_URL%/}
+          echo "Container URL: $URL"
+          curl -fsS "$URL/api/health" | jq '{ok,telegramNotifications,telegramFallbackManagers}'
+          echo "Revision network configuration:"
+          yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
+
       - name: Run reversible client-to-handoff Yandex E2E
         run: node scripts/e2e-yandex-workflow.mjs
