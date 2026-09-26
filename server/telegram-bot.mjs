@@ -25,9 +25,12 @@ function orderLead(state,order){
   return leadFor(state,order?.leadId);
 }
 function clientId(lead){return /^\d+$/.test(clean(lead?.telegramUserId))?clean(lead.telegramUserId):''}
-function managerIds(lead,fallback=[]){
+function managerIds(lead,fallback=[],state=null){
+  const managerName=clean(lead?.manager);
+  const member=managerName?arr(state?.team).find(item=>clean(item?.name)===managerName&&item?.active!==false):null;
   return unique([
     /^\d+$/.test(clean(lead?.managerTelegramUserId))?clean(lead.managerTelegramUserId):'',
+    /^\d+$/.test(clean(member?.telegramUserId))?clean(member.telegramUserId):'',
     ...fallback
   ]);
 }
@@ -109,7 +112,7 @@ export function createTelegramService({
     if(!lead)return{ok:false,error:'lead_not_found'};
     const sender=clean(senderId);
     if(target==='client'){
-      const allowedManagers=managerIds(lead,fallbackManagers);
+      const allowedManagers=managerIds(lead,fallbackManagers,state);
       if(!allowedManagers.includes(sender))return{ok:false,error:'telegram_sender_forbidden'};
       const chatId=clientId(lead);
       if(!chatId)return{ok:false,error:'client_telegram_not_linked'};
@@ -117,7 +120,7 @@ export function createTelegramService({
     }
     if(target==='manager'){
       if(clientId(lead)!==sender)return{ok:false,error:'telegram_sender_forbidden'};
-      const ids=managerIds(lead,fallbackManagers);
+      const ids=managerIds(lead,fallbackManagers,state);
       if(!ids.length)return{ok:false,error:'manager_telegram_not_linked'};
       return{ok:true,lead,chatId:ids[0]};
     }
@@ -154,7 +157,7 @@ export function createTelegramService({
       }
     };
     const toManagers=async(lead,message,meta)=>{
-      for(const chatId of managerIds(lead,fallbackManagers))await deliver(chatId,message,{target:'manager',...meta});
+      for(const chatId of managerIds(lead,fallbackManagers,next))await deliver(chatId,message,{target:'manager',...meta});
     };
     const toClient=async(lead,message,meta)=>{
       const chatId=clientId(lead);if(chatId)await deliver(chatId,message,{target:'client',...meta});
