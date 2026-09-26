@@ -1,0 +1,45 @@
+name: Inspect AUTO SALE photo grouping
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .inspect-auto-sale-photo-grouping
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Inspect live Kia Forte records and source post
+        run: |
+          python - <<'PY'
+          import json,requests,re
+          s=requests.get('https://auto-sale-demo.viiversion.com/api/auto-sale/state',timeout=30).json()
+          cars=s.get('catalog') or []
+          matches=[]
+          for c in cars:
+              hay=' '.join(str(c.get(k,'')) for k in ['brand','model','title','name'])
+              if 'forte' in hay.lower():
+                  matches.append(c)
+          print('MATCH_COUNT',len(matches))
+          for c in matches:
+              keep={k:c.get(k) for k in ['id','sourcePostId','sourceUrl','brand','model','year','title','name','photos','sourcePhotos','rawText','source'] if k in c}
+              print('CAR_JSON',json.dumps(keep,ensure_ascii=False))
+              url=c.get('sourceUrl') or (f"https://t.me/AutoWorld_Georgia/{c.get('sourcePostId')}" if c.get('sourcePostId') else '')
+              if url:
+                  public=url.replace('https://t.me/','https://t.me/s/')
+                  try:
+                      html=requests.get(public,timeout=30,headers={'User-Agent':'Mozilla/5.0'}).text
+                      print('SOURCE_URL',public,'HTML_LEN',len(html))
+                      print('SOURCE_PHOTO_WRAP_COUNT',html.count('tgme_widget_message_photo_wrap'))
+                      print('SOURCE_GROUPED_COUNT',html.count('grouped_media_wrap'))
+                      print('SOURCE_DATA_POSTS',re.findall(r'data-post="([^"]+)"',html)[:40])
+                  except Exception as e:
+                      print('SOURCE_ERR',repr(e))
+          PY
