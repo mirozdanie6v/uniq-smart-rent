@@ -35,7 +35,7 @@ await api('setChatMenuButton',{menu_button:{
   web_app:{url:appUrl}
 }});
 
-const webhookKey=createHmac('sha256',token).update('auto-sale-telegram-webhook').digest('hex').slice(0,32);
+const webhookKey=createHmac('sha256',token).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32);
 const webhookUrl=new URL(`/api/auto-sale/telegram/webhook/${webhookKey}`,appUrl).toString();
 await api('setWebhook',{
   url:webhookUrl,
@@ -43,11 +43,22 @@ await api('setWebhook',{
   drop_pending_updates:false
 });
 
-const [button,webhook]=await Promise.all([api('getChatMenuButton'),api('getWebhookInfo')]);
+const [actualBot,name,description,shortDescription,commands,button,webhook]=await Promise.all([
+  api('getMe'),
+  api('getMyName'),
+  api('getMyDescription'),
+  api('getMyShortDescription'),
+  api('getMyCommands'),
+  api('getChatMenuButton'),
+  api('getWebhookInfo')
+]);
 console.log(JSON.stringify({
   ok:true,
-  bot:{id:me.id,username:me.username,first_name:me.first_name},
+  bot:{id:actualBot.id,username:actualBot.username,name:name?.name||actualBot.first_name},
+  description:description?.description||'',
+  shortDescription:shortDescription?.short_description||'',
+  commands,
   appUrl,
   menuButton:button,
-  webhook:{url:webhook.url,pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
+  webhook:{configured:Boolean(webhook.url),pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
 },null,2));
