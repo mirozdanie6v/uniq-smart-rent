@@ -71,6 +71,8 @@ if(!webhookProbe.ok)throw new Error(`Webhook endpoint probe failed: HTTP ${webho
 const webhookProbeBody=await webhookProbe.json().catch(()=>({}));
 if(webhookProbeBody?.ok!==true)throw new Error('Webhook endpoint probe did not return ok=true');
 
+await sleep(15000);
+
 const [actualBot,name,description,shortDescription,commands,button,webhook]=await Promise.all([
   api('getMe'),
   api('getMyName'),
@@ -82,6 +84,7 @@ const [actualBot,name,description,shortDescription,commands,button,webhook]=awai
 ]);
 if(webhook.url!==webhookUrl)throw new Error(`Final webhook URL mismatch: expected ${webhookUrl}, got ${webhook.url||'empty'}`);
 if(webhook.last_error_message)throw new Error(`Final Telegram webhook error: ${webhook.last_error_message}`);
+if(Number(webhook.pending_update_count||0)>0)throw new Error(`Telegram webhook has ${webhook.pending_update_count} pending updates after 15s; delivery is not draining`);
 
 console.log(JSON.stringify({
   ok:true,
