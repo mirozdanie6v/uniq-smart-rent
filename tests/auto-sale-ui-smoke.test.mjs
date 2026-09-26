@@ -167,3 +167,9 @@ test('client canon does not publish unverified partner market-share or brand-exc
   for(const token of ['Кавказус','Глобал авто импорт','80% всего автомобильного мира','никаких совместных производств','Китайщины'])assert.equal(app.includes(token),false,token);
   assert.doesNotMatch(app,/ALLOWED_BRANDS|BLOCKED_BRANDS|BRAND_WHITELIST|BRAND_BLACKLIST/);
 });
+
+test('car detail module exports a defined runtime API',()=>{
+  assert.doesNotMatch(details,/__AUTO_SALE_CAR_DETAILS__=carDetails/);
+  assert.match(details,/__AUTO_SALE_CAR_DETAILS__=\{open:openDetail,close:closeDetail,currentCar,currentGallery,setSliderIndex\}/);
+});
+
