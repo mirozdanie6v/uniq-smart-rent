@@ -66,7 +66,9 @@ async function staticFile(res,url){
     const info=await stat(file);
     if(info.isDirectory())file=path.join(file,'index.html');
     const body=await readFile(file);
-    res.writeHead(200,{'content-type':mime[path.extname(file).toLowerCase()]||'application/octet-stream','cache-control':file.endsWith('index.html')?'no-cache':'public, max-age=300'});
+    const ext=path.extname(file).toLowerCase();
+    const cacheControl=file.endsWith('index.html')||['.css','.js','.mjs'].includes(ext)?'no-cache':'public, max-age=300';
+    res.writeHead(200,{'content-type':mime[ext]||'application/octet-stream','cache-control':cacheControl});
     res.end(body);
   }catch{
     const body=await readFile(path.join(distDir,'index.html'));
