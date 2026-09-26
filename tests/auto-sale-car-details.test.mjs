@@ -49,3 +49,12 @@ test('vehicle popup shows origin and uses source-neutral verification copy',()=>
   assert.match(details,/spec\('Локация автомобиля',car\.origin\|\|'Уточняется'\)/);
   assert.match(details,/по VIN и данным источника до покупки/);
 });
+
+
+test('car detail popup supports before and after discount price markup',()=>{
+  assert.match(details,/detailOldPriceRub/);
+  assert.match(details,/auto-detail-price-old/);
+  assert.match(details,/auto-detail-price-current/);
+  assert.match(details,/цена со скидкой/);
+  assert.match(css,/auto-detail-price-old/);
+});
