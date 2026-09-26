@@ -114,7 +114,8 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,100_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       try{
-        const result=await telegram.handleWebhookUpdate(input,{appUrl:process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/'});
+        const result=await telegram.handleWebhookUpdate(input,{appUrl:process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/',webhookReply:true});
+        if(result?.webhookMethod&&result?.webhookPayload){json(res,{method:result.webhookMethod,...result.webhookPayload},200);return}
         json(res,result,200);
       }catch(error){
         const status=Number(error?.statusCode)||500;
