@@ -180,3 +180,10 @@ test('bootstrap does not write state on load and rebases revision conflicts',()=
   assert.doesNotMatch(bootstrap,/scheduleSync\(250\);\s*$/);
 });
 
+test('approved brand logo and favicon are wired',()=>{
+  assert.match(html,/favicon-64\.webp/);
+  assert.match(app,/auto-sale-logo\.webp/);
+  assert.match(clientCss,/\.auto-brand-logo/);
+  assert.match(responsive,/\.auto-brand-image\{width:min\(100%,300px\)/);
+});
+
