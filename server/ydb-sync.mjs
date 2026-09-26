@@ -13,7 +13,7 @@ const validPhoto=value=>{
   return /^https?:\/\//i.test(src)&&src.length<=4000;
 };
 
-export async function syncYdbState(store,input){
+export async function syncYdbState(store,input,{includePrevious=false}={}){
   const previous=await store.loadState();
   const current=Number(previous.revision)||0;
   const supplied=input?.baseRevision;
@@ -114,5 +114,6 @@ export async function syncYdbState(store,input){
     }
   }
 
-  return store.replaceState({leads,quotes,orders,notes,team,catalog},{expectedRevision:current});
+  const result=await store.replaceState({leads,quotes,orders,notes,team,catalog},{expectedRevision:current});
+  return includePrevious?{...result,previous}:result;
 }
