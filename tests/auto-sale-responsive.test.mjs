@@ -59,5 +59,6 @@ test('mobile primary touch targets are at least 44px tall',()=>{
   assert.match(base,/\.auto-card-actions \.auto-btn\{width:100%;min-height:44px/);
   assert.match(base,/\.auto-brand\{min-height:44px\}/);
   assert.match(base,/\.auto-btn\.small\{min-height:44px\}/);
+  assert.match(base,/\.auto-role-switch button,.auto-card-actions \.auto-btn,.auto-btn\.small\{min-height:44px\}/);
 });
 
