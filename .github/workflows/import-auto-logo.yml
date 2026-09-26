@@ -26,8 +26,9 @@ jobs:
       - name: Download transparent WebP asset
         run: |
           set -euo pipefail
-          npm exec --yes --package=playwright@1.55.0 playwright install chromium
-          npm exec --yes --package=playwright@1.55.0 -- node <<'NODE'
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+          node <<'NODE'
           const { chromium } = require('playwright');
           const fs = require('fs');
           (async () => {
