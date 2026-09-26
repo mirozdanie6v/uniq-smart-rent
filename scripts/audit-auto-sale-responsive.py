@@ -128,6 +128,36 @@ async def one_viewport(browser, vp):
 
     # Modal coverage on representative workflows, read-only interactions only.
     results.append(await audit_modal(page,"client","home","[data-open-request]","client:request-modal",vp["mobile"]))
+    await route(page,"manager","work")
+    manager_new=page.locator('[data-manager-new]')
+    if await manager_new.count():
+        await manager_new.first.click()
+        await page.wait_for_timeout(120)
+        manager_field=page.locator('#requestForm [name="manager"]')
+        manager_issues=[]
+        if not await manager_field.count():
+            manager_issues.append("responsible-field-missing")
+        else:
+            tag=await manager_field.first.evaluate("(el)=>el.tagName")
+            disabled=await manager_field.first.is_disabled()
+            if disabled:
+                manager_issues.append("responsible-field-disabled")
+            if tag=="SELECT":
+                values=await manager_field.first.locator("option").evaluate_all("els=>els.map(x=>x.value).filter(Boolean)")
+                if not values:
+                    manager_issues.append("responsible-select-empty")
+            elif tag!="INPUT":
+                manager_issues.append("responsible-field-invalid-control:"+tag)
+        check=await inspect_page(page,"manager:new-lead-modal",vp["mobile"])
+        check["issues"].extend(manager_issues)
+        check["issues"]=sorted(set(check["issues"]))
+        results.append(check)
+        close=page.locator('[data-close]')
+        if await close.count():
+            await close.first.click()
+            await page.wait_for_timeout(80)
+    else:
+        results.append({"label":"manager:new-lead-modal","metrics":{},"issues":["new-lead-trigger-missing"],"warnings":[]})
     await page.locator('[data-role="manager"]').click(); await page.wait_for_timeout(100)
     results.append(await audit_modal(page,"manager","catalogAdmin","[data-catalog-add]","manager:catalog-add-modal",vp["mobile"]))
 
