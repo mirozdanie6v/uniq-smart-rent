@@ -1,0 +1,40 @@
+name: Deploy AutoWorld Cloudflare alias
+
+on:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .deploy-autoworld-alias-once
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: f493882b22e1a86496c69baf2ee88b68
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Require Cloudflare token
+        run: test -n "${CLOUDFLARE_API_TOKEN:-}" || { echo 'CLOUDFLARE_API_TOKEN is missing'; exit 1; }
+      - name: Deploy alias Worker and custom domain
+        run: npx --yes wrangler@4 deploy --config tmp-autoworld-alias/wrangler.jsonc
+      - name: Verify alias
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 24); do
+            if curl -L -fsS --connect-timeout 8 --max-time 20 https://autoworld.viiversion.com/api/health -o /tmp/health.json; then
+              jq -e '.ok == true and .service == "auto-sale-yandex"' /tmp/health.json >/dev/null
+              echo "Alias verified: https://autoworld.viiversion.com/"
+              exit 0
+            fi
+            echo "Waiting for custom domain ($i/24)..."
+            sleep 10
+          done
+          exit 1
