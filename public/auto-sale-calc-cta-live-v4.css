@@ -1,0 +1,155 @@
+/* AUTO SALE calculate CTA — isolated live override
+   Loaded after every other AUTO SALE stylesheet so the client CTA cannot be flattened by legacy rules. */
+
+.auto-car .auto-card-actions{
+  grid-template-columns:minmax(0,1.35fr) minmax(92px,.75fr)!important;
+  gap:9px!important;
+}
+
+.auto-btn.primary[data-request-car]{
+  position:relative!important;
+  isolation:isolate!important;
+  overflow:hidden!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:50px!important;
+  padding:0 22px!important;
+  border:0!important;
+  border-radius:0!important;
+  clip-path:polygon(
+    10px 0,
+    calc(100% - 3px) 0,
+    100% 3px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    3px 100%,
+    0 calc(100% - 3px),
+    0 10px
+  )!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 34%),
+    linear-gradient(105deg,#0067ff 0%,#0a86ff 46%,#00c8ff 100%)!important;
+  color:#fff!important;
+  font-size:var(--type-body)!important;
+  font-weight:950!important;
+  letter-spacing:.025em!important;
+  text-align:center!important;
+  text-shadow:0 1px 1px rgba(0,25,70,.42)!important;
+  box-shadow:none!important;
+  filter:
+    drop-shadow(0 7px 10px rgba(0,81,199,.28))
+    drop-shadow(0 0 10px rgba(0,202,255,.12))!important;
+  transform:translateY(0)!important;
+  transition:transform .15s ease,filter .15s ease,brightness .15s ease!important;
+}
+
+.auto-btn.primary[data-request-car]::before{
+  content:""!important;
+  position:absolute!important;
+  z-index:1!important;
+  inset:1px!important;
+  clip-path:inherit!important;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.10),transparent 42%),
+    linear-gradient(90deg,rgba(2,46,128,.12),transparent 18%,transparent 78%,rgba(255,255,255,.04))!important;
+  border:1px solid rgba(129,230,255,.34)!important;
+  pointer-events:none!important;
+}
+
+.auto-btn.primary[data-request-car]::after{
+  content:""!important;
+  position:absolute!important;
+  z-index:2!important;
+  top:-45%!important;
+  bottom:-45%!important;
+  left:-22%!important;
+  width:9%!important;
+  transform:translateX(-360%) skewX(-18deg)!important;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),rgba(255,255,255,.94),rgba(255,255,255,.12),transparent)!important;
+  opacity:0!important;
+  pointer-events:none!important;
+  animation:autoCalcLiveSweep 10.4s cubic-bezier(.2,.72,.22,1) infinite!important;
+}
+
+.auto-btn.primary[data-request-car] .auto-calc-label{
+  position:relative!important;
+  z-index:3!important;
+  display:block!important;
+  width:100%!important;
+  color:inherit!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+
+.auto-btn.primary[data-request-car]:hover:not(:disabled){
+  transform:translateY(-1px)!important;
+  filter:
+    brightness(1.045)
+    saturate(1.05)
+    drop-shadow(0 9px 13px rgba(0,89,211,.32))
+    drop-shadow(0 0 14px rgba(0,210,255,.17))!important;
+}
+
+.auto-btn.primary[data-request-car]:active:not(:disabled){
+  transform:translateY(1px) scale(.995)!important;
+  filter:
+    brightness(.98)
+    drop-shadow(0 4px 8px rgba(0,77,180,.22))!important;
+}
+
+.auto-car:nth-child(3n+2) .auto-btn.primary[data-request-car]::after{animation-delay:1.8s!important}
+.auto-car:nth-child(3n+3) .auto-btn.primary[data-request-car]::after{animation-delay:3.6s!important}
+
+.auto-btn.primary[data-request-car]:disabled,
+.auto-btn.primary[data-request-car][aria-disabled="true"]{
+  clip-path:polygon(
+    10px 0,
+    calc(100% - 3px) 0,
+    100% 3px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    3px 100%,
+    0 calc(100% - 3px),
+    0 10px
+  )!important;
+  background:#303741!important;
+  color:#929aa6!important;
+  opacity:.62!important;
+  text-shadow:none!important;
+  filter:none!important;
+  transform:none!important;
+}
+.auto-btn.primary[data-request-car]:disabled::before,
+.auto-btn.primary[data-request-car][aria-disabled="true"]::before,
+.auto-btn.primary[data-request-car]:disabled::after,
+.auto-btn.primary[data-request-car][aria-disabled="true"]::after{
+  content:none!important;
+  animation:none!important;
+}
+
+.auto-actions .auto-btn.primary[data-request-car]{
+  min-width:230px!important;
+}
+
+@keyframes autoCalcLiveSweep{
+  0%,86%{transform:translateX(-360%) skewX(-18deg);opacity:0}
+  87.5%{opacity:.78}
+  91.5%{transform:translateX(1180%) skewX(-18deg);opacity:.60}
+  93%,100%{transform:translateX(1180%) skewX(-18deg);opacity:0}
+}
+
+@media(max-width:720px){
+  .auto-car .auto-card-actions{
+    grid-template-columns:minmax(0,1.4fr) minmax(90px,.72fr)!important;
+  }
+  .auto-btn.primary[data-request-car]{
+    min-height:50px!important;
+    padding-inline:14px!important;
+    font-size:var(--type-body)!important;
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  .auto-btn.primary[data-request-car]::after{animation:none!important;opacity:0!important}
+}
