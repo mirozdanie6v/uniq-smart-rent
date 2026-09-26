@@ -61,128 +61,102 @@
   position:relative;
   isolation:isolate;
   overflow:hidden;
-  display:grid;
-  grid-template-columns:32px minmax(0,1fr) 22px;
+  display:flex;
   align-items:center;
-  gap:10px;
+  justify-content:center;
   min-height:48px;
-  padding:5px 12px 5px 7px;
-  border:1px solid transparent;
-  border-radius:14px;
+  padding:0 20px;
+  border:1px solid #2ed8ff;
+  border-radius:12px;
   background:
-    linear-gradient(180deg,#0b2d57 0%,#0a2444 100%) padding-box,
-    linear-gradient(110deg,#1fc5ff 0%,#5bdcff 42%,#88e9ff 58%,#168cff 100%) border-box;
-  color:#f7fcff;
-  font-weight:900;
-  letter-spacing:.005em;
-  text-shadow:0 1px 0 rgba(0,20,46,.42);
+    linear-gradient(180deg,rgba(255,255,255,.18) 0%,rgba(255,255,255,0) 34%) border-box,
+    linear-gradient(135deg,#0069ff 0%,#008dff 48%,#00b9ff 100%);
+  color:#fff;
+  font-size:var(--type-control);
+  font-weight:950;
+  letter-spacing:.015em;
+  text-align:center;
+  text-shadow:0 1px 1px rgba(0,24,70,.55);
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.08),
-    inset 0 -12px 28px rgba(0,12,32,.22),
-    0 8px 20px rgba(0,65,138,.24);
-  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+    inset 0 1px 0 rgba(255,255,255,.36),
+    inset 0 -2px 0 rgba(0,64,150,.36),
+    0 6px 0 rgba(2,70,158,.38),
+    0 10px 24px rgba(0,114,240,.30),
+    0 0 20px rgba(0,190,255,.14);
+  transform:translateY(0);
+  transition:transform .14s ease,box-shadow .14s ease,filter .14s ease,border-color .14s ease;
 }
 .auto-calc-btn::before{
   content:"";
   position:absolute;
-  inset:1px;
-  z-index:-1;
-  border-radius:12px;
-  background:
-    radial-gradient(circle at 14% 50%,rgba(24,187,255,.18),transparent 28%),
-    linear-gradient(110deg,rgba(255,255,255,.05),transparent 35%,transparent 72%,rgba(26,160,255,.08));
+  inset:1px 1px auto;
+  height:44%;
+  border-radius:10px 10px 8px 8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.17),rgba(255,255,255,.025));
   pointer-events:none;
 }
 .auto-calc-btn::after{
   content:"";
   position:absolute;
-  z-index:3;
-  top:-40%;
-  bottom:-40%;
-  left:-30%;
-  width:12%;
-  transform:translateX(-260%) skewX(-15deg);
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),rgba(246,253,255,.92),rgba(255,255,255,.16),transparent);
+  z-index:2;
+  top:-35%;
+  bottom:-35%;
+  left:-28%;
+  width:16%;
+  transform:translateX(-260%) skewX(-17deg);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),rgba(255,255,255,.95),rgba(255,255,255,.20),transparent);
   opacity:0;
   pointer-events:none;
-  animation:autoCalcSweep 10.5s cubic-bezier(.22,.72,.24,1) infinite;
+  animation:autoCalcSweep 8.6s cubic-bezier(.2,.72,.22,1) infinite;
 }
-.auto-calc-icon{
-  position:relative;
-  z-index:2;
-  display:grid;
-  place-items:center;
-  width:32px;
-  height:32px;
-  border:1px solid rgba(115,225,255,.52);
-  border-radius:10px;
-  background:linear-gradient(180deg,rgba(13,132,217,.72),rgba(7,77,150,.82));
-  color:#c9f3ff;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 0 12px rgba(25,184,255,.12);
-}
-.auto-calc-icon .auto-ui-icon{width:17px;height:17px;stroke-width:1.9}
 .auto-calc-label{
   position:relative;
-  z-index:2;
-  text-align:left;
+  z-index:3;
+  display:block;
+  width:100%;
+  text-align:center;
   white-space:nowrap;
-}
-.auto-calc-arrow{
-  position:relative;
-  z-index:2;
-  display:grid;
-  place-items:center;
-  width:22px;
-  height:22px;
-  border-radius:999px;
-  background:rgba(64,194,255,.12);
-  color:#9fe9ff;
-  font-size:16px;
-  line-height:1;
-  transition:transform .16s ease,background .16s ease;
 }
 .auto-calc-btn:hover:not(:disabled){
   transform:translateY(-1px);
-  filter:brightness(1.035);
+  filter:saturate(1.08) brightness(1.04);
+  border-color:#75e8ff;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.11),
-    inset 0 -12px 28px rgba(0,12,32,.18),
-    0 10px 24px rgba(0,78,164,.28),
-    0 0 18px rgba(30,187,255,.10);
+    inset 0 1px 0 rgba(255,255,255,.42),
+    inset 0 -2px 0 rgba(0,64,150,.28),
+    0 7px 0 rgba(2,70,158,.34),
+    0 13px 28px rgba(0,121,247,.34),
+    0 0 24px rgba(0,199,255,.20);
 }
-.auto-calc-btn:hover:not(:disabled) .auto-calc-arrow{
-  transform:translateX(2px);
-  background:rgba(64,194,255,.18);
+.auto-calc-btn:active:not(:disabled){
+  transform:translateY(4px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.32),
+    inset 0 -1px 0 rgba(0,64,150,.30),
+    0 2px 0 rgba(2,70,158,.36),
+    0 6px 16px rgba(0,101,216,.24);
 }
-.auto-calc-btn:active:not(:disabled){transform:translateY(1px) scale(.996)}
-.auto-car:nth-child(3n+2) .auto-calc-btn::after{animation-delay:1.8s}
-.auto-car:nth-child(3n+3) .auto-calc-btn::after{animation-delay:3.6s}
+.auto-car:nth-child(3n+2) .auto-calc-btn::after{animation-delay:1.45s}
+.auto-car:nth-child(3n+3) .auto-calc-btn::after{animation-delay:2.9s}
 .auto-calc-btn:disabled,
 .auto-calc-btn[aria-disabled="true"]{
   border-color:rgba(255,255,255,.10);
-  background:#272f39;
-  color:#8f99a6;
-  box-shadow:none;
-}
-.auto-calc-btn:disabled .auto-calc-icon,
-.auto-calc-btn[aria-disabled="true"] .auto-calc-icon{
-  border-color:rgba(255,255,255,.10);
   background:#303741;
-  color:#7d8792;
+  color:#929aa6;
+  text-shadow:none;
   box-shadow:none;
+  transform:none;
 }
-.auto-calc-btn:disabled .auto-calc-arrow,
-.auto-calc-btn[aria-disabled="true"] .auto-calc-arrow{background:transparent;color:#737c87}
 .auto-calc-btn:disabled::before,
 .auto-calc-btn[aria-disabled="true"]::before,
 .auto-calc-btn:disabled::after,
 .auto-calc-btn[aria-disabled="true"]::after{content:none;animation:none}
 @keyframes autoCalcSweep{
-  0%,86%{transform:translateX(-260%) skewX(-15deg);opacity:0}
-  88%{opacity:0}
-  89%{opacity:.74}
-  93%{transform:translateX(860%) skewX(-15deg);opacity:.68}
-  95%,100%{transform:translateX(860%) skewX(-15deg);opacity:0}
+  0%,80%{transform:translateX(-260%) skewX(-17deg);opacity:0}
+  82%{opacity:0}
+  84%{opacity:.92}
+  90%{transform:translateX(760%) skewX(-17deg);opacity:.70}
+  92%,100%{transform:translateX(760%) skewX(-17deg);opacity:0}
 }
 @media(prefers-reduced-motion:reduce){
   .auto-calc-btn::after{animation:none;opacity:0}
