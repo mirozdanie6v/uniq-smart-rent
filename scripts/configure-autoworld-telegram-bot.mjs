@@ -1,3 +1,5 @@
+import {createHmac} from 'node:crypto';
+
 const token=String(process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'').trim();
 const appUrl=String(process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/').trim();
 if(!token)throw new Error('AUTO_SALE_TELEGRAM_BOT_TOKEN is required');
@@ -16,26 +18,36 @@ const api=async(method,payload={})=>{
 
 const me=await api('getMe');
 if(String(me.username||'').toLowerCase()!=='autoworld_georgia_bot'){
-  console.warn(`Configured bot username is @${me.username}; requested username is @AutoWorld_Georgia_bot`);
+  throw new Error(`Wrong bot token: expected @AutoWorld_Georgia_bot, got @${me.username||'unknown'}`);
 }
 
-await api('setMyName',{name:'AutoWorld Georgia'});
-await api('setMyDescription',{description:'Автомобили из США и Грузии с доставкой в Россию. Каталог, заявка, расчёт и отслеживание заказа в одном приложении.'});
-await api('setMyShortDescription',{short_description:'Каталог автомобилей AUTO МИР · США и Грузия'});
+await api('setMyName',{name:'AUTO МИР | AutoWorld Georgia'});
+await api('setMyDescription',{description:'Автомобили из США и Грузии с доставкой в Россию. Каталог, прозрачный расчёт, заявка, этапы оплаты и отслеживание заказа — в одном приложении.'});
+await api('setMyShortDescription',{short_description:'Автомобили из США и Грузии · каталог и заказ'});
 await api('setMyCommands',{commands:[
-  {command:'start',description:'Открыть AUTO МИР'},
-  {command:'app',description:'Открыть каталог'}
+  {command:'start',description:'Начать'},
+  {command:'catalog',description:'Открыть каталог'},
+  {command:'help',description:'Как это работает'}
 ]});
 await api('setChatMenuButton',{menu_button:{
   type:'web_app',
-  text:'Открыть каталог',
+  text:'🚗 Открыть каталог',
   web_app:{url:appUrl}
 }});
 
-const button=await api('getChatMenuButton');
+const webhookKey=createHmac('sha256',token).update('auto-sale-telegram-webhook').digest('hex').slice(0,32);
+const webhookUrl=new URL(`/api/auto-sale/telegram/webhook/${webhookKey}`,appUrl).toString();
+await api('setWebhook',{
+  url:webhookUrl,
+  allowed_updates:['message'],
+  drop_pending_updates:false
+});
+
+const [button,webhook]=await Promise.all([api('getChatMenuButton'),api('getWebhookInfo')]);
 console.log(JSON.stringify({
   ok:true,
   bot:{id:me.id,username:me.username,first_name:me.first_name},
   appUrl,
-  menuButton:button
+  menuButton:button,
+  webhook:{url:webhook.url,pending_update_count:webhook.pending_update_count,last_error_message:webhook.last_error_message||null}
 },null,2));
