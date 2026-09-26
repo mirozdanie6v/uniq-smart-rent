@@ -1,0 +1,32 @@
+name: Inspect firestorage logo share
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .inspect-firestorage-logo
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Inspect share page
+        run: |
+          python - <<'PY'
+          import requests,re
+          u='https://firestorage.ai/ja/f/HHHASdPMz_Ov'
+          r=requests.get(u,timeout=30,allow_redirects=True)
+          print('STATUS',r.status_code,'URL',r.url,'CT',r.headers.get('content-type'))
+          print('LEN',len(r.content))
+          text=r.text
+          for m in re.findall(r'https?://[^"\'<> ]+',text):
+              if 'firestorage' in m or 'storage' in m or 'download' in m:
+                  print('URLCAND',m[:1000])
+          for line in text.splitlines():
+              low=line.lower()
+              if 'download' in low or 'auto-sale-logo-wide-1200.webp' in low or 'qi yl'.replace(' ','') in low:
+                  print('LINE',line[:2000])
+          PY
