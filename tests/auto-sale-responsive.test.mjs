@@ -26,7 +26,7 @@ test('mobile cards and modals prevent common narrow-screen overflow',()=>{
   assert.match(base,/overflow-x:clip/);
   assert.match(base,/\.auto-car-top,.auto-order-head\{display:grid;grid-template-columns:1fr/);
   assert.match(base,/max-height:calc\(100dvh - 8px\)/);
-  assert.match(base,/\.auto-form input,.auto-form select,.auto-form textarea\{font-size:16px\}/);
+  assert.match(base,/\.auto-form input,.auto-form select,.auto-form textarea\{font-size:var\(--type-body\)\}/);
 });
 
 test('manager and director wide tables collapse into mobile cards',()=>{
@@ -51,7 +51,7 @@ test('safe areas cover all screen edges and iPhone landscape fields avoid zoom',
   assert.match(clientBase,/--safe-left:env\(safe-area-inset-left,0px\)/);
   assert.match(base,/max\(12px,var\(--safe-left\)\)/);
   assert.match(base,/orientation:landscape/);
-  assert.match(base,/orientation:landscape[^}]*\}[\s\S]*?\.auto-form input,.auto-form select,.auto-form textarea\{font-size:16px\}/);
+  assert.match(base,/orientation:landscape[^}]*\}[\s\S]*?\.auto-form input,.auto-form select,.auto-form textarea\{font-size:var\(--type-body\)\}/);
 });
 
 test('mobile primary touch targets are at least 44px tall',()=>{
