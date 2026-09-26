@@ -45,12 +45,14 @@ export function createTelegramService({
   managerChatIds=process.env.AUTO_SALE_MANAGER_CHAT_IDS||'',
   fetchImpl=globalThis.fetch,
   apiBaseUrl=process.env.AUTO_SALE_TELEGRAM_API_BASE_URL||'https://api.telegram.org',
+  relayUrl=process.env.AUTO_SALE_TELEGRAM_RELAY_URL||'',
   now=()=>Date.now(),
   maxInitDataAgeSec=86400
 }={}){
   const botToken=clean(token);
   const fallbackManagers=parseManagerIds(managerChatIds);
   const telegramApiBase=clean(apiBaseUrl).replace(/\/$/,'')||'https://api.telegram.org';
+  const telegramRelayUrl=clean(relayUrl).replace(/\/$/,'');
   const enabled=Boolean(botToken&&fetchImpl);
   const webhookKey=botToken?createHmac('sha256',botToken).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32):'';
   const webhookPath=webhookKey?`/api/auto-sale/telegram/webhook/${webhookKey}`:'';
@@ -79,6 +81,15 @@ export function createTelegramService({
     if(!/^-?\d+$/.test(id)){const error=new Error('telegram_chat_id_required');error.statusCode=409;throw error}
     if(!body){const error=new Error('telegram_message_required');error.statusCode=400;throw error}
     if(body.length>3500){const error=new Error('telegram_message_too_long');error.statusCode=400;throw error}
+    if(telegramRelayUrl){
+      const payload=JSON.stringify({chatId:id,text:body,disableWebPagePreview});
+      const timestamp=String(now());
+      const signature=createHmac('sha256',botToken).update(timestamp+'.'+payload).digest('hex');
+      const response=await fetchImpl(telegramRelayUrl,{method:'POST',headers:{'content-type':'application/json','x-relay-timestamp':timestamp,'x-relay-signature':signature},body:payload});
+      let data={};try{data=await response.json()}catch{}
+      if(!response.ok||data?.ok===false){const error=new Error('telegram_relay_error');error.statusCode=502;error.telegramDescription=clean(data?.description)||clean(data?.error)||`HTTP ${response.status}`;throw error}
+      return{message_id:data?.messageId||null};
+    }
     return api('sendMessage',{chat_id:id,text:body,disable_web_page_preview:disableWebPagePreview});
   }
 
