@@ -31,3 +31,60 @@ test('manager save card button persists edited lead data',async()=>{
   assert.equal(saved.note,'Сохранение работает');
   dom.window.close();
 });
+
+test('new lead keeps responsible selection usable when team configuration is empty',async()=>{
+  const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/manager-empty-team'});
+  globalThis.window=dom.window;
+  globalThis.document=dom.window.document;
+  globalThis.localStorage=dom.window.localStorage;
+  globalThis.sessionStorage=dom.window.sessionStorage;
+  globalThis.FormData=dom.window.FormData;
+  globalThis.Event=dom.window.Event;
+  globalThis.CustomEvent=dom.window.CustomEvent;
+  globalThis.MutationObserver=dom.window.MutationObserver;
+  globalThis.HTMLFormElement=dom.window.HTMLFormElement;
+  const assigned=seedLeads();
+  localStorage.setItem('auto-sale-leads-v2',JSON.stringify(assigned));
+  localStorage.setItem('auto-sale-quotes-v2','[]');
+  localStorage.setItem('auto-sale-orders-v2','[]');
+  localStorage.setItem('auto-sale-team-v1','[]');
+  await import('../public/auto-sale-app-v3.mjs?responsible-assigned-'+Date.now());
+  const root=document.querySelector('#app');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-manager-new]').click();
+  const field=root.querySelector('#requestForm [name="manager"]');
+  assert.ok(field);
+  assert.equal(field.tagName,'SELECT');
+  const values=[...field.options].map(x=>x.value);
+  assert.ok(values.includes('Дмитрий'));
+  assert.ok(values.includes('Анна'));
+  dom.window.close();
+});
+
+test('new lead allows entering a responsible person when no team or assignments exist',async()=>{
+  const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/manager-empty-all'});
+  globalThis.window=dom.window;
+  globalThis.document=dom.window.document;
+  globalThis.localStorage=dom.window.localStorage;
+  globalThis.sessionStorage=dom.window.sessionStorage;
+  globalThis.FormData=dom.window.FormData;
+  globalThis.Event=dom.window.Event;
+  globalThis.CustomEvent=dom.window.CustomEvent;
+  globalThis.MutationObserver=dom.window.MutationObserver;
+  globalThis.HTMLFormElement=dom.window.HTMLFormElement;
+  localStorage.setItem('auto-sale-leads-v2','[]');
+  localStorage.setItem('auto-sale-quotes-v2','[]');
+  localStorage.setItem('auto-sale-orders-v2','[]');
+  localStorage.setItem('auto-sale-team-v1','[]');
+  await import('../public/auto-sale-app-v3.mjs?responsible-manual-'+Date.now());
+  const root=document.querySelector('#app');
+  root.querySelector('[data-role="manager"]').click();
+  root.querySelector('[data-manager-new]').click();
+  const field=root.querySelector('#requestForm [name="manager"]');
+  assert.ok(field);
+  assert.equal(field.tagName,'INPUT');
+  assert.equal(field.required,true);
+  assert.match(field.getAttribute('placeholder')||'',/ответственного/i);
+  dom.window.close();
+});
+
