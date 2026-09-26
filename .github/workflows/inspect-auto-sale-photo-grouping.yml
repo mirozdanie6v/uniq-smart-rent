@@ -19,8 +19,12 @@ jobs:
       - name: Inspect live Kia Forte records and source post
         run: |
           python - <<'PY'
-          import json,requests,re
-          s=requests.get('https://auto-sale-demo.viiversion.com/api/auto-sale/state',timeout=30).json()
+          import json,re,urllib.request
+          def get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+              with urllib.request.urlopen(req,timeout=30) as r:
+                  return r.read()
+          s=json.loads(get('https://auto-sale-demo.viiversion.com/api/auto-sale/state'))
           cars=s.get('catalog') or []
           matches=[]
           for c in cars:
@@ -35,7 +39,7 @@ jobs:
               if url:
                   public=url.replace('https://t.me/','https://t.me/s/')
                   try:
-                      html=requests.get(public,timeout=30,headers={'User-Agent':'Mozilla/5.0'}).text
+                      html=get(public).decode('utf-8','replace')
                       print('SOURCE_URL',public,'HTML_LEN',len(html))
                       print('SOURCE_PHOTO_WRAP_COUNT',html.count('tgme_widget_message_photo_wrap'))
                       print('SOURCE_GROUPED_COUNT',html.count('grouped_media_wrap'))
