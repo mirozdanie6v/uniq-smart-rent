@@ -98,10 +98,12 @@ const server=http.createServer(async(req,res)=>{
       const before=telegram.enabled?await store.loadState():null;
       const result=await syncYdbState(store,input);
       if(result.status>=200&&result.status<300&&telegram.enabled){
-        try{
-          const deliveries=await telegram.notifyStateChanges(before,{...input,initialized:true});
-          if(deliveries.some(x=>!x.ok))console.warn('AUTO SALE Telegram partial delivery',deliveries.filter(x=>!x.ok));
-        }catch(error){console.error('AUTO SALE Telegram state notification failed',error)}
+        const nextState={...input,initialized:true};
+        setImmediate(()=>{
+          telegram.notifyStateChanges(before,nextState)
+            .then(deliveries=>{if(deliveries.some(x=>!x.ok))console.warn('AUTO SALE Telegram partial delivery',deliveries.filter(x=>!x.ok))})
+            .catch(error=>console.error('AUTO SALE Telegram state notification failed',error));
+        });
       }
       json(res,result.data,result.status);
       return;
