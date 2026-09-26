@@ -91,7 +91,7 @@ test('webhook replies to start with a Mini App button',async()=>{
   assert.equal(result.ok,true);
   assert.equal(sent.length,1);
   assert.match(sent[0].body.text,/AUTO МИР/);
-  assert.equal(sent[0].body.reply_markup.inline_keyboard[0][0].url,'https://example.test/');
+  assert.equal(sent[0].body.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.test/');
 });
 
 test('webhook help command explains the customer flow',async()=>{
