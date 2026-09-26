@@ -42,8 +42,10 @@ function showTelegramManagerStatus(data){
   if(!strip)return;
   let badge=strip.querySelector('[data-telegram-manager-status]');
   if(!badge){badge=document.createElement('small');badge.dataset.telegramManagerStatus='1';strip.append(badge)}
-  if(data?.ok){badge.textContent='Telegram подключён · '+(data.member?.name||currentTelegram?.displayName||'');badge.dataset.state='connected'}
-  else{badge.textContent='Telegram: выберите сотрудника для привязки';badge.dataset.state='pending'}
+  if(data?.ok){badge.innerHTML='Telegram подключён · <b>'+esc(data.member?.name||currentTelegram?.displayName||'')+'</b>';badge.dataset.state='connected';return}
+  const rows=teamRows().filter(item=>item&&item.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item.role||'')));
+  badge.dataset.state='pending';
+  badge.innerHTML='<span>Telegram: выберите сотрудника</span><select data-telegram-manager-select><option value="">Сотрудник…</option>'+rows.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name)+' · '+esc(item.role)+'</option>').join('')+'</select><button type="button" data-telegram-manager-bind>Привязать Telegram</button>';
 }
 async function registerCurrentManager(member=null){
   if(!botMessagingAvailable)return null;
@@ -71,6 +73,14 @@ async function registerCurrentManager(member=null){
   return managerRegistrationPromise;
 }
 document.addEventListener('click',event=>{
+  const bindButton=event.target.closest?.('[data-telegram-manager-bind]');
+  if(bindButton){
+    event.preventDefault();event.stopPropagation();
+    const select=document.querySelector('[data-telegram-manager-select]');
+    const member=teamRows().find(item=>String(item.id)===String(select?.value||''));
+    if(member){bindButton.disabled=true;bindButton.textContent='Подключение…';registerCurrentManager(member).finally(()=>{if(document.body.contains(bindButton)){bindButton.disabled=false;bindButton.textContent='Привязать Telegram'}})}
+    return;
+  }
   const roleButton=event.target.closest?.('[data-role="manager"],[data-role="owner"]');
   if(roleButton)setTimeout(()=>registerCurrentManager(),0);
 },true);
@@ -249,3 +259,5 @@ let scheduled=false;function enhance(){scheduled=false;injectStyles();autofillCl
 function scheduleEnhance(){if(scheduled)return;scheduled=true;queueMicrotask(enhance)}
 const observer=new MutationObserver(scheduleEnhance);observer.observe(document.getElementById('app'),{childList:true,subtree:true});
 scheduleEnhance();
+
+if(!document.getElementById('autoSaleTelegramManagerBindStyles')){const style=document.createElement('style');style.id='autoSaleTelegramManagerBindStyles';style.textContent=`[data-telegram-manager-status][data-state="pending"]{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}[data-telegram-manager-status] select{min-width:150px;max-width:220px;background:#101925;color:#eef4fb;border:1px solid #304258;border-radius:9px;padding:7px 9px;font:inherit}[data-telegram-manager-status] button{background:#1976b9;color:white;border:1px solid #3996d4;border-radius:9px;padding:7px 10px;font-weight:700}[data-telegram-manager-status][data-state="connected"]{color:#7bd8a9;margin-top:8px}`;document.head.append(style)}
