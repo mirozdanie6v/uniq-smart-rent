@@ -25,7 +25,7 @@ const apiHeaders={
   'content-type':'application/json; charset=utf-8',
   'cache-control':'no-store',
   'access-control-allow-origin':'*',
-  'access-control-allow-headers':'content-type,x-auto-sale-key,x-telegram-init-data',
+  'access-control-allow-headers':'content-type,x-auto-sale-key,x-telegram-init-data,x-auto-sale-skip-telegram',
   'access-control-allow-methods':'GET,PUT,POST,DELETE,OPTIONS'
 };
 const json=(res,data,status=200)=>{
@@ -33,13 +33,13 @@ const json=(res,data,status=200)=>{
   res.writeHead(status,{...apiHeaders,'content-length':Buffer.byteLength(body)});
   res.end(body);
 };
-const authorized=req=>{
-  if(publicDemoWrite)return true;
+const hasApiKey=req=>{
   const supplied=String(req.headers['x-auto-sale-key']||'');
   const expected=Buffer.from(apiKey);
   const actual=Buffer.from(supplied);
   return expected.length===actual.length&&expected.length>0&&timingSafeEqual(expected,actual);
 };
+const authorized=req=>publicDemoWrite||hasApiKey(req);
 async function parseJson(req,maxBytes=2_000_000){
   const chunks=[];let size=0;
   for await(const chunk of req){
@@ -95,8 +95,10 @@ const server=http.createServer(async(req,res)=>{
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const input=await parseJson(req);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
-      const result=await syncYdbState(store,input,{includePrevious:telegram.enabled});
-      if(result.status>=200&&result.status<300&&telegram.enabled){
+      const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
+      const notifyTelegram=telegram.enabled&&!skipTelegram;
+      const result=await syncYdbState(store,input,{includePrevious:notifyTelegram});
+      if(result.status>=200&&result.status<300&&notifyTelegram){
         const before=result.previous;
         const nextState={...input,initialized:true};
         setImmediate(()=>{
