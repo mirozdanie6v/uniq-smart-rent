@@ -2,6 +2,8 @@ name: Configure AutoWorld Telegram bot
 
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [configure-autoworld-telegram]
 
 permissions:
   contents: read
