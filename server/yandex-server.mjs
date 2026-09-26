@@ -112,6 +112,22 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='GET'&&url.pathname==='/api/auto-sale/telegram/diagnose'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const probe=async target=>{
+        const started=Date.now();
+        try{
+          const response=await fetch(target,{method:'GET',signal:AbortSignal.timeout(8000)});
+          return{ok:true,status:response.status,ms:Date.now()-started};
+        }catch(error){
+          return{ok:false,error:String(error?.message||error),detail:String(error?.cause?.message||error?.cause||''),ms:Date.now()-started};
+        }
+      };
+      const [telegramProbe,publicProbe]=await Promise.all([probe('https://api.telegram.org'),probe('https://example.com')]);
+      json(res,{ok:true,telegram:telegramProbe,publicInternet:publicProbe});
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
