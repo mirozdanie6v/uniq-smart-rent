@@ -128,6 +128,21 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
 
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-manager-delivery'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const state=await store.loadState();
+      const member=(Array.isArray(state.team)?state.team:[]).find(item=>item?.active!==false&&/^\d+$/.test(String(item?.telegramUserId||'')));
+      if(!member){json(res,{error:'manager_telegram_not_linked'},409);return}
+      try{
+        const result=await telegram.send(String(member.telegramUserId),`AUTO МИР · проверка уведомлений\n\nСвязь с системой настроена. Уведомления менеджеру доставляются через защищённый канал AutoWorld.`);
+        json(res,{ok:true,member:{id:member.id,name:member.name,role:member.role},messageId:result?.message_id||null},201);
+      }catch(error){
+        json(res,{error:String(error?.message||'telegram_send_failed'),telegramDescription:String(error?.telegramDescription||'')},Number(error?.statusCode)||500);
+      }
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
