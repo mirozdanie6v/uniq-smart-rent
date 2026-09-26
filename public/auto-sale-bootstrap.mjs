@@ -1,3 +1,4 @@
+import {rebaseAutoSaleState,snapshotAutoSaleState} from './auto-sale-sync-merge.mjs?v=20260926-concurrency-1';
 const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',team:'auto-sale-team-v1',catalog:'auto-sale-catalog-v1'};
 const REVISION_KEY='auto-sale-server-revision-v1';
 const QUOTE_AUDIT_MODE=new URLSearchParams(location.search).has('quoteAudit');
@@ -7,11 +8,13 @@ let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
 let timer=null;
 let syncing=false;
 let pending=false;
+let baselineState=null;
 
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{});writeCache(DATA_KEYS.team,state.team||[]);if(Array.isArray(state.catalog))writeCache(DATA_KEYS.catalog,state.catalog)}
-function payload(){return{baseRevision:revision,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{}),team:readCache(DATA_KEYS.team,[]),catalog:readCache(DATA_KEYS.catalog,[])}}
+function localState(){return{revision,initialized:true,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{}),team:readCache(DATA_KEYS.team,[]),catalog:readCache(DATA_KEYS.catalog,[])}}
+function payload(){const state=localState();return{baseRevision:revision,leads:state.leads,quotes:state.quotes,orders:state.orders,notes:state.notes,team:state.team,catalog:state.catalog}}
 
 async function pullInitialState(){
   try{
@@ -21,6 +24,7 @@ async function pullInitialState(){
     revision=Number(state.revision||0);
     sessionStorage.setItem(REVISION_KEY,String(revision));
     applyServerState(state);
+    baselineState=snapshotAutoSaleState(state);
     window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};
   }catch(error){
     console.warn('AUTO SALE using offline cache',error);
@@ -37,11 +41,22 @@ async function pushState(){
       const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
       const data=await response.json().catch(()=>({}));
       if(response.status===409){
-        const currentRevision=Number(data.currentRevision||data.state?.revision||revision);
-        revision=currentRevision;
-        sessionStorage.setItem(REVISION_KEY,String(revision));
+        const serverState=data.state&&data.state.initialized?data.state:null;
+        const currentRevision=Number(data.currentRevision||serverState?.revision||revision);
+        if(serverState){
+          const localBefore=localState();
+          const base=baselineState||snapshotAutoSaleState({revision,initialized:true,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]});
+          const rebased=rebaseAutoSaleState(serverState,base,localBefore);
+          revision=currentRevision;
+          sessionStorage.setItem(REVISION_KEY,String(revision));
+          baselineState=snapshotAutoSaleState(serverState);
+          applyServerState(rebased);
+        }else{
+          revision=currentRevision;
+          sessionStorage.setItem(REVISION_KEY,String(revision));
+        }
         window.__AUTO_SALE_SERVER__={online:true,revision,conflict:true,currentRevision,retrying:attempt===0};
-        window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision,currentRevision,state:data.state||null,retrying:attempt===0}}));
+        window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision,currentRevision,state:serverState,retrying:attempt===0}}));
         if(attempt===0)continue;
         return;
       }
@@ -53,6 +68,7 @@ async function pushState(){
       }
       revision=Number(data.revision||revision);
       sessionStorage.setItem(REVISION_KEY,String(revision));
+      baselineState=snapshotAutoSaleState({...localState(),revision,initialized:true});
       window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};
       window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));
       return;
@@ -91,7 +107,7 @@ function normalizeSettledPaymentField(){
 }
 
 await pullInitialState();
-Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&!suppress&&!QUOTE_AUDIT_MODE&&Object.values(DATA_KEYS).includes(String(key)))scheduleSync()};
+Storage.prototype.setItem=function(key,value){const tracked=this===localStorage&&Object.values(DATA_KEYS).includes(String(key));const before=tracked?this.getItem(key):null;originalSet.call(this,key,value);if(tracked&&!suppress&&!QUOTE_AUDIT_MODE&&before!==String(value))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
 await import('./auto-sale-app-v3.mjs?v=20260926-discount-prices-1');
 await import('./auto-sale-ui-business-guard.mjs');
@@ -107,4 +123,3 @@ normalizeSettledPaymentField();
 const appRoot=document.querySelector('#app');
 if(appRoot)new MutationObserver(()=>queueMicrotask(normalizeSettledPaymentField)).observe(appRoot,{childList:true,subtree:true});
 document.addEventListener('input',event=>{if(event.target?.closest?.('#orderForm'))queueMicrotask(normalizeSettledPaymentField)},true);
-scheduleSync(250);
