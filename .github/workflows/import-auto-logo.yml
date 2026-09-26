@@ -103,7 +103,7 @@ jobs:
 
           test = Path('tests/auto-sale-ui-smoke.test.mjs')
           t = test.read_text()
-          t = t.replace(r'auto-sale-logo-automir\\.png', r'auto-sale-logo-automir-v5\\.webp')
+          t = t.replace(r'auto-sale-logo-automir\.png', r'auto-sale-logo-automir-v5\.webp')
           test.write_text(t)
           PY
           printf '%s\n' 'deploy transparent layered WebP logo v5 2026-09-26' > .deploy-auto-sale
