@@ -71,6 +71,15 @@ if(!webhookProbe.ok)throw new Error(`Webhook endpoint probe failed: HTTP ${webho
 const webhookProbeBody=await webhookProbe.json().catch(()=>({}));
 if(webhookProbeBody?.ok!==true)throw new Error('Webhook endpoint probe did not return ok=true');
 
+const outboundProbe=await fetch(webhookUrl,{
+  method:'POST',
+  headers:{'content-type':'application/json'},
+  body:JSON.stringify({update_id:-2,message:{message_id:-2,chat:{id:me.id,type:'private'},from:{id:me.id,is_bot:true,first_name:'probe'},text:'/help'}})
+});
+const outboundProbeBody=await outboundProbe.json().catch(()=>({}));
+console.log('Webhook outbound diagnostic:',JSON.stringify({status:outboundProbe.status,body:outboundProbeBody}));
+if(outboundProbe.status===500)throw new Error(`Webhook outbound transport failed: ${JSON.stringify(outboundProbeBody)}`);
+
 await sleep(15000);
 
 const [actualBot,name,description,shortDescription,commands,button,webhook]=await Promise.all([
