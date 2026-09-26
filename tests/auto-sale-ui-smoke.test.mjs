@@ -182,7 +182,7 @@ test('bootstrap does not write state on load and rebases revision conflicts',()=
 
 test('approved brand logo and favicon are wired',()=>{
   assert.match(html,/favicon-64\.webp/);
-  assert.match(app,/auto-sale-logo-wide\.webp/);
+  assert.match(app,/auto-sale-logo-automir\.png/);
   assert.match(clientCss,/\.auto-brand-logo/);
   assert.match(responsive,/\.auto-brand-image\{display:block;width:100%;max-width:none/);
 });
