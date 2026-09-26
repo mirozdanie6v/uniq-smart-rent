@@ -79,3 +79,25 @@ test('order stage and payment changes notify linked client and manager',async()=
   assert.equal(sent.length,4);
   assert.ok(sent.some(x=>/Автомобиль \+ аукционные сборы/.test(x.body.text)));
 });
+
+test('webhook replies to start with a Mini App button',async()=>{
+  const sent=[];
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent)});
+  assert.match(service.webhookPath,/^\/api\/auto-sale\/telegram\/webhook\/[a-f0-9]{32}$/);
+  assert.equal(service.isWebhookPath(service.webhookPath),true);
+  const result=await service.handleWebhookUpdate({
+    message:{chat:{id:700},from:{id:700,first_name:'Анна'},text:'/start'}
+  },{appUrl:'https://example.test/'});
+  assert.equal(result.ok,true);
+  assert.equal(sent.length,1);
+  assert.match(sent[0].body.text,/AUTO МИР/);
+  assert.equal(sent[0].body.reply_markup.inline_keyboard[0][0].web_app.url,'https://example.test/');
+});
+
+test('webhook help command explains the customer flow',async()=>{
+  const sent=[];
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent)});
+  await service.handleWebhookUpdate({message:{chat:{id:700},from:{id:700},text:'/help'}},{appUrl:'https://example.test/'});
+  assert.match(sent[0].body.text,/Выбрать авто из США или Грузии/);
+  assert.match(sent[0].body.text,/Следить за этапами заказа и оплатами/);
+});
