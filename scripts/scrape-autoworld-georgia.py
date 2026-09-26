@@ -132,6 +132,37 @@ def parse_rub(text, label):
                 return int(v * (1_000 if i == 0 else 1_000_000))
     return None
 
+KEYCAP_PRICE_RE = re.compile(
+    r"([0-9])️⃣\s*\n\s*🤩\s*\n\s*([0-9])️⃣\s*\n\s*([0-9])️⃣\s*\n\s*🔤\s*\n\s*🔤\s*\n\s*🔤",
+    re.U,
+)
+
+def parse_discount_rub(text):
+    """Decode the channel's custom-emoji price such as 1️⃣ 🤩 7️⃣ 2️⃣ 🔤🔤🔤 => 1.72M RUB."""
+    m = KEYCAP_PRICE_RE.search(str(text or ""))
+    if m:
+        return int(m.group(1) + m.group(2) + m.group(3)) * 10_000
+
+    # Fallback for posts where the promotional price is plain text.
+    for p in [
+        r"(?:скидк|акци|горячая\s+цена|торопитесь)[^\d]{0,80}([0-9]+(?:[.,][0-9]+)?)\s*млн",
+        r"(?:теперь|сейчас|итого)[^\d]{0,40}([0-9]+(?:[.,][0-9]+)?)\s*млн",
+    ]:
+        m = re.search(p, str(text or ""), re.I | re.S)
+        if m:
+            return int(float(m.group(1).replace(",", ".")) * 1_000_000)
+    return None
+
+def parse_price_pair(text):
+    visible = parse_rub(text, "price")
+    promo = parse_discount_rub(text)
+    before = None
+    current = promo or visible
+    if visible and promo and visible > promo:
+        before = visible
+        current = promo
+    return before, current, promo
+
 def parse_title(text):
     lines = [x.strip(" -*•🌟✨") for x in text.splitlines() if x.strip()]
     candidates = []
@@ -194,6 +225,7 @@ def parse_car(post_id, source_url, text, photos, published_at, emoji_ids=None):
     ], text)
 
     detected_origin, origin_detection = origin_from_custom_emoji(emoji_ids or [])
+    price_before_discount, price_current, price_after_discount = parse_price_pair(text)
     return {
         "source": "AutoWorld_Georgia",
         "sourcePostId": str(post_id),
@@ -220,7 +252,9 @@ def parse_car(post_id, source_url, text, photos, published_at, emoji_ids=None):
         "vin": vin,
         "auctionDate": auction_date,
         "estimatedBidUsd": estimated,
-        "priceRub": parse_rub(text, "price"),
+        "priceBeforeDiscountRub": price_before_discount,
+        "priceAfterDiscountRub": price_after_discount,
+        "priceRub": price_current,
         "customsRub": parse_rub(text, "customs"),
         "lot": lot,
         "calculationDate": calc_date,
@@ -404,7 +438,7 @@ def write_outputs(cars, pages, uploaded_count, reused_count, recovered_cars, fai
     fields = [
         "sourcePostId","sourceUrl","publishedAt","origin","brand","model","year","trim","mileage","engine","powerHp",
         "consumption","transmission","drive","safety","interior","damage","vin","auctionDate","estimatedBidUsd",
-        "priceRub","customsRub","lot","calculationDate","photos","rawText"
+        "priceBeforeDiscountRub","priceAfterDiscountRub","priceRub","customsRub","lot","calculationDate","photos","rawText"
     ]
     with (OUT_DIR / "cars.csv").open("w", encoding="utf-8-sig", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore")
