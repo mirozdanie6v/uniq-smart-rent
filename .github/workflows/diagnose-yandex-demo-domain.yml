@@ -25,6 +25,28 @@ jobs:
           echo "DEMO:"
           dig +short CNAME auto-sale-demo.viiversion.com
 
+
+      - name: Inspect live AUTO SALE assets
+        run: |
+          set -euo pipefail
+          for BASE in https://autoworld.viiversion.com https://auto-sale-demo.viiversion.com; do
+            echo "===== $BASE ====="
+            echo "INDEX HEADERS"
+            curl -sSIL "$BASE/" | sed -n '1,25p'
+            HTML=$(curl -fsSL "$BASE/")
+            echo "$HTML" | grep -o 'auto-sale-calc-cta-live-v4.css?v=[^"[:space:]]*' || true
+            ASSET=$(printf '%s' "$HTML" | grep -o 'auto-sale-calc-cta-live-v4.css?v=[^"[:space:]]*' | head -n1 || true)
+            if [ -n "$ASSET" ]; then
+              echo "CTA ASSET: $ASSET"
+              echo "CTA HEADERS"
+              curl -sSIL "$BASE/$ASSET" | sed -n '1,25p'
+              echo "CTA MARKERS"
+              curl -fsSL "$BASE/$ASSET" | grep -E 'Bright sportsbook/crypto CTA|Make calculate|autoCalcPremiumSweep|min-height:52px' | head -n20 || true
+            else
+              echo "CTA ASSET NOT REFERENCED BY LIVE INDEX"
+            fi
+          done
+
       - name: Request GitHub OIDC token
         uses: actions/github-script@v7
         id: oidc
