@@ -23,6 +23,35 @@ function telegramIdentity(){
 const currentTelegram=telegramIdentity();
 window.__AUTO_SALE_TELEGRAM_USER__=currentTelegram;
 const botMessagingAvailable=Boolean(tg?.initData&&currentTelegram?.id);
+let managerRegistrationPromise=null;
+async function registerCurrentManager(){
+  if(!botMessagingAvailable)return null;
+  if(managerRegistrationPromise)return managerRegistrationPromise;
+  managerRegistrationPromise=fetch('/api/auto-sale/telegram/register-manager',{
+    method:'POST',
+    headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},
+    body:'{}'
+  }).then(async response=>{
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'telegram_manager_registration_failed');
+    window.__AUTO_SALE_TELEGRAM_MANAGER__=data;
+    window.dispatchEvent(new CustomEvent('auto-sale-telegram-manager-registered',{detail:data}));
+    return data;
+  }).catch(error=>{
+    console.warn('AUTO SALE Telegram manager registration failed',error);
+    managerRegistrationPromise=null;
+    return null;
+  });
+  return managerRegistrationPromise;
+}
+document.addEventListener('click',event=>{
+  const roleButton=event.target.closest?.('[data-role="manager"],[data-role="owner"]');
+  if(roleButton)queueMicrotask(()=>registerCurrentManager());
+},true);
+try{
+  const savedRole=sessionStorage.getItem('auto-sale-role-v2');
+  if(savedRole==='manager'||savedRole==='owner')queueMicrotask(()=>registerCurrentManager());
+}catch{}
 
 function usernameFrom(value){const match=String(value||'').match(/(?:^|\s|\/)(?:@|t\.me\/)?([A-Za-z0-9_]{5,32})(?:$|\s|\?|\/)/i);return match?.[1]||''}
 function clientTelegram(lead){return{username:String(lead.telegramUsername||usernameFrom(lead.contact)||'').replace(/^@/,''),id:String(lead.telegramUserId||'')}}
