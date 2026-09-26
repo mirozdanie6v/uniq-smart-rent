@@ -24,34 +24,58 @@ const currentTelegram=telegramIdentity();
 window.__AUTO_SALE_TELEGRAM_USER__=currentTelegram;
 const botMessagingAvailable=Boolean(tg?.initData&&currentTelegram?.id);
 let managerRegistrationPromise=null;
-async function registerCurrentManager(){
+function currentStaffRole(){
+  try{return sessionStorage.getItem('auto-sale-role-v2')||''}catch{return''}
+}
+function teamRows(){return read('auto-sale-team-v1',[])}
+function registrationCandidate(){
+  const rows=teamRows().filter(item=>item&&item.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item.role||'')));
+  const already=rows.find(item=>String(item.telegramUserId||'')===String(currentTelegram?.id||''));
+  if(already)return already;
+  const role=currentStaffRole();
+  const desired=role==='owner'?'Директор':'Менеджер';
+  const matching=rows.filter(item=>item.role===desired);
+  return matching.length===1?matching[0]:null;
+}
+function showTelegramManagerStatus(data){
+  const strip=document.querySelector('.auto-role-strip');
+  if(!strip)return;
+  let badge=strip.querySelector('[data-telegram-manager-status]');
+  if(!badge){badge=document.createElement('small');badge.dataset.telegramManagerStatus='1';strip.append(badge)}
+  if(data?.ok){badge.textContent='Telegram подключён · '+(data.member?.name||currentTelegram?.displayName||'');badge.dataset.state='connected'}
+  else{badge.textContent='Telegram: выберите сотрудника для привязки';badge.dataset.state='pending'}
+}
+async function registerCurrentManager(member=null){
   if(!botMessagingAvailable)return null;
+  const candidate=member||registrationCandidate();
+  if(!candidate){showTelegramManagerStatus(null);return null}
   if(managerRegistrationPromise)return managerRegistrationPromise;
   managerRegistrationPromise=fetch('/api/auto-sale/telegram/register-manager',{
     method:'POST',
     headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},
-    body:'{}'
+    body:JSON.stringify({memberId:candidate.id,memberName:candidate.name})
   }).then(async response=>{
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||'telegram_manager_registration_failed');
+    if(!response.ok)throw Object.assign(new Error(data.error||'telegram_manager_registration_failed'),{data});
+    const rows=teamRows().map(item=>String(item.id)===String(data.member?.id)?{...item,telegramUserId:data.telegramUserId,telegramUsername:data.username||'',telegramLinkedAt:new Date().toISOString()}:item);
+    write('auto-sale-team-v1',rows);
     window.__AUTO_SALE_TELEGRAM_MANAGER__=data;
+    showTelegramManagerStatus(data);
     window.dispatchEvent(new CustomEvent('auto-sale-telegram-manager-registered',{detail:data}));
     return data;
   }).catch(error=>{
     console.warn('AUTO SALE Telegram manager registration failed',error);
-    managerRegistrationPromise=null;
+    showTelegramManagerStatus(null);
     return null;
-  });
+  }).finally(()=>{managerRegistrationPromise=null});
   return managerRegistrationPromise;
 }
 document.addEventListener('click',event=>{
   const roleButton=event.target.closest?.('[data-role="manager"],[data-role="owner"]');
-  if(roleButton)queueMicrotask(()=>registerCurrentManager());
+  if(roleButton)setTimeout(()=>registerCurrentManager(),0);
 },true);
-try{
-  const savedRole=sessionStorage.getItem('auto-sale-role-v2');
-  if(savedRole==='manager'||savedRole==='owner')queueMicrotask(()=>registerCurrentManager());
-}catch{}
+window.addEventListener('auto-sale-server-synced',()=>{if(['manager','owner'].includes(currentStaffRole()))registerCurrentManager()});
+try{if(['manager','owner'].includes(currentStaffRole()))setTimeout(()=>registerCurrentManager(),0)}catch{}
 
 function usernameFrom(value){const match=String(value||'').match(/(?:^|\s|\/)(?:@|t\.me\/)?([A-Za-z0-9_]{5,32})(?:$|\s|\?|\/)/i);return match?.[1]||''}
 function clientTelegram(lead){return{username:String(lead.telegramUsername||usernameFrom(lead.contact)||'').replace(/^@/,''),id:String(lead.telegramUserId||'')}}
