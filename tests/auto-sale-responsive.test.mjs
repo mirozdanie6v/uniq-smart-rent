@@ -62,3 +62,9 @@ test('mobile primary touch targets are at least 44px tall',()=>{
   assert.match(base,/\.auto-role-switch button,.auto-card-actions \.auto-btn,.auto-btn\.small\{min-height:44px\}/);
 });
 
+test('mobile brand fills the available header width',()=>{
+  assert.match(base,/\.auto-brand\{width:100%;max-width:none\}/);
+  assert.match(base,/\.auto-brand-image\{display:block;width:100%;max-width:none;min-height:0\}/);
+  assert.match(base,/\.auto-brand-logo\{display:block;width:100%;height:auto;max-height:none;object-fit:contain;object-position:center\}/);
+});
+
