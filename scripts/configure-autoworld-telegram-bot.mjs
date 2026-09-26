@@ -37,18 +37,18 @@ if(String(me.username||'').toLowerCase()!=='autoworld_georgia_bot'){
 }
 
 await api('setMyName',{name:'AUTO МИР | AutoWorld Georgia'},{skipLongRateLimit:true});
-await api('setMyDescription',{description:'Автомобили из США и Грузии с доставкой в Россию. Каталог, прозрачный расчёт, заявка, этапы оплаты и отслеживание заказа — в одном приложении.'});
-await api('setMyShortDescription',{short_description:'Автомобили из США и Грузии · каталог и заказ'});
+await api('setMyDescription',{description:'Автомобили из США и Грузии с доставкой в Россию. Каталог, прозрачный расчёт, заявка, этапы оплаты и отслеживание заказа — в одном приложении.'},{skipLongRateLimit:true});
+await api('setMyShortDescription',{short_description:'Автомобили из США и Грузии · каталог и заказ'},{skipLongRateLimit:true});
 await api('setMyCommands',{commands:[
   {command:'start',description:'Начать'},
   {command:'catalog',description:'Открыть каталог'},
   {command:'help',description:'Как это работает'}
-]});
+]},{skipLongRateLimit:true});
 await api('setChatMenuButton',{menu_button:{
   type:'web_app',
   text:'🚗 Открыть каталог',
   web_app:{url:appUrl}
-}});
+}},{skipLongRateLimit:true});
 
 const webhookKey=createHmac('sha256',token).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32);
 const webhookUrl=new URL(`/api/auto-sale/telegram/webhook/${webhookKey}`,appUrl).toString();
