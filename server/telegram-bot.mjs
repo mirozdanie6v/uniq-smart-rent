@@ -207,7 +207,7 @@ export function createTelegramService({
     return Boolean(enabled&&webhookPath&&clean(pathname)===webhookPath);
   }
 
-  async function handleWebhookUpdate(update,{appUrl=''}={}){
+  async function handleWebhookUpdate(update,{appUrl='',webhookReply=false}={}){
     if(!enabled){const error=new Error('telegram_not_configured');error.statusCode=503;throw error}
     const message=update?.message;
     if(!message?.chat?.id)return{ok:true,ignored:true};
@@ -221,6 +221,7 @@ export function createTelegramService({
         :`🚗 Каталог AUTO МИР\n\nОткройте приложение, чтобы посмотреть автомобили, отправить заявку или проверить свой заказ.`;
       const payload={chat_id:chatId,text:greeting};
       if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'🚗 Открыть каталог',url:webAppUrl}]]};
+      if(webhookReply)return{ok:true,handled:command,webhookMethod:'sendMessage',webhookPayload:payload};
       const result=await api('sendMessage',payload);
       return{ok:true,handled:command,messageId:result?.message_id||null};
     }
@@ -229,12 +230,14 @@ export function createTelegramService({
       const body='AUTO МИР помогает пройти весь путь покупки автомобиля:\n\n1. Выбрать авто из США или Грузии\n2. Получить прозрачный расчёт\n3. Оформить заявку\n4. Следить за этапами заказа и оплатами\n5. Получать уведомления прямо в Telegram';
       const payload={chat_id:chatId,text:body};
       if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'Открыть AUTO МИР',url:webAppUrl}]]};
+      if(webhookReply)return{ok:true,handled:'/help',webhookMethod:'sendMessage',webhookPayload:payload};
       const result=await api('sendMessage',payload);
       return{ok:true,handled:'/help',messageId:result?.message_id||null};
     }
 
     if(textValue){
       const payload={chat_id:chatId,text:'Для работы с AUTO МИР используйте кнопку каталога ниже или команду /help.'};
+      if(webhookReply)return{ok:true,handled:'fallback',webhookMethod:'sendMessage',webhookPayload:payload};
       const result=await api('sendMessage',payload);
       return{ok:true,handled:'fallback',messageId:result?.message_id||null};
     }
