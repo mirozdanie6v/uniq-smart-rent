@@ -32,4 +32,4 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
         run: printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
       - name: Verify relay
-        run: curl --fail --silent --show-error https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/health
+        run: curl --fail --silent --show-error https://integration-telegram.viiversion.com/telegram/health
