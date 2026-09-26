@@ -1,0 +1,76 @@
+name: Create AutoWorld DNS alias
+
+on:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .create-autoworld-alias-once
+
+permissions:
+  contents: read
+
+jobs:
+  dns:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create or update Cloudflare CNAME
+        env:
+          CF_TOKEN_PRIMARY: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_TOKEN_ALT: ${{ secrets.CF_API_TOKEN }}
+          ZONE_NAME: viiversion.com
+          RECORD_NAME: autoworld.viiversion.com
+          TARGET_NAME: auto-sale-demo.viiversion.com
+        run: |
+          set -euo pipefail
+          TOKEN="${CF_TOKEN_PRIMARY:-}"
+          if [ -z "$TOKEN" ]; then TOKEN="${CF_TOKEN_ALT:-}"; fi
+          if [ -z "$TOKEN" ]; then
+            echo "Missing Cloudflare API token. Expected CLOUDFLARE_API_TOKEN or CF_API_TOKEN."
+            exit 2
+          fi
+          echo "::add-mask::$TOKEN"
+
+          API="https://api.cloudflare.com/client/v4"
+          AUTH=(-H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json")
+
+          ZONES="$(curl -fsS "${AUTH[@]}" "$API/zones?name=$ZONE_NAME&status=active")"
+          ZONE_ID="$(printf '%s' "$ZONES" | jq -r '.result[0].id // empty')"
+          if [ -z "$ZONE_ID" ]; then
+            echo "Cloudflare zone $ZONE_NAME is not available to this token."
+            printf '%s' "$ZONES" | jq '{success,errors}'
+            exit 3
+          fi
+
+          EXISTING="$(curl -fsS "${AUTH[@]}" "$API/zones/$ZONE_ID/dns_records?type=CNAME&name=$RECORD_NAME")"
+          RECORD_ID="$(printf '%s' "$EXISTING" | jq -r '.result[0].id // empty')"
+          BODY="$(jq -nc --arg type CNAME --arg name "$RECORD_NAME" --arg content "$TARGET_NAME" '{type:$type,name:$name,content:$content,ttl:1,proxied:true}')"
+
+          if [ -n "$RECORD_ID" ]; then
+            RESULT="$(curl -fsS -X PUT "${AUTH[@]}" --data "$BODY" "$API/zones/$ZONE_ID/dns_records/$RECORD_ID")"
+            ACTION=updated
+          else
+            RESULT="$(curl -fsS -X POST "${AUTH[@]}" --data "$BODY" "$API/zones/$ZONE_ID/dns_records")"
+            ACTION=created
+          fi
+
+          printf '%s' "$RESULT" | jq -e '.success == true' >/dev/null
+          printf '%s' "$RESULT" | jq '{success,result:{id,name,type,content,proxied}}'
+          echo "Cloudflare DNS record $ACTION: $RECORD_NAME -> $TARGET_NAME"
+
+      - name: Verify alias resolves and serves AUTO MIR
+        env:
+          RECORD_NAME: autoworld.viiversion.com
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 18); do
+            if BODY="$(curl -fsS --connect-timeout 8 --max-time 15 "https://$RECORD_NAME/api/health" 2>/dev/null)"; then
+              echo "$BODY" | jq -e '.ok == true and .service == "auto-sale-yandex"' >/dev/null
+              echo "Alias verified: https://$RECORD_NAME/"
+              exit 0
+            fi
+            echo "Waiting for DNS/TLS propagation ($i/18)..."
+            sleep 10
+          done
+          echo "DNS record was written but HTTPS verification did not complete within the propagation window."
+          exit 4
