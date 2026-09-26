@@ -184,6 +184,6 @@ test('approved brand logo and favicon are wired',()=>{
   assert.match(html,/favicon-64\.webp/);
   assert.match(app,/auto-sale-logo-automir-v5\.webp/);
   assert.match(clientCss,/\.auto-brand-logo/);
-  assert.match(responsive,/\.auto-brand-image\{display:block;width:100%;max-width:none/);
+  assert.match(responsive,/\.auto-brand-image\{[^}]*display:block;width:100%;max-width:none/);
 });
 
