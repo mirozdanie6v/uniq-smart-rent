@@ -1,0 +1,36 @@
+name: Import wide AUTO SALE logo
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .import-wide-auto-sale-logo
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: prototype/auto-sale-usa
+      - name: Download exact generated logo
+        run: |
+          set -euo pipefail
+          API='https://api.firestorage.ai/dev/file'
+          SHARE='HHHASdPMz_Ov'
+          JSON="$(curl -fsSL "$API/shares/$SHARE/files?maxResults=1000")"
+          FILE_ID="$(printf '%s' "$JSON" | python -c 'import json,sys; d=json.load(sys.stdin); print(d["files"][0]["fileId"])')"
+          DL="$(curl -fsSL -X POST "$API/shares/$SHARE/files/$FILE_ID/download" | python -c 'import json,sys; print(json.load(sys.stdin)["downloadUrl"])')"
+          curl -fsSL "$DL" -o public/auto-sale-logo-wide.webp
+          echo '64c4a95921663d47c03afe1e487c0061a3b4ca3b54a9e2e49505a228fa27553d  public/auto-sale-logo-wide.webp' | sha256sum -c -
+          file public/auto-sale-logo-wide.webp
+      - name: Commit wide logo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/auto-sale-logo-wide.webp
+          git commit -m "Add wide AUTO SALE mobile logo" || exit 0
+          git push origin HEAD:prototype/auto-sale-usa
