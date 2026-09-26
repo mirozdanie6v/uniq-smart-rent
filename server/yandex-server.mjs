@@ -118,7 +118,7 @@ const server=http.createServer(async(req,res)=>{
         json(res,result,200);
       }catch(error){
         const status=Number(error?.statusCode)||500;
-        json(res,{error:String(error?.message||'telegram_webhook_failed')},status);
+        json(res,{error:String(error?.message||'telegram_webhook_failed'),telegramDescription:String(error?.telegramDescription||''),detail:String(error?.cause?.message||error?.cause||'')},status);
       }
       return;
     }
