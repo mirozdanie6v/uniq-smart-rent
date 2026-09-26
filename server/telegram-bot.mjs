@@ -41,20 +41,26 @@ export function createTelegramService({
   token=process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'',
   managerChatIds=process.env.AUTO_SALE_MANAGER_CHAT_IDS||'',
   fetchImpl=globalThis.fetch,
+  apiBaseUrl=process.env.AUTO_SALE_TELEGRAM_API_BASE_URL||'https://api.telegram.org',
+  relayKey=process.env.AUTO_SALE_TELEGRAM_RELAY_KEY||'',
   now=()=>Date.now(),
   maxInitDataAgeSec=86400
 }={}){
   const botToken=clean(token);
   const fallbackManagers=parseManagerIds(managerChatIds);
+  const telegramApiBase=clean(apiBaseUrl).replace(/\/$/,'')||'https://api.telegram.org';
+  const telegramRelayKey=clean(relayKey);
   const enabled=Boolean(botToken&&fetchImpl);
   const webhookKey=botToken?createHmac('sha256',botToken).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32):'';
   const webhookPath=webhookKey?`/api/auto-sale/telegram/webhook/${webhookKey}`:'';
 
   async function api(method,payload){
     if(!enabled){const error=new Error('telegram_not_configured');error.statusCode=503;throw error}
-    const response=await fetchImpl(`https://api.telegram.org/bot${botToken}/${method}`,{
+    const headers={'content-type':'application/json'};
+    if(telegramRelayKey)headers['x-auto-sale-relay-key']=telegramRelayKey;
+    const response=await fetchImpl(`${telegramApiBase}/bot${botToken}/${method}`,{
       method:'POST',
-      headers:{'content-type':'application/json'},
+      headers,
       body:JSON.stringify(payload)
     });
     let data={};
