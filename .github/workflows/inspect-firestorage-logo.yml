@@ -13,20 +13,17 @@ jobs:
   inspect:
     runs-on: ubuntu-24.04
     steps:
-      - name: Inspect share page
+      - name: Inspect firestorage download client
         run: |
-          python - <<'PY'
-          import requests,re
-          u='https://firestorage.ai/ja/f/HHHASdPMz_Ov'
-          r=requests.get(u,timeout=30,allow_redirects=True)
-          print('STATUS',r.status_code,'URL',r.url,'CT',r.headers.get('content-type'))
-          print('LEN',len(r.content))
-          text=r.text
-          for m in re.findall(r'https?://[^"\'<> ]+',text):
-              if 'firestorage' in m or 'storage' in m or 'download' in m:
-                  print('URLCAND',m[:1000])
-          for line in text.splitlines():
-              low=line.lower()
-              if 'download' in low or 'auto-sale-logo-wide-1200.webp' in low or 'qi yl'.replace(' ','') in low:
-                  print('LINE',line[:2000])
-          PY
+          set -e
+          curl -sSL 'https://firestorage.ai/ja/f/HHHASdPMz_Ov' -o page.html
+          grep -o 'src="[^"]*\.js"' page.html | sed 's/^src="//;s/"$//' > js.txt
+          cat js.txt
+          while IFS= read -r p; do
+            case "$p" in
+              /*) ;;
+              *) continue ;;
+            esac
+            echo "CHUNK $p"
+            curl -sSL "https://firestorage.ai$p" | tr ';' '\n' | grep -E -i 'download|/api/' | head -80 || true
+          done < js.txt
