@@ -1,1 +1,1 @@
-final deploy: Telegram webhook v2 + non-blocking YDB notification diff 2026-09-26T20:48+07:00
+final Telegram deploy: webhook v2 + E2E external-side-effect isolation 2026-09-26T20:55+07:00
