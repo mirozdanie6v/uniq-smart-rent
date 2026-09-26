@@ -42,3 +42,21 @@ test('very narrow and landscape breakpoints are explicitly covered',()=>{
   assert.match(base,/max-width:340px/);
   assert.match(base,/orientation:landscape/);
 });
+
+test('safe areas cover all screen edges and iPhone landscape fields avoid zoom',()=>{
+  assert.match(base,/--safe-top:env\(safe-area-inset-top,0px\)/);
+  assert.match(base,/--safe-right:env\(safe-area-inset-right,0px\)/);
+  assert.match(base,/--safe-bottom:env\(safe-area-inset-bottom,0px\)/);
+  assert.match(base,/--safe-left:env\(safe-area-inset-left,0px\)/);
+  assert.match(base,/max\(12px,var\(--safe-left\)\)/);
+  assert.match(base,/orientation:landscape/);
+  assert.match(base,/orientation:landscape[^}]*\}[\s\S]*?\.auto-form input,.auto-form select,.auto-form textarea\{font-size:16px\}/);
+});
+
+test('mobile primary touch targets are at least 44px tall',()=>{
+  assert.match(base,/\.auto-role-switch button\{min-width:0;min-height:44px/);
+  assert.match(base,/\.auto-card-actions \.auto-btn\{width:100%;min-height:44px/);
+  assert.match(base,/\.auto-brand\{min-height:44px\}/);
+  assert.match(base,/\.auto-btn\.small\{min-height:44px\}/);
+});
+
