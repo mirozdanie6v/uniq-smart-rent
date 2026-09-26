@@ -6,7 +6,6 @@ on:
     branches: [prototype/auto-sale-usa]
     paths:
       - .deploy-auto-sale
-      - .deploy-yandex-once
 
 permissions:
   contents: read
