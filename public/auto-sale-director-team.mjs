@@ -13,7 +13,7 @@ function orders(){const rows=read(ORDERS_KEY,[]);return Array.isArray(rows)?rows
 function isOwner(){return sessionStorage.getItem(ROLE_KEY)==='owner'||document.querySelector('.auto-role-switch button[data-role="owner"].active')}
 function memberStats(name){const ls=leads().filter(x=>x.manager===name),os=orders().filter(x=>x.manager===name);return{leads:ls.length,active:ls.filter(x=>!['Сделка','Отказ'].includes(x.status)).length,deals:os.length,revenue:os.reduce((s,x)=>s+Number(x.total||0),0),margin:os.reduce((s,x)=>s+Number(x.total||0)-Number(x.cost||0),0)}}
 function findTeamMember(id){return team().find(x=>x.id===id)}
-function activeManagerNames(){return[...new Set(team().filter(x=>x.active!==false&&x.role==='Менеджер').map(x=>x.name).filter(Boolean))]}
+function activeManagerNames(){const configured=team().filter(x=>x.active!==false&&x.role==='Менеджер').map(x=>String(x.name||'').trim()),assigned=[...leads(),...orders()].map(x=>String(x?.manager||'').trim()).filter(Boolean);return[...new Set([...configured,...assigned].filter(Boolean))]}
 function ensureTeam(){}
 function route(name){document.querySelector(`.auto-bottom [data-go="${name}"]`)?.click()}
 function modal(html){closeModal();const el=document.createElement('div');el.className='director-modal-bg';el.dataset.directorModal='1';el.innerHTML=`<div class="director-modal">${html}</div>`;(root||document.body).append(el)}
