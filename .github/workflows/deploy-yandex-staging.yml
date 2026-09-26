@@ -153,7 +153,7 @@ jobs:
           echo "Container URL: $URL"
           curl -fsS "$URL/api/health" | jq '{ok,telegramNotifications,telegramFallbackManagers}'
           echo "Outbound probes:"
-          curl -fsS -H "x-auto-sale-api-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/diagnose" | jq .
+          curl -fsS -H "authorization: Bearer $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/diagnose" | jq .
           echo "Revision network configuration:"
           yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
 
