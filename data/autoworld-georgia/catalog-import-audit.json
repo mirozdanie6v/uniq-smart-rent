@@ -5,9 +5,10 @@
   "skippedInvalidCount": 234,
   "duplicateVinCount": 8,
   "excludedTotal": 242,
-  "pricedRub": 74,
+  "pricedRub": 116,
+  "discountedRub": 60,
   "pricedBid": 59,
-  "noPrice": 75,
+  "noPrice": 33,
   "withPhotos": 149,
   "originCounts": {
     "Грузия": 59,
