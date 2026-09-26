@@ -109,13 +109,13 @@ function normalizeSettledPaymentField(){
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){const tracked=this===localStorage&&Object.values(DATA_KEYS).includes(String(key));const before=tracked?this.getItem(key):null;originalSet.call(this,key,value);if(tracked&&!suppress&&!QUOTE_AUDIT_MODE&&before!==String(value))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
-await import('./auto-sale-app-v3.mjs?v=20260926-discount-prices-1');
+await import('./auto-sale-app-v3.mjs?v=20260926-responsive-manager-v1');
 await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-lead-serialization.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
-await import('./auto-sale-director-team.mjs?v=20260924-no-demo-1');
+await import('./auto-sale-director-team.mjs?v=20260926-responsive-manager-v1');
 await import('./auto-sale-telegram.mjs?v=20260925-bot-messaging-v1');
 await import('./auto-sale-telegram-id.mjs?v=20260924-no-demo-1');
 await import('./auto-sale-client-quote.mjs');
