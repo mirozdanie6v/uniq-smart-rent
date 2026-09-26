@@ -220,7 +220,7 @@ export function createTelegramService({
         ?`🚗 AUTO МИР\n\nЗдравствуйте${firstName?', '+firstName:''}!\n\nЗдесь можно выбрать автомобиль из США или Грузии, получить расчёт и отслеживать заказ — всё в одном приложении.\n\nНажмите «Открыть каталог», чтобы начать.`
         :`🚗 Каталог AUTO МИР\n\nОткройте приложение, чтобы посмотреть автомобили, отправить заявку или проверить свой заказ.`;
       const payload={chat_id:chatId,text:greeting};
-      if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'🚗 Открыть каталог',url:webAppUrl}]]};
+      if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'🚗 Открыть каталог',web_app:{url:webAppUrl}}]]};
       if(webhookReply)return{ok:true,handled:command,webhookMethod:'sendMessage',webhookPayload:payload};
       const result=await api('sendMessage',payload);
       return{ok:true,handled:command,messageId:result?.message_id||null};
@@ -229,7 +229,7 @@ export function createTelegramService({
     if(command==='/help'){
       const body='AUTO МИР помогает пройти весь путь покупки автомобиля:\n\n1. Выбрать авто из США или Грузии\n2. Получить прозрачный расчёт\n3. Оформить заявку\n4. Следить за этапами заказа и оплатами\n5. Получать уведомления прямо в Telegram';
       const payload={chat_id:chatId,text:body};
-      if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'Открыть AUTO МИР',url:webAppUrl}]]};
+      if(webAppUrl)payload.reply_markup={inline_keyboard:[[{text:'Открыть AUTO МИР',web_app:{url:webAppUrl}}]]};
       if(webhookReply)return{ok:true,handled:'/help',webhookMethod:'sendMessage',webhookPayload:payload};
       const result=await api('sendMessage',payload);
       return{ok:true,handled:'/help',messageId:result?.message_id||null};
