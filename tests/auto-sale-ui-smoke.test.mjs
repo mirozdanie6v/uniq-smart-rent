@@ -173,3 +173,10 @@ test('car detail module exports a defined runtime API',()=>{
   assert.match(details,/__AUTO_SALE_CAR_DETAILS__=\{open:openDetail,close:closeDetail,currentCar,currentGallery,setSliderIndex\}/);
 });
 
+test('bootstrap does not write state on load and rebases revision conflicts',()=>{
+  assert.match(bootstrap,/before=tracked\?this\.getItem\(key\):null/);
+  assert.match(bootstrap,/before!==String\(value\)/);
+  assert.match(bootstrap,/rebaseAutoSaleState\(serverState,base,localBefore\)/);
+  assert.doesNotMatch(bootstrap,/scheduleSync\(250\);\s*$/);
+});
+
