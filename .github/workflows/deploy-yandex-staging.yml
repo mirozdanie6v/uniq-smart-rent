@@ -215,5 +215,27 @@ jobs:
           echo "$body" | jq -e '.ok == true and ([.results[].ok] | all)' >/dev/null
           echo "AUTO_SALE_TELEGRAM_BOT_SCENARIOS_OK"
 
+      - name: Verify notification outbox status
+        env:
+          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --connect-timeout 10 --max-time 30 -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/notifications/status")
+          echo "$body" | jq .
+          echo "$body" | jq -e '.ok == true and (.stats | type == "object")' >/dev/null
+          dead=$(echo "$body" | jq -r '.stats.dead // 0')
+          test "$dead" = "0"
+          echo "AUTO_SALE_NOTIFICATION_OUTBOX_OK"
+
+      - name: Run notification outbox processor
+        env:
+          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
+        run: |
+          set -euo pipefail
+          body=$(curl -fsS --connect-timeout 10 --max-time 45 -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/notifications/process")
+          echo "$body" | jq .
+          echo "$body" | jq -e '.ok == true and (.stats | type == "object")' >/dev/null
+          echo "AUTO_SALE_NOTIFICATION_PROCESSOR_OK"
+
       - name: Run reversible client-to-handoff Yandex E2E
         run: node scripts/e2e-yandex-workflow.mjs
