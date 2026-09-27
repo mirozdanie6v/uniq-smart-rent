@@ -1,2 +1,2 @@
-Deploy Telegram identity preservation fix
-2026-09-27 v19
+Deploy durable notification outbox and retries
+2026-09-27 v20
