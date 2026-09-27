@@ -1,4 +1,4 @@
-name: Inspect AUTO SALE refractive glass v24
+name: Inspect AUTO SALE premium pearlescent glass v25
 
 on:
   push:
@@ -15,13 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Wait for v24 live
+      - name: Wait for v25 live
         shell: bash
         run: |
           set -euo pipefail
           for i in $(seq 1 48); do
-            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v24=$RANDOM" | grep -q "auto-sale-calc-cta-v24.css"; then
-              echo "v24 is live"
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v25=$RANDOM" | grep -q "auto-sale-calc-cta-v25.css"; then
+              echo "v25 is live"
               exit 0
             fi
             sleep 5
@@ -53,11 +53,11 @@ jobs:
             await page.setViewport({width:390,height:844,deviceScaleFactor:2});
 
             for(let a=0;a<12;a++){
-              await page.goto('https://autoworld.viiversion.com/?_inspect_v24='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
+              await page.goto('https://autoworld.viiversion.com/?_inspect_v25='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
               const href=await page.evaluate(()=>document.querySelector('link[href*="auto-sale-calc-cta"]')?.getAttribute('href')||'');
               console.log('CSS_HREF='+href);
-              if(href.includes('auto-sale-calc-cta-v24.css')) break;
-              if(a===11) throw new Error('browser never loaded v24 stylesheet');
+              if(href.includes('auto-sale-calc-cta-v25.css')) break;
+              if(a===11) throw new Error('browser never loaded v25 stylesheet');
               await sleep(1200);
             }
 
@@ -99,6 +99,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: refractive-glass-v24-screens
+          name: refractive-glass-v25-screens
           path: /tmp/glass-shots/*.png
           if-no-files-found: error
+
+# v25 visual inspection
