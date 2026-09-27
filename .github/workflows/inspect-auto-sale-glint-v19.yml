@@ -51,10 +51,18 @@ jobs:
             });
             const page=await browser.newPage();
             await page.setViewport({width:390,height:844,deviceScaleFactor:2});
-            await page.goto('https://autoworld.viiversion.com/?_inspect=v20',{
-              waitUntil:'networkidle2',
-              timeout:60000
-            });
+            let loadedV20=false;
+            for(let attempt=0;attempt<12;attempt++){
+              await page.goto('https://autoworld.viiversion.com/?_inspect=v20_'+Date.now()+'_'+attempt,{
+                waitUntil:'networkidle2',
+                timeout:60000
+              });
+              const href=await page.evaluate(()=>document.querySelector('link[href*="auto-sale-calc-cta"]')?.getAttribute('href')||'');
+              console.log('CSS_HREF='+href);
+              if(href.includes('auto-sale-calc-cta-v20.css')){ loadedV20=true; break; }
+              await new Promise(r=>setTimeout(r,1500));
+            }
+            if(!loadedV20) throw new Error('browser never loaded v20 stylesheet');
 
             const btnSel='.auto-calc-btn:not([disabled])';
             const glintSel=btnSel+' .auto-calc-glint';
@@ -133,3 +141,5 @@ jobs:
           if-no-files-found: error
 
 # v20 visual inspection
+
+# strict browser-side v20 cache check
