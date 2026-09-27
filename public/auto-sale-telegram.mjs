@@ -169,7 +169,15 @@ document.addEventListener('submit',event=>{
       if(!form.elements.name.value.trim())form.elements.name.value=currentTelegram.displayName;
       if(!form.elements.contact.value.trim())form.elements.contact.value=currentTelegram.contact;
       pendingClient={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),telegram:currentTelegram};
-      setTimeout(()=>{if(!pendingClient)return;const lead=findNewestLead(pendingClient);if(lead){patchLead(lead.id,{telegramUserId:pendingClient.telegram.id,telegramUsername:pendingClient.telegram.username,telegramFirstName:pendingClient.telegram.firstName,telegramLastName:pendingClient.telegram.lastName,telegramDisplayName:pendingClient.telegram.displayName,contact:pendingClient.contact});window.dispatchEvent(new CustomEvent('auto-sale-telegram-lead-linked',{detail:{leadId:lead.id}}))}pendingClient=null},0);
+      setTimeout(async()=>{if(!pendingClient)return;const pending=pendingClient;const lead=findNewestLead(pending);pendingClient=null;if(!lead)return;
+        patchLead(lead.id,{telegramUserId:pending.telegram.id,telegramUsername:pending.telegram.username,telegramFirstName:pending.telegram.firstName,telegramLastName:pending.telegram.lastName,telegramDisplayName:pending.telegram.displayName,contact:pending.contact});
+        try{
+          const response=await fetch('/api/auto-sale/telegram/link-client',{method:'POST',headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},body:JSON.stringify({leadId:lead.id})});
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw new Error(data.error||'telegram_client_link_failed');
+          window.dispatchEvent(new CustomEvent('auto-sale-telegram-lead-linked',{detail:{leadId:lead.id,revision:data.revision}}));
+        }catch(error){console.warn('AUTO SALE Telegram client link failed',error)}
+      },0);
     }
     if(managerMode){const managerTelegram=String(form.elements.managerTelegram?.value||'').trim();if(managerTelegram)pendingManager={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),managerTelegram};}
   }
