@@ -10,13 +10,24 @@ const today=new Date().toISOString().slice(0,10);
 const addDays=(days)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
 
 async function request(path,options={}){
-  const response=await fetch(base+path,{...options,headers:{...headers,...options.headers}});
-  const data=await response.json().catch(()=>({}));
-  return{response,data};
+  let last={response:null,data:{}};
+  for(let attempt=0;attempt<4;attempt++){
+    try{
+      const response=await fetch(base+path,{...options,headers:{...headers,...options.headers},signal:AbortSignal.timeout(45_000)});
+      const data=await response.json().catch(()=>({}));
+      last={response,data};
+      if(response.status!==502&&response.status!==503&&response.status!==504)return last;
+    }catch(error){
+      last={response:null,data:{error:String(error?.message||error)}};
+    }
+    if(attempt<3)await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));
+  }
+  if(!last.response)throw new Error(`request failed after retries: ${path} ${JSON.stringify(last.data)}`);
+  return last;
 }
 async function getState(){
   const {response,data}=await request('/api/auto-sale/state',{method:'GET'});
-  if(!response.ok)throw new Error(`GET state failed: ${response.status} ${JSON.stringify(data)}`);
+  if(!response.ok)throw new Error(`GET state failed after retries: ${response.status} ${JSON.stringify(data)}`);
   return data;
 }
 async function putState(state){
