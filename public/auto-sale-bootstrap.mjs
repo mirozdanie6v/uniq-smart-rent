@@ -116,7 +116,7 @@ await import('./auto-sale-quote-save-fix.mjs');
 await import('./auto-sale-lead-status-fix.mjs');
 await import('./auto-sale-required-fields.mjs');
 await import('./auto-sale-director-team.mjs?v=20260926-responsive-manager-v1');
-await import('./auto-sale-telegram.mjs?v=20260927-client-created-notify-v4');
+await import('./auto-sale-telegram.mjs?v=20260927-client-atomic-link-v5');
 await import('./auto-sale-telegram-id.mjs?v=20260924-no-demo-1');
 await import('./auto-sale-client-quote.mjs');
 normalizeSettledPaymentField();
