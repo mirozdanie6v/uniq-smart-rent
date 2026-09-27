@@ -101,7 +101,7 @@ jobs:
           AUTO_SALE_API_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
-          printf '%s' "$AUTO_SALE_API_KEY" > "$RUNNER_TEMP/auto-sale-api-key
+          printf '%s' "$AUTO_SALE_API_KEY" > "$RUNNER_TEMP/auto-sale-api-key"
 
       - name: Deploy public demo YDB staging container
         run: |
