@@ -156,6 +156,7 @@ export function createTelegramService({
   async function notifyStateChanges(previous,next){
     if(!enabled||!previous?.initialized)return[];
     const deliveries=[];
+    const eventKey=meta=>[meta.event,meta.leadId,meta.quoteId,meta.orderId,meta.paymentId].filter(Boolean).join(':');
     const prevLeads=new Map(arr(previous.leads).map(x=>[clean(x.id),x]));
     const prevQuotes=new Map(arr(previous.quotes).map(x=>[clean(x.id),x]));
     const prevOrders=new Map(arr(previous.orders).map(x=>[clean(x.id),x]));
@@ -163,9 +164,9 @@ export function createTelegramService({
     const deliver=async(chatId,message,meta)=>{
       try{
         const result=await send(chatId,message);
-        deliveries.push({ok:true,chatId,messageId:result?.message_id||null,...meta});
+        deliveries.push({ok:true,chatId,messageId:result?.message_id||null,id:eventKey(meta)+':'+meta.target+':'+chatId,...meta});
       }catch(error){
-        deliveries.push({ok:false,chatId,error:clean(error?.message)||'telegram_send_failed',...meta});
+        deliveries.push({ok:false,chatId,error:clean(error?.message)||'telegram_send_failed',id:eventKey(meta)+':'+meta.target+':'+chatId,message,...meta});
       }
     };
     const toManagers=async(lead,message,meta)=>{
