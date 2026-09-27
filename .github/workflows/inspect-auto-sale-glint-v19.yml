@@ -5,7 +5,7 @@ on:
     branches:
       - prototype/auto-sale-usa
     paths:
-      - .github/workflows/inspect-auto-sale-glint-v20.yml
+      - .github/workflows/inspect-auto-sale-glint-v19.yml
 
 permissions:
   contents: read
