@@ -115,6 +115,16 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/admin/clear-applications'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const state=await store.loadState();
+      const cleared={...state,leads:[],quotes:[],orders:[],notes:{}};
+      const result=await store.replaceState(cleared,{expectedRevision:state.revision});
+      if(result.status!==200){json(res,result.data,result.status);return}
+      json(res,{ok:true,cleared:{leads:Array.isArray(state.leads)?state.leads.length:0,quotes:Array.isArray(state.quotes)?state.quotes.length:0,orders:Array.isArray(state.orders)?state.orders.length:0},revision:result.data.revision});
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/notifications/process'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const pending=await store.pendingNotifications(50),results=[];
