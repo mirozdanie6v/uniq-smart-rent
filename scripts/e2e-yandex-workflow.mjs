@@ -4,6 +4,7 @@ if(!base)throw new Error('STAGING_URL is required');
 if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
 
 const headers={'content-type':'application/json','x-auto-sale-key':apiKey,'x-auto-sale-skip-telegram':'1'};
+const notifyHeaders={'content-type':'application/json','x-auto-sale-key':apiKey};
 const clone=value=>JSON.parse(JSON.stringify(value));
 const today=new Date().toISOString().slice(0,10);
 const addDays=(days)=>{const d=new Date();d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)};
@@ -47,6 +48,23 @@ const payment2=`PAY-YDB-${suffix}-2`;
 const total=39000;
 
 try{
+  // Verify the real state-change path used by a newly created application.
+  {
+    const state=await getState();
+    const notificationLeadId=`L-NOTIFY-${suffix}`;
+    state.leads.push({
+      id:notificationLeadId,name:'Notification E2E Client',contact:`notify-${suffix}@example.invalid`,model:'Telegram notification E2E',
+      budget:35000,source:'Mini App',manager:'',status:'Новый',priority:'Средний',
+      createdAt:new Date().toISOString(),nextAction:today,note:'Real lead-created notification E2E',clientCreated:true
+    });
+    state.notes[notificationLeadId]=[{at:new Date().toISOString(),text:'Notification E2E: заявка создана.'}];
+    const payload={...state,baseRevision:Number(state.revision)||0};delete payload.revision;
+    const response=await fetch(base+'/api/auto-sale/state',{method:'PUT',headers:notifyHeaders,body:JSON.stringify(payload)});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(`notification lead PUT failed: ${response.status} ${JSON.stringify(data)}`);
+    console.log('AUTO_SALE_REAL_LEAD_NOTIFICATION_TRIGGERED',JSON.stringify({leadId:notificationLeadId,revision:data.revision}));
+  }
+
   await mutate(state=>{
     state.leads.push({
       id:leadId,name:'Yandex E2E Client',contact:`e2e-${suffix}@example.invalid`,model:'BMW X5 xDrive40i 2022',
