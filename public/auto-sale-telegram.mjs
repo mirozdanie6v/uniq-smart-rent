@@ -88,13 +88,22 @@ window.addEventListener('auto-sale-server-synced',()=>{if(['manager','owner'].in
 try{if(['manager','owner'].includes(currentStaffRole()))setTimeout(()=>registerCurrentManager(),0)}catch{}
 
 function usernameFrom(value){const match=String(value||'').match(/(?:^|\s|\/)(?:@|t\.me\/)?([A-Za-z0-9_]{5,32})(?:$|\s|\?|\/)/i);return match?.[1]||''}
-function clientTelegram(lead){return{username:String(lead.telegramUsername||usernameFrom(lead.contact)||'').replace(/^@/,''),id:String(lead.telegramUserId||'')}}
+function clientTelegram(lead){
+  const stored=String(lead.telegramUsername||'').replace(/^@/,'').trim();
+  const contact=String(lead.contact||'').trim();
+  const explicit=/^@[A-Za-z0-9_]{5,32}$/.test(contact)?contact.slice(1):(/^https?:\/\/t\.me\/[A-Za-z0-9_]{5,32}\/?$/i.test(contact)?contact.replace(/^https?:\/\/t\.me\//i,'').replace(/\/$/,''):'');
+  return{username:stored||explicit,id:String(lead.telegramUserId||'')}
+}
 function managerTelegram(lead){return{username:String(lead.managerTelegramUsername||'').replace(/^@/,''),id:String(lead.managerTelegramUserId||'')}}
 function hasTelegram(contact){return Boolean(contact.username||contact.id)}
 function openTelegram(contact){
   const username=String(contact?.username||'').replace(/^@/,'').trim();
-  if(username){const url=`https://t.me/${encodeURIComponent(username)}`;try{if(tg?.openTelegramLink)return tg.openTelegramLink(url)}catch{}window.open(url,'_blank','noopener,noreferrer');return true}
-  return false;
+  if(!/^[A-Za-z0-9_]{5,32}$/.test(username))return false;
+  const selfUsername=String(currentTelegram?.username||'').replace(/^@/,'').trim().toLowerCase();
+  if(selfUsername&&username.toLowerCase()===selfUsername)return false;
+  const url=`https://t.me/${username}`;
+  try{if(tg?.openTelegramLink){tg.openTelegramLink(url);return true}}catch{}
+  window.open(url,'_blank','noopener,noreferrer');return true;
 }
 
 function patchLead(id,patch){
@@ -124,7 +133,7 @@ function enhanceManagerLead(){
 
   const contact=clientTelegram(lead);const side=document.querySelector('.auto-side-panel .auto-side-actions');
   if(side&&!side.querySelector('[data-tg-client]')){
-    const button=document.createElement('button');button.type='button';button.className='auto-btn tg';button.dataset.tgClient=id;button.textContent=contact.username?'Открыть чат клиента':(contact.id?'Чат доступен через бота':'Telegram клиента не указан');button.disabled=!contact.username;side.prepend(button);
+    const button=document.createElement('button');button.type='button';button.className='auto-btn tg';button.dataset.tgClient=id;const direct=Boolean(contact.username&&String(contact.username).toLowerCase()!==String(currentTelegram?.username||'').toLowerCase());button.textContent=direct?'Открыть чат клиента':(contact.id?'Чат клиента · через бота':'Telegram клиента не указан');button.disabled=!direct;side.prepend(button);
   }
   if(side&&!side.querySelector('[data-tg-send][data-tg-target="client"]')){
     const button=document.createElement('button');button.type='button';button.className='auto-btn ghost';button.dataset.tgSend=id;button.dataset.tgTarget='client';button.textContent=botMessagingAvailable&&contact.id?'Отправить через бота':'Сообщение через бота недоступно';button.disabled=!(botMessagingAvailable&&contact.id);side.prepend(button);
