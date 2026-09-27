@@ -171,14 +171,25 @@ document.addEventListener('submit',event=>{
       if(!form.elements.contact.value.trim())form.elements.contact.value=currentTelegram.contact;
       pendingClient={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),telegram:currentTelegram};
       setTimeout(async()=>{if(!pendingClient)return;const pending=pendingClient;const lead=findNewestLead(pending);pendingClient=null;if(!lead)return;
-        patchLead(lead.id,{telegramUserId:pending.telegram.id,telegramUsername:pending.telegram.username,telegramFirstName:pending.telegram.firstName,telegramLastName:pending.telegram.lastName,telegramDisplayName:pending.telegram.displayName,contact:pending.contact});
+        const identity={telegramUserId:pending.telegram.id,telegramUsername:pending.telegram.username,telegramFirstName:pending.telegram.firstName,telegramLastName:pending.telegram.lastName,telegramDisplayName:pending.telegram.displayName,contact:pending.contact};
+        patchLead(lead.id,identity);
         try{
-          const response=await fetch('/api/auto-sale/telegram/link-client',{method:'POST',headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},body:JSON.stringify({leadId:lead.id})});
-          const data=await response.json().catch(()=>({}));
-          if(!response.ok)throw new Error(data.error||'telegram_client_link_failed');
-          window.dispatchEvent(new CustomEvent('auto-sale-telegram-lead-linked',{detail:{leadId:lead.id,revision:data.revision}}));
+          // Wait until the ordinary state sync has created the lead in YDB.
+          // link-client is deliberately a second atomic operation so Telegram identity cannot be lost in a revision race.
+          let linked=null,lastError=null;
+          for(let attempt=0;attempt<8;attempt++){
+            if(attempt)await new Promise(resolve=>setTimeout(resolve,150+attempt*100));
+            const response=await fetch('/api/auto-sale/telegram/link-client',{method:'POST',headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},body:JSON.stringify({leadId:lead.id})});
+            const data=await response.json().catch(()=>({}));
+            if(response.ok){linked=data;break}
+            lastError=Object.assign(new Error(data.error||'telegram_client_link_failed'),{status:response.status,data});
+            if(![404,409].includes(response.status))break;
+          }
+          if(!linked)throw lastError||new Error('telegram_client_link_failed');
+          patchLead(lead.id,identity);
+          window.dispatchEvent(new CustomEvent('auto-sale-telegram-lead-linked',{detail:{leadId:lead.id,revision:linked.revision}}));
         }catch(error){console.warn('AUTO SALE Telegram client link failed',error)}
-      },0);
+      },250);
     }
     if(managerMode){const managerTelegram=String(form.elements.managerTelegram?.value||'').trim();if(managerTelegram)pendingManager={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),managerTelegram};}
   }
