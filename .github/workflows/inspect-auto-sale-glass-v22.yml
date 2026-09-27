@@ -1,4 +1,4 @@
-name: Inspect AUTO SALE living glass v22
+name: Inspect AUTO SALE crystal flow v23
 
 on:
   push:
@@ -15,18 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Wait for v22 live
+      - name: Wait for v23 live
         shell: bash
         run: |
           set -euo pipefail
           for i in $(seq 1 48); do
-            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v22=$RANDOM" | grep -q "auto-sale-calc-cta-v22.css"; then
-              echo "v22 is live"
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v23=$RANDOM" | grep -q "auto-sale-calc-cta-v23.css"; then
+              echo "v23 is live"
               exit 0
             fi
             sleep 5
           done
-          echo "v22 did not become live"
+          echo "v23 did not become live"
           exit 8
 
       - name: Capture living glass phases in Chrome
@@ -53,11 +53,11 @@ jobs:
             await page.setViewport({width:390,height:844,deviceScaleFactor:2});
 
             for(let a=0;a<12;a++){
-              await page.goto('https://autoworld.viiversion.com/?_inspect_v22='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
+              await page.goto('https://autoworld.viiversion.com/?_inspect_v23='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
               const href=await page.evaluate(()=>document.querySelector('link[href*="auto-sale-calc-cta"]')?.getAttribute('href')||'');
               console.log('CSS_HREF='+href);
-              if(href.includes('auto-sale-calc-cta-v22.css')) break;
-              if(a===11) throw new Error('browser never loaded v22 stylesheet');
+              if(href.includes('auto-sale-calc-cta-v23.css')) break;
+              if(a===11) throw new Error('browser never loaded v23 stylesheet');
               await new Promise(r=>setTimeout(r,1200));
             }
 
@@ -116,6 +116,8 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: living-glass-v22-screens
+          name: living-glass-v23-screens
           path: /tmp/glass-shots/*.png
           if-no-files-found: error
+
+# v23 inspection
