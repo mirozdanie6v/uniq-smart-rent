@@ -40,7 +40,7 @@ function paymentStageTitle(order,payment){
 function leadTitle(lead){return clean(lead?.model)||clean(lead?.name)||clean(lead?.id)||'заявка'}
 function orderTitle(order){return clean(order?.model)||clean(order?.id)||'автомобиль'}
 function statusClientTitle(status){
-  return ({'В работе':'Заявка принята в работу','Расчёт':'Готовим расчёт','Ожидает клиента':'Расчёт готов — требуется ваше решение','Сделка':'Условия согласованы — оформляем заказ'}[clean(status)]||('Статус заявки: '+(clean(status)||'обновлён')));
+  return ({'В работе':'Менеджер принял заявку в работу','Расчёт':'Менеджер готовит расчёт','Ожидает клиента':'Расчёт готов','Сделка':'Расчёт согласован — оформляем заказ'}[clean(status)]||('Статус заявки: '+(clean(status)||'обновлён')));
 }
 function stageClientTitle(stage){
   return ({'Выкуп':'Автомобиль готовится к выкупу','Порт США':'Автомобиль доставлен в порт','В море':'Автомобиль отправлен морем','Таможня':'Автомобиль проходит таможенное оформление','Доставка':'Автомобиль направлен к месту выдачи','Выдача':'Автомобиль готов к выдаче'}[clean(stage)]||('Новый этап: '+(clean(stage)||'обновлён')));
@@ -197,10 +197,10 @@ export function createTelegramService({
         const source=lead.clientCreated?'Новая заявка клиента':'Новый лид';
         await toManagers(lead,`🚗 AUTO МИР · ${source.toLowerCase()}\n${clean(lead.name)||'Клиент'}\n${leadTitle(lead)}\nБюджет: ${lead.budget?money(lead.budget):'не указан'}\nКонтакт: ${clean(lead.contact)||'—'}`,{event:'lead_created',leadId:lead.id});
         if(lead.clientCreated){
-          await toClient(lead,`🚗 AUTO МИР · заявка принята\n\n${leadTitle(lead)}\nБюджет: ${lead.budget?money(lead.budget):'не указан'}\nСтатус: ${clean(lead.status)||'Новый'}\n\nМенеджер получил вашу заявку. Здесь будут приходить изменения по расчёту и заказу.`,{event:'lead_created_confirmation',leadId:lead.id});
+          await toClient(lead,`🚗 AUTO МИР · заявка принята\n\n${leadTitle(lead)}\nБюджет: ${lead.budget?money(lead.budget):'не указан'}\nСтатус: ${clean(lead.status)||'Новый'}\n\nЗаявка передана менеджеру. Мы сообщим здесь, когда будет готов расчёт, а после оформления заказа — об оплатах и этапах доставки.`,{event:'lead_created_confirmation',leadId:lead.id});
         }
       }else if(before&&clean(before.status)!==clean(lead.status)){
-        const clientMsg=`🚗 AUTO МИР\n\n${statusClientTitle(lead.status)}\n${leadTitle(lead)}\n\n${clean(lead.status)==='В работе'?'Менеджер начал обработку вашей заявки. Мы сообщим здесь, когда расчёт будет готов.':clean(lead.status)==='Ожидает клиента'?'Откройте AUTO МИР, чтобы посмотреть расчёт и подтвердить решение.':'Мы сообщим здесь о следующем изменении.'}`;
+        const clientMsg=`🚗 AUTO МИР\n\n${statusClientTitle(lead.status)}\n${leadTitle(lead)}\n\n${clean(lead.status)==='В работе'?'Менеджер уже работает с вашей заявкой. Сообщим, когда расчёт будет готов.':clean(lead.status)==='Ожидает клиента'?'Откройте AUTO МИР: расчёт готов и ждёт вашего решения.':'Следующее важное изменение мы также пришлём сюда.'}`;
         const managerMsg=`🔔 AUTO МИР · статус заявки\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${leadTitle(lead)}\n${clean(before.status)||'—'} → ${clean(lead.status)||'—'}`;
         await toClient(lead,clientMsg,{event:'lead_status',leadId:lead.id});
         await toManagers(lead,managerMsg,{event:'lead_status',leadId:lead.id});
@@ -212,7 +212,7 @@ export function createTelegramService({
       if(!before||clean(before.status)===clean(quote.status))continue;
       const lead=quoteLead(next,quote);if(!lead)continue;
       const total=num(quote.total)?`\nСтоимость: ${money(quote.total)}`:'';
-      const clientMsg=`💰 AUTO МИР · расчёт\n\n${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}\n\n${clean(quote.status)==='Отправлен'?'Расчёт готов. Откройте AUTO МИР, чтобы посмотреть подробности.':clean(quote.status)==='Согласован'?'Расчёт подтверждён. Переходим к оформлению заказа.':'Мы сообщим о следующем изменении.'}`;
+      const clientMsg=`💰 AUTO МИР · расчёт\n\n${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}\n\n${clean(quote.status)==='Отправлен'?'Расчёт готов. Откройте AUTO МИР, чтобы увидеть итоговую стоимость и детали.':clean(quote.status)==='Согласован'?'Расчёт согласован. Менеджер переходит к оформлению заказа.':'Следующее важное изменение мы также пришлём сюда.'}`;
       const managerMsg=`💰 AUTO МИР · расчёт\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}`;
       await toClient(lead,clientMsg,{event:'quote_status',leadId:lead.id,quoteId:quote.id},'Посмотреть расчёт');
       await toManagers(lead,managerMsg,{event:'quote_status',leadId:lead.id,quoteId:quote.id});
@@ -222,7 +222,7 @@ export function createTelegramService({
       const before=prevOrders.get(clean(order.id));
       const lead=orderLead(next,order);if(!lead)continue;
       if(!before){
-        const clientMsg=`✅ AUTO МИР · заказ оформлен\n\n${orderTitle(order)}\nНомер заказа: ${clean(order.id)}\nТекущий этап: ${clean(order.stage)||'Выкуп'}\n\nТеперь здесь будут приходить уведомления об оплатах, доставке и изменении статуса автомобиля.`;
+        const clientMsg=`✅ AUTO МИР · заказ оформлен\n\n${orderTitle(order)}\nНомер заказа: ${clean(order.id)}\nТекущий этап: ${clean(order.stage)||'Выкуп'}\n\nЗаказ создан. Здесь будут приходить подтверждения платежей и изменения этапов доставки автомобиля.`;
         const managerMsg=`✅ AUTO МИР · заказ создан\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${orderTitle(order)}\nЗаказ: ${clean(order.id)}\nЭтап: ${clean(order.stage)||'Выкуп'}`;
         await toClient(lead,clientMsg,{event:'order_created',leadId:lead.id,orderId:order.id},'Открыть заказ');
         await toManagers(lead,managerMsg,{event:'order_created',leadId:lead.id,orderId:order.id});
@@ -238,7 +238,7 @@ export function createTelegramService({
       for(const payment of newPayments){
         const title=paymentStageTitle(order,payment);
         const fullyPaid=num(order.paid)>=num(order.total)&&num(order.total)>0;
-        const clientMsg=`💳 AUTO МИР · ${fullyPaid?'оплата получена полностью':'платёж получен'}\n\n${orderTitle(order)}\n${title}\nСумма: ${money(payment.amount)}\nОплачено по заказу: ${money(order.paid)} из ${money(order.total)}\n\n${fullyPaid?'Спасибо. Оплата по заказу зафиксирована полностью.':'Платёж зафиксирован. Следующее уведомление придёт при изменении заказа.'}`;
+        const clientMsg=`💳 AUTO МИР · ${fullyPaid?'оплата получена полностью':'платёж получен'}\n\n${orderTitle(order)}\n${title}\nСумма: ${money(payment.amount)}\nОплачено по заказу: ${money(order.paid)} из ${money(order.total)}\n\n${fullyPaid?'Оплата по заказу получена полностью. Информация сохранена в заказе.':'Платёж получен и зафиксирован. Следующее уведомление придёт при изменении заказа.'}`;
         const managerMsg=`💳 AUTO МИР · платёж\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${orderTitle(order)}\n${title}\nСумма: ${money(payment.amount)}\nОплачено: ${money(order.paid)} из ${money(order.total)}`;
         await toClient(lead,clientMsg,{event:'payment',leadId:lead.id,orderId:order.id,paymentId:payment.id});
         await toManagers(lead,managerMsg,{event:'payment',leadId:lead.id,orderId:order.id,paymentId:payment.id});
