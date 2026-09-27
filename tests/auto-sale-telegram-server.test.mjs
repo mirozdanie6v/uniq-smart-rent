@@ -55,9 +55,11 @@ test('fallback manager chat ids receive new client request notifications',async(
     clientCreated:true,telegramUserId:'700'
   }],quotes:[],orders:[]};
   const deliveries=await service.notifyStateChanges(previous,next);
-  assert.equal(deliveries.length,2);
-  assert.deepEqual(sent.map(x=>x.body.chat_id),['900','901']);
+  assert.equal(deliveries.filter(x=>x.target==='manager').length,2);
+  assert.equal(deliveries.filter(x=>x.target==='client').length,1);
+  assert.deepEqual(sent.map(x=>x.body.chat_id),['900','901','700']);
   assert.match(sent[0].body.text,/новая заявка/);
+  assert.match(sent[2].body.text,/заявка принята/);
 });
 
 test('order stage and payment changes notify linked client and manager',async()=>{
