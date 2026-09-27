@@ -20,6 +20,28 @@ if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when
 const store=await createYdbStateStore({connectionString});
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
+const notificationPumpIntervalMs=Math.max(15_000,Number(process.env.AUTO_SALE_NOTIFICATION_PUMP_MS||60_000));
+let notificationPumpBusy=false;
+async function processNotificationOutbox(limit=50){
+  if(notificationPumpBusy)return{ok:true,skipped:'busy',processed:0,stats:await store.notificationStats()};
+  notificationPumpBusy=true;
+  const results=[];
+  try{
+    const pending=await store.pendingNotifications(limit);
+    for(const item of pending){
+      try{
+        const sent=await telegram.send(item.chatId,item.message);
+        await store.markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
+        results.push({id:item.id,ok:true,messageId:sent?.message_id||null});
+      }catch(error){
+        const message=String(error?.message||'telegram_send_failed');
+        await store.markNotification(item.id,{ok:false,error:message,attempts:item.attempts});
+        results.push({id:item.id,ok:false,error:message});
+      }
+    }
+    return{ok:true,processed:results.length,results,stats:await store.notificationStats()};
+  }finally{notificationPumpBusy=false}
+}
 
 const apiHeaders={
   'content-type':'application/json; charset=utf-8',
@@ -127,18 +149,7 @@ const server=http.createServer(async(req,res)=>{
 
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/notifications/process'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
-      const pending=await store.pendingNotifications(50),results=[];
-      for(const item of pending){
-        try{
-          const sent=await telegram.send(item.chatId,item.message);
-          await store.markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
-          results.push({id:item.id,ok:true,messageId:sent?.message_id||null});
-        }catch(error){
-          await store.markNotification(item.id,{ok:false,error:String(error?.message||'telegram_send_failed'),attempts:item.attempts});
-          results.push({id:item.id,ok:false,error:String(error?.message||'telegram_send_failed')});
-        }
-      }
-      json(res,{ok:true,processed:results.length,results,stats:await store.notificationStats()});
+      json(res,await processNotificationOutbox(50));
       return;
     }
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/status'){
@@ -352,10 +363,16 @@ const server=http.createServer(async(req,res)=>{
     json(res,{error:status===413?(code==='image_too_large'?'image_too_large':'payload_too_large'):status===400?code:status===503?code:'internal_error'},status);
   }
 });
-server.listen(port,'0.0.0.0',()=>console.log(`AUTO SALE Yandex listening on ${port}`));
+server.listen(port,'0.0.0.0',()=>{
+  console.log(`AUTO SALE Yandex listening on ${port}`);
+  setTimeout(()=>processNotificationOutbox().catch(error=>console.error('AUTO SALE notification pump failed',error)),5_000).unref();
+});
+const notificationPump=setInterval(()=>processNotificationOutbox().catch(error=>console.error('AUTO SALE notification pump failed',error)),notificationPumpIntervalMs);
+notificationPump.unref();
 
 const shutdown=signal=>{
   console.log(`Received ${signal}`);
+  clearInterval(notificationPump);
   server.close(async()=>{
     await store.close();
     process.exit(0);
