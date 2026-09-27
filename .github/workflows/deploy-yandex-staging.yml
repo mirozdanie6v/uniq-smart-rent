@@ -157,14 +157,16 @@ jobs:
           curl -fsS "${URL%/}/api/auto-sale/state" | jq -e '.initialized == true and (.revision|tonumber) >= 1' >/dev/null
           echo "Yandex public demo staging verified: $URL"
 
-      - name: Diagnose Yandex outbound Telegram connectivity
+      - name: Diagnose Yandex and Cloudflare Telegram relay
         run: |
           set -euo pipefail
           URL=${STAGING_URL%/}
           echo "Container URL: $URL"
           curl -fsS "$URL/api/health" | jq '{ok,telegramNotifications,telegramFallbackManagers}'
-          echo "Outbound probes:"
-          curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/diagnose" | jq .
+          echo "Cloudflare relay reachability:"
+          relay_code=$(curl -sS --connect-timeout 10 --max-time 20 -o /tmp/relay-probe -w '%{http_code}' "$AUTO_SALE_TELEGRAM_RELAY_URL" || true)
+          echo "Relay HTTP: $relay_code"
+          test "$relay_code" != "000"
           echo "Revision network configuration:"
           yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
 
