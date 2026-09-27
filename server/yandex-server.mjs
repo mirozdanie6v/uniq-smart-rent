@@ -105,13 +105,37 @@ const server=http.createServer(async(req,res)=>{
         const nextState={...input,initialized:true};
         setImmediate(()=>{
           telegram.notifyStateChanges(before,nextState)
-            .then(deliveries=>{if(deliveries.some(x=>!x.ok))console.warn('AUTO SALE Telegram partial delivery',deliveries.filter(x=>!x.ok))})
+            .then(async deliveries=>{
+              const failed=deliveries.filter(x=>!x.ok);
+              if(failed.length){await store.enqueueNotifications(failed);console.warn('AUTO SALE Telegram queued failed deliveries',failed.map(x=>x.id))}
+            })
             .catch(error=>console.error('AUTO SALE Telegram state notification failed',error));
         });
       }
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/notifications/process'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const pending=await store.pendingNotifications(50),results=[];
+      for(const item of pending){
+        try{
+          const sent=await telegram.send(item.chatId,item.message);
+          await store.markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
+          results.push({id:item.id,ok:true,messageId:sent?.message_id||null});
+        }catch(error){
+          await store.markNotification(item.id,{ok:false,error:String(error?.message||'telegram_send_failed'),attempts:item.attempts});
+          results.push({id:item.id,ok:false,error:String(error?.message||'telegram_send_failed')});
+        }
+      }
+      json(res,{ok:true,processed:results.length,results,stats:await store.notificationStats()});
+      return;
+    }
+    if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/status'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      json(res,{ok:true,stats:await store.notificationStats()});return;
+    }
+
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/telegram/diagnose'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const probe=async target=>{
