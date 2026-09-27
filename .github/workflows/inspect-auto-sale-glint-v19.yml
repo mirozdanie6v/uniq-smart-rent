@@ -1,4 +1,4 @@
-name: Inspect AUTO SALE pearlescent glass v20
+name: Inspect AUTO SALE crystal sheen v21
 
 on:
   push:
@@ -15,18 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Wait for v20 live
+      - name: Wait for v21 live
         shell: bash
         run: |
           set -euo pipefail
           for i in $(seq 1 48); do
-            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glint_v20=$RANDOM" | grep -q "auto-sale-calc-cta-v20.css"; then
-              echo "v20 is live"
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glint_v21=$RANDOM" | grep -q "auto-sale-calc-cta-v21.css"; then
+              echo "v21 is live"
               exit 0
             fi
             sleep 5
           done
-          echo "v20 did not become live"
+          echo "v21 did not become live"
           exit 8
 
       - name: Capture live button phases in Chrome
@@ -53,16 +53,16 @@ jobs:
             await page.setViewport({width:390,height:844,deviceScaleFactor:2});
             let loadedV20=false;
             for(let attempt=0;attempt<12;attempt++){
-              await page.goto('https://autoworld.viiversion.com/?_inspect=v20_'+Date.now()+'_'+attempt,{
+              await page.goto('https://autoworld.viiversion.com/?_inspect=v21_'+Date.now()+'_'+attempt,{
                 waitUntil:'networkidle2',
                 timeout:60000
               });
               const href=await page.evaluate(()=>document.querySelector('link[href*="auto-sale-calc-cta"]')?.getAttribute('href')||'');
               console.log('CSS_HREF='+href);
-              if(href.includes('auto-sale-calc-cta-v20.css')){ loadedV20=true; break; }
+              if(href.includes('auto-sale-calc-cta-v21.css')){ loadedV20=true; break; }
               await new Promise(r=>setTimeout(r,1500));
             }
-            if(!loadedV20) throw new Error('browser never loaded v20 stylesheet');
+            if(!loadedV20) throw new Error('browser never loaded v21 stylesheet');
 
             const btnSel='.auto-calc-btn:not([disabled])';
             const glintSel=btnSel+' .auto-calc-glint';
@@ -95,7 +95,7 @@ jobs:
 
             const anim=await page.evaluateHandle(sel=>{
               const el=document.querySelector(sel);
-              return el.getAnimations().find(a=>a.animationName==='autoCalcPearlGlassV20') || el.getAnimations()[0];
+              return el.getAnimations().find(a=>a.animationName==='autoCalcCrystalSkinV21') || el.getAnimations()[0];
             },glintSel);
 
             const phases=[
@@ -108,8 +108,8 @@ jobs:
             for(const p of phases){
               await page.evaluate((sel)=>document.querySelector(sel).getAnimations().forEach(a=>a.pause()),glintSel);
               await page.evaluate((sel,f)=>{
-                const a=document.querySelector(sel).getAnimations().find(x=>x.animationName==='autoCalcPearlGlassV20')||document.querySelector(sel).getAnimations()[0];
-                if(a){a.currentTime=8800*f;a.pause();}
+                const a=document.querySelector(sel).getAnimations().find(x=>x.animationName==='autoCalcCrystalSkinV21')||document.querySelector(sel).getAnimations()[0];
+                if(a){a.currentTime=9600*f;a.pause();}
               },glintSel,p.t);
               await new Promise(r=>setTimeout(r,120));
               const btn=await page.$(btnSel);
@@ -118,7 +118,7 @@ jobs:
 
             const summary=await page.evaluate(sel=>{
               const g=document.querySelector(sel);
-              const a=g.getAnimations().find(x=>x.animationName==='autoCalcPearlGlassV20')||g.getAnimations()[0];
+              const a=g.getAnimations().find(x=>x.animationName==='autoCalcCrystalSkinV21')||g.getAnimations()[0];
               return {
                 animationName:getComputedStyle(g).animationName,
                 duration:getComputedStyle(g).animationDuration,
@@ -136,10 +136,12 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: glint-v20-screens
+          name: glint-v21-screens
           path: /tmp/glint-shots/*.png
           if-no-files-found: error
 
-# v20 visual inspection
+# v21 visual inspection
 
-# strict browser-side v20 cache check
+# strict browser-side v21 cache check
+
+# v21 crystal sheen visual inspection
