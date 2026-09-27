@@ -178,8 +178,9 @@ export function createTelegramService({
 
     for(const lead of arr(next?.leads)){
       const before=prevLeads.get(clean(lead.id));
-      if(!before&&lead.clientCreated){
-        await toManagers(lead,`🚗 AUTO МИР · новая заявка\n${clean(lead.name)||'Клиент'}\n${leadTitle(lead)}\nБюджет: ${lead.budget?money(lead.budget):'не указан'}\nКонтакт: ${clean(lead.contact)||'—'}`,{event:'lead_created',leadId:lead.id});
+      if(!before){
+        const source=lead.clientCreated?'Новая заявка клиента':'Новый лид';
+        await toManagers(lead,`🚗 AUTO МИР · ${source.toLowerCase()}\n${clean(lead.name)||'Клиент'}\n${leadTitle(lead)}\nБюджет: ${lead.budget?money(lead.budget):'не указан'}\nКонтакт: ${clean(lead.contact)||'—'}`,{event:'lead_created',leadId:lead.id});
       }else if(before&&clean(before.status)!==clean(lead.status)){
         const msg=`AUTO МИР · статус заявки\n${leadTitle(lead)}\n${clean(before.status)||'—'} → ${clean(lead.status)||'—'}`;
         await toClient(lead,msg,{event:'lead_status',leadId:lead.id});
