@@ -132,13 +132,18 @@ const server=http.createServer(async(req,res)=>{
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const state=await store.loadState();
-      const lead=(Array.isArray(state.leads)?state.leads:[]).find(item=>/^\d+$/.test(String(item?.telegramUserId||''))&&String(item?.manager||'').trim());
+      const team=Array.isArray(state.team)?state.team:[];
+      const leads=Array.isArray(state.leads)?state.leads:[];
+      let lead=leads.find(item=>/^\d+$/.test(String(item?.telegramUserId||''))&&team.some(member=>member?.active!==false&&String(member?.name||'').trim()===String(item?.manager||'').trim()&&/^\d+$/.test(String(member?.telegramUserId||''))));
+      if(!lead)lead=leads.find(item=>/^\d+$/.test(String(item?.telegramUserId||'')));
       if(!lead){json(res,{error:'linked_conversation_not_available'},409);return}
-      const manager=(Array.isArray(state.team)?state.team:[]).find(item=>item?.active!==false&&String(item?.name||'').trim()===String(lead.manager||'').trim()&&/^\d+$/.test(String(item?.telegramUserId||'')));
-      if(!manager){json(res,{error:'assigned_manager_telegram_not_linked'},409);return}
+      let manager=team.find(item=>item?.active!==false&&String(item?.name||'').trim()===String(lead.manager||'').trim()&&/^\d+$/.test(String(item?.telegramUserId||'')));
+      if(!manager)manager=team.find(item=>item?.active!==false&&/^\d+$/.test(String(item?.telegramUserId||'')));
+      if(!manager){json(res,{error:'manager_telegram_not_linked'},409);return}
+      const conversationState={...state,leads:leads.map(item=>String(item?.id||'')===String(lead.id||'')?{...item,manager:manager.name,managerTelegramUserId:String(manager.telegramUserId)}:item)};
       try{
-        const toClient=await telegram.sendManual(state,{leadId:lead.id,target:'client',text:'Проверка канала: менеджер → клиент.',senderId:String(manager.telegramUserId)});
-        const toManager=await telegram.sendManual(state,{leadId:lead.id,target:'manager',text:'Проверка канала: клиент → менеджер.',senderId:String(lead.telegramUserId)});
+        const toClient=await telegram.sendManual(conversationState,{leadId:lead.id,target:'client',text:'Проверка канала: менеджер → клиент.',senderId:String(manager.telegramUserId)});
+        const toManager=await telegram.sendManual(conversationState,{leadId:lead.id,target:'manager',text:'Проверка канала: клиент → менеджер.',senderId:String(lead.telegramUserId)});
         json(res,{ok:true,leadId:lead.id,manager:{id:manager.id,name:manager.name},managerToClientMessageId:toClient.messageId,clientToManagerMessageId:toManager.messageId},201);
       }catch(error){
         json(res,{error:String(error?.message||'telegram_send_failed'),telegramDescription:String(error?.telegramDescription||'')},Number(error?.statusCode)||500);
