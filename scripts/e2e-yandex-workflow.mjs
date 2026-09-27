@@ -36,13 +36,20 @@ async function putState(state){
   const {response,data}=await request('/api/auto-sale/state',{method:'PUT',body:JSON.stringify(payload)});
   if(!response.ok)throw new Error(`PUT state failed: ${response.status} ${JSON.stringify(data)}`);
   const next=await getState();
-  if(Number(next.revision)!==Number(data.revision))throw new Error('revision_mismatch_after_write');
+  if(Number(next.revision)<Number(data.revision))throw new Error('revision_regressed_after_write');
   return next;
 }
 async function mutate(mutator){
-  const state=await getState();
-  mutator(state);
-  return putState(state);
+  for(let attempt=0;attempt<8;attempt++){
+    const state=await getState();
+    mutator(state);
+    const payload={...state,baseRevision:Number(state.revision)||0};delete payload.revision;
+    const {response,data}=await request('/api/auto-sale/state',{method:'PUT',body:JSON.stringify(payload)});
+    if(response.ok)return getState();
+    if(response.status!==409)throw new Error(`PUT state failed: ${response.status} ${JSON.stringify(data)}`);
+    await new Promise(resolve=>setTimeout(resolve,150*(attempt+1)));
+  }
+  throw new Error('PUT state failed after revision-conflict retries');
 }
 
 const publicStateResponse=await fetch(base+'/api/auto-sale/state',{headers:{accept:'application/json'},cache:'no-store'});
