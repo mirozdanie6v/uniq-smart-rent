@@ -101,6 +101,7 @@ jobs:
           AUTO_SALE_API_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
+          printf '%s' "$AUTO_SALE_API_KEY" > "$RUNNER_TEMP/auto-sale-api-key
 
       - name: Deploy public demo YDB staging container
         run: |
@@ -141,6 +142,11 @@ jobs:
           URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
           echo "STAGING_URL=$URL" >> "$GITHUB_ENV"
+          # Re-export the exact generated credential after deployment so every protected
+          # live-delivery check uses the same bytes that were injected into the revision.
+          AUTO_SALE_API_KEY=$(cat "$RUNNER_TEMP/auto-sale-api-key")
+          echo "::add-mask::$AUTO_SALE_API_KEY"
+          echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
             if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
               break
