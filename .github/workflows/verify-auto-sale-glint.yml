@@ -1,4 +1,4 @@
-name: Verify AUTO SALE live glint
+name: Verify AUTO SALE live glint v13
 
 on:
   push:
@@ -129,3 +129,5 @@ jobs:
           NODE
 
           CHROME="$CHROME" node verify.cjs
+
+# v13 rerun
