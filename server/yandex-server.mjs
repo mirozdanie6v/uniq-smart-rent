@@ -231,6 +231,27 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
 
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/link-client'){
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
+      if(!auth.ok){json(res,{error:auth.error},401);return}
+      const input=await parseJson(req,20_000);
+      const leadId=String(input?.leadId||'').trim();
+      if(!leadId){json(res,{error:'lead_id_required'},400);return}
+      const state=await store.loadState();
+      const leads=Array.isArray(state.leads)?state.leads.map(item=>({...item})):[];
+      const index=leads.findIndex(item=>String(item?.id||'')===leadId);
+      if(index<0){json(res,{error:'lead_not_found'},404);return}
+      const existing=String(leads[index].telegramUserId||'').trim();
+      if(existing&&existing!==String(auth.user.id)){json(res,{error:'client_telegram_already_linked'},409);return}
+      const username=String(auth.user.username||'').replace(/^@/,'');
+      leads[index]={...leads[index],clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()};
+      const replaced=await store.replaceState({...state,leads},{expectedRevision:state.revision});
+      if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
+      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision});
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
       const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
