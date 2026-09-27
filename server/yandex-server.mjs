@@ -128,6 +128,32 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
 
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-bot-scenarios'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const chat={id:987654321};
+      const from={id:987654321,first_name:'Тест'};
+      const scenarios=[
+        {name:'start',update:{message:{chat,from,text:'/start'}},expected:'/start',button:true},
+        {name:'catalog',update:{message:{chat,from,text:'/catalog'}},expected:'/catalog',button:true},
+        {name:'app',update:{message:{chat,from,text:'/app'}},expected:'/app',button:true},
+        {name:'help',update:{message:{chat,from,text:'/help'}},expected:'/help',button:true},
+        {name:'fallback',update:{message:{chat,from,text:'Здравствуйте'}},expected:'fallback',button:false}
+      ];
+      const appUrl=process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://autoworld.viiversion.com/';
+      const results=[];
+      for(const scenario of scenarios){
+        const result=await telegram.handleWebhookUpdate(scenario.update,{appUrl,webhookReply:true});
+        const payload=result?.webhookPayload||{};
+        const webAppUrl=payload?.reply_markup?.inline_keyboard?.[0]?.[0]?.web_app?.url||'';
+        results.push({name:scenario.name,ok:result?.handled===scenario.expected&&result?.webhookMethod==='sendMessage'&&(!scenario.button||webAppUrl===appUrl),handled:result?.handled,webhookMethod:result?.webhookMethod,webAppUrl});
+      }
+      const ignored=await telegram.handleWebhookUpdate({update_id:1},{appUrl,webhookReply:true});
+      results.push({name:'non_message_ignored',ok:ignored?.ignored===true});
+      json(res,{ok:results.every(item=>item.ok),appUrl,results},results.every(item=>item.ok)?200:500);
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-conversation-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
