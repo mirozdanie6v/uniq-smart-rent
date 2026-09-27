@@ -146,15 +146,6 @@ jobs:
           curl -fsS "${URL%/}/api/auto-sale/state" | jq -e '.initialized == true and (.revision|tonumber) >= 1' >/dev/null
           echo "Yandex public demo staging verified: $URL"
 
-      - name: Clear all existing applications
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          response=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/admin/clear-applications")
-          echo "$response" | jq .
-          test "$(echo "$response" | jq -r '.ok')" = "true"
-          echo "AUTO_SALE_APPLICATIONS_CLEARED"
-
       - name: Diagnose Yandex outbound Telegram connectivity
         run: |
           set -euo pipefail
