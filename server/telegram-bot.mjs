@@ -87,13 +87,13 @@ export function createTelegramService({
     return data?.result||data;
   }
 
-  async function send(chatId,message,{disableWebPagePreview=true}={}){
+  async function send(chatId,message,{disableWebPagePreview=true,replyMarkup=null}={}){
     const id=clean(chatId),body=clean(message);
     if(!/^-?\d+$/.test(id)){const error=new Error('telegram_chat_id_required');error.statusCode=409;throw error}
     if(!body){const error=new Error('telegram_message_required');error.statusCode=400;throw error}
     if(body.length>3500){const error=new Error('telegram_message_too_long');error.statusCode=400;throw error}
     if(telegramRelayUrl){
-      const payload=JSON.stringify({chatId:id,text:body,disableWebPagePreview});
+      const payload=JSON.stringify({chatId:id,text:body,disableWebPagePreview,replyMarkup});
       const timestamp=String(now());
       const relayKey=telegramRelaySecret||botToken;
       const signature=createHmac('sha256',relayKey).update(timestamp+'.'+payload).digest('hex');
@@ -104,7 +104,7 @@ export function createTelegramService({
       if(!response.ok||data?.ok===false){const error=new Error('telegram_relay_error');error.statusCode=502;error.telegramDescription=clean(data?.description)||clean(data?.error)||`HTTP ${response.status}`;throw error}
       return{message_id:data?.messageId||null};
     }
-    return api('sendMessage',{chat_id:id,text:body,disable_web_page_preview:disableWebPagePreview});
+    return api('sendMessage',{chat_id:id,text:body,disable_web_page_preview:disableWebPagePreview,...(replyMarkup?{reply_markup:replyMarkup}:{})});
   }
 
   function validateInitData(initData){
@@ -174,19 +174,21 @@ export function createTelegramService({
     const prevQuotes=new Map(arr(previous.quotes).map(x=>[clean(x.id),x]));
     const prevOrders=new Map(arr(previous.orders).map(x=>[clean(x.id),x]));
 
-    const deliver=async(chatId,message,meta)=>{
+    const appUrl=clean(process.env.AUTO_SALE_TELEGRAM_APP_URL||'');
+    const actionMarkup=label=>appUrl?{inline_keyboard:[[{text:label,web_app:{url:appUrl}}]]}:null;
+    const deliver=async(chatId,message,meta,replyMarkup=null)=>{
       try{
-        const result=await send(chatId,message);
+        const result=await send(chatId,message,{replyMarkup});
         deliveries.push({ok:true,chatId,messageId:result?.message_id||null,id:eventKey(meta)+':'+meta.target+':'+chatId,...meta});
       }catch(error){
         deliveries.push({ok:false,chatId,error:clean(error?.message)||'telegram_send_failed',id:eventKey(meta)+':'+meta.target+':'+chatId,message,...meta});
       }
     };
-    const toManagers=async(lead,message,meta)=>{
-      for(const chatId of managerIds(lead,fallbackManagers,next))await deliver(chatId,message,{target:'manager',...meta});
+    const toManagers=async(lead,message,meta,label='Открыть заявку')=>{
+      for(const chatId of managerIds(lead,fallbackManagers,next))await deliver(chatId,message,{target:'manager',...meta},actionMarkup(label));
     };
-    const toClient=async(lead,message,meta)=>{
-      const chatId=clientId(lead);if(chatId)await deliver(chatId,message,{target:'client',...meta});
+    const toClient=async(lead,message,meta,label='Открыть AUTO МИР')=>{
+      const chatId=clientId(lead);if(chatId)await deliver(chatId,message,{target:'client',...meta},actionMarkup(label));
     };
 
     for(const lead of arr(next?.leads)){
@@ -212,7 +214,7 @@ export function createTelegramService({
       const total=num(quote.total)?`\nСтоимость: ${money(quote.total)}`:'';
       const clientMsg=`💰 AUTO МИР · расчёт\n\n${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}\n\n${clean(quote.status)==='Отправлен'?'Расчёт готов. Откройте AUTO МИР, чтобы посмотреть подробности.':clean(quote.status)==='Согласован'?'Расчёт подтверждён. Переходим к оформлению заказа.':'Мы сообщим о следующем изменении.'}`;
       const managerMsg=`💰 AUTO МИР · расчёт\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}`;
-      await toClient(lead,clientMsg,{event:'quote_status',leadId:lead.id,quoteId:quote.id});
+      await toClient(lead,clientMsg,{event:'quote_status',leadId:lead.id,quoteId:quote.id},'Посмотреть расчёт');
       await toManagers(lead,managerMsg,{event:'quote_status',leadId:lead.id,quoteId:quote.id});
     }
 
@@ -222,13 +224,13 @@ export function createTelegramService({
       if(!before){
         const clientMsg=`✅ AUTO МИР · заказ оформлен\n\n${orderTitle(order)}\nНомер заказа: ${clean(order.id)}\nТекущий этап: ${clean(order.stage)||'Выкуп'}\n\nТеперь здесь будут приходить уведомления об оплатах, доставке и изменении статуса автомобиля.`;
         const managerMsg=`✅ AUTO МИР · заказ создан\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${orderTitle(order)}\nЗаказ: ${clean(order.id)}\nЭтап: ${clean(order.stage)||'Выкуп'}`;
-        await toClient(lead,clientMsg,{event:'order_created',leadId:lead.id,orderId:order.id});
+        await toClient(lead,clientMsg,{event:'order_created',leadId:lead.id,orderId:order.id},'Открыть заказ');
         await toManagers(lead,managerMsg,{event:'order_created',leadId:lead.id,orderId:order.id});
       }else if(clean(before.stage)!==clean(order.stage)){
         const extra=clean(order.location)?`\nЛокация: ${clean(order.location)}`:'';
         const clientMsg=`🚚 AUTO МИР · заказ\n\n${stageClientTitle(order.stage)}\n${orderTitle(order)}${extra}\n\n${nextStageText(order.stage)}`;
         const managerMsg=`🚚 AUTO МИР · этап заказа\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${orderTitle(order)}\n${clean(before.stage)||'—'} → ${clean(order.stage)||'—'}${extra}`;
-        await toClient(lead,clientMsg,{event:'order_stage',leadId:lead.id,orderId:order.id});
+        await toClient(lead,clientMsg,{event:'order_stage',leadId:lead.id,orderId:order.id},'Отследить автомобиль');
         await toManagers(lead,managerMsg,{event:'order_stage',leadId:lead.id,orderId:order.id});
       }
       const previousPaymentIds=new Set(arr(before?.payments).map(x=>clean(x.id)));
