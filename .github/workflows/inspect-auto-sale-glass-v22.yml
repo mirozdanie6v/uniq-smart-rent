@@ -1,4 +1,4 @@
-name: Inspect AUTO SALE crystal flow v23
+name: Inspect AUTO SALE refractive glass v24
 
 on:
   push:
@@ -15,21 +15,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - name: Wait for v23 live
+      - name: Wait for v24 live
         shell: bash
         run: |
           set -euo pipefail
           for i in $(seq 1 48); do
-            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v23=$RANDOM" | grep -q "auto-sale-calc-cta-v23.css"; then
-              echo "v23 is live"
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glass_v24=$RANDOM" | grep -q "auto-sale-calc-cta-v24.css"; then
+              echo "v24 is live"
               exit 0
             fi
             sleep 5
           done
-          echo "v23 did not become live"
           exit 8
 
-      - name: Capture living glass phases in Chrome
+      - name: Capture consecutive live glass frames in Chrome
         shell: bash
         run: |
           set -euo pipefail
@@ -42,6 +41,7 @@ jobs:
           cat > inspect.cjs <<'NODE'
           const puppeteer=require('puppeteer-core');
           const fs=require('fs');
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
           (async()=>{
             const browser=await puppeteer.launch({
@@ -53,59 +53,42 @@ jobs:
             await page.setViewport({width:390,height:844,deviceScaleFactor:2});
 
             for(let a=0;a<12;a++){
-              await page.goto('https://autoworld.viiversion.com/?_inspect_v23='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
+              await page.goto('https://autoworld.viiversion.com/?_inspect_v24='+Date.now()+'_'+a,{waitUntil:'networkidle2',timeout:60000});
               const href=await page.evaluate(()=>document.querySelector('link[href*="auto-sale-calc-cta"]')?.getAttribute('href')||'');
               console.log('CSS_HREF='+href);
-              if(href.includes('auto-sale-calc-cta-v23.css')) break;
-              if(a===11) throw new Error('browser never loaded v23 stylesheet');
-              await new Promise(r=>setTimeout(r,1200));
+              if(href.includes('auto-sale-calc-cta-v24.css')) break;
+              if(a===11) throw new Error('browser never loaded v24 stylesheet');
+              await sleep(1200);
             }
 
             const btnSel='.auto-calc-btn:not([disabled])';
             const gSel=btnSel+' .auto-calc-glint';
             await page.waitForSelector(btnSel,{timeout:30000});
             await page.evaluate(sel=>document.querySelector(sel)?.scrollIntoView({block:'center'}),btnSel);
-            await new Promise(r=>setTimeout(r,500));
-
-            const meta=await page.evaluate((bsel,gsel)=>{
-              const b=document.querySelector(bsel),g=document.querySelector(gsel);
-              const gs=getComputedStyle(g), bef=getComputedStyle(g,'::before'), aft=getComputedStyle(g,'::after');
-              return {
-                buttonWidth:b.getBoundingClientRect().width,
-                animationName:gs.animationName,
-                animationDuration:gs.animationDuration,
-                baseOpacity:gs.opacity,
-                beforeOpacity:bef.opacity,
-                afterOpacity:aft.opacity,
-                glintWidth:gs.width,
-                blend:gs.mixBlendMode
-              };
-            },btnSel,gSel);
-            console.log('META='+JSON.stringify(meta));
+            await sleep(800);
 
             fs.mkdirSync('/tmp/glass-shots',{recursive:true});
-            const phases=[
-              {name:'01_start',ms:0},
-              {name:'02_rising',ms:1600},
-              {name:'03_peak',ms:3000},
-              {name:'04_late',ms:4600}
-            ];
 
-            for(const p of phases){
-              await page.evaluate((sel,ms)=>{
-                const g=document.querySelector(sel);
-                g.getAnimations().forEach(a=>{a.pause();a.currentTime=ms;});
-                const bef=getComputedStyle(g,'::before');
-              },gSel,p.ms);
-              await new Promise(r=>setTimeout(r,120));
-              const btn=await page.$(btnSel);
-              await btn.screenshot({path:'/tmp/glass-shots/'+p.name+'.png'});
+            for(let i=0;i<4;i++){
               const state=await page.evaluate(sel=>{
                 const g=document.querySelector(sel);
-                const gs=getComputedStyle(g), bs=getComputedStyle(g,'::before'), as=getComputedStyle(g,'::after');
-                return {o:gs.opacity,before:bs.opacity,after:as.opacity,bg:gs.backgroundPosition};
+                const gs=getComputedStyle(g);
+                const bs=getComputedStyle(g,'::before');
+                const as=getComputedStyle(g,'::after');
+                return {
+                  baseOpacity:gs.opacity,
+                  beforeOpacity:bs.opacity,
+                  beforeTransform:bs.transform,
+                  afterOpacity:as.opacity,
+                  afterTransform:as.transform,
+                  beforeAnimation:bs.animationName,
+                  afterAnimation:as.animationName
+                };
               },gSel);
-              console.log(p.name.toUpperCase()+'='+JSON.stringify(state));
+              console.log('FRAME_'+(i+1)+'='+JSON.stringify(state));
+              const btn=await page.$(btnSel);
+              await btn.screenshot({path:'/tmp/glass-shots/0'+(i+1)+'.png'});
+              if(i<3) await sleep(1100);
             }
 
             await browser.close();
@@ -116,8 +99,6 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: living-glass-v23-screens
+          name: refractive-glass-v24-screens
           path: /tmp/glass-shots/*.png
           if-no-files-found: error
-
-# v23 inspection
