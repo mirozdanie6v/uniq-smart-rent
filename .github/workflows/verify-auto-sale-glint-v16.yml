@@ -5,7 +5,7 @@ on:
     branches:
       - prototype/auto-sale-usa
     paths:
-      - .github/workflows/verify-auto-sale-glint-v17.yml
+      - .github/workflows/verify-auto-sale-glint-v16.yml
 
 jobs:
   verify:
