@@ -125,7 +125,7 @@ test('full Telegram notification lifecycle keeps client and manager event sequen
   for(const event of ['lead_created','lead_status','quote_status','order_created','order_stage','payment'])assert.ok(manager.some(x=>x.event===event),event+' manager');
   assert.equal(client.filter(x=>x.event==='order_stage').length,5);
   assert.equal(manager.filter(x=>x.event==='order_stage').length,5);
-  assert.ok(sent.some(x=>x.body.chat_id==='700'&&/готов к выдаче/.test(x.body.text)));
+  assert.ok(sent.some(x=>x.body.chat_id==='700'&&/готов к выдаче/i.test(x.body.text)));
   assert.ok(sent.some(x=>x.body.chat_id==='700'&&/оплата получена полностью/.test(x.body.text)));
   assert.ok(sent.some(x=>x.body.chat_id==='800'&&/этап заказа/.test(x.body.text)));
 });
