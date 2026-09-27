@@ -1,29 +1,29 @@
-name: Verify AUTO SALE luxury glint v16
+name: Verify AUTO SALE luxury glint v17
 
 on:
   push:
     branches:
       - prototype/auto-sale-usa
     paths:
-      - .github/workflows/verify-auto-sale-glint-v16.yml
+      - .github/workflows/verify-auto-sale-glint-v17.yml
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
-      - name: Wait for v16 and verify live glint
+      - name: Wait for v17 and verify live glint
         shell: bash
         run: |
           set -euo pipefail
 
           for i in $(seq 1 36); do
-            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glint_check=$RANDOM" | grep -q "auto-sale-calc-cta-v16.css"; then
-              echo "v16 is live"
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glint_check=$RANDOM" | grep -q "auto-sale-calc-cta-v17.css"; then
+              echo "v17 is live"
               break
             fi
             if [ "$i" -eq 36 ]; then
-              echo "v16 did not become live in time"
+              echo "v17 did not become live in time"
               exit 8
             fi
             sleep 5
@@ -120,3 +120,5 @@ jobs:
           NODE
 
           CHROME="$CHROME" node verify.cjs
+
+# direct-selector rerun for v17
