@@ -103,3 +103,29 @@ test('webhook help command explains the customer flow',async()=>{
   assert.match(sent[0].body.text,/Выбрать авто из США или Грузии/);
   assert.match(sent[0].body.text,/Следить за этапами заказа и оплатами/);
 });
+
+
+test('full Telegram notification lifecycle keeps client and manager event sequence',async()=>{
+  const sent=[];
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent)});
+  const lead={id:'L-E2E',name:'Анна',model:'BMW X5',budget:45000,contact:'@anna',clientCreated:true,telegramUserId:'700',managerTelegramUserId:'800',status:'Новый'};
+  let prev={initialized:true,leads:[],quotes:[],orders:[]};
+  let next={initialized:true,leads:[lead],quotes:[],orders:[]};
+  const all=[];
+  all.push(...await service.notifyStateChanges(prev,next));
+  prev=structuredClone(next);next.leads[0].status='В работе';all.push(...await service.notifyStateChanges(prev,next));
+  prev=structuredClone(next);next.leads[0].status='Ожидает клиента';next.quotes=[{id:'Q-E2E',leadId:'L-E2E',model:'BMW X5',status:'Отправлен',total:39000}];all.push(...await service.notifyStateChanges(prev,next));
+  prev=structuredClone(next);next.quotes[0].status='Согласован';all.push(...await service.notifyStateChanges(prev,next));
+  prev=structuredClone(next);next.leads[0].status='Сделка';next.orders=[{id:'O-E2E',leadId:'L-E2E',model:'BMW X5',stage:'Выкуп',paid:10000,total:39000,paymentPlan:[{id:'auction_deposit',title:'1. Аукционный аванс',amount:10000}],payments:[{id:'P1',amount:10000,paymentStage:'auction_deposit'}]}];all.push(...await service.notifyStateChanges(prev,next));
+  for(const stage of ['Порт США','В море','Таможня','Доставка','Выдача']){prev=structuredClone(next);next.orders[0].stage=stage;all.push(...await service.notifyStateChanges(prev,next));}
+  prev=structuredClone(next);next.orders[0].paid=39000;next.orders[0].payments.push({id:'P2',amount:29000,paymentStage:'final'});all.push(...await service.notifyStateChanges(prev,next));
+  const client=all.filter(x=>x.target==='client'&&x.ok);
+  const manager=all.filter(x=>x.target==='manager'&&x.ok);
+  for(const event of ['lead_created_confirmation','lead_status','quote_status','order_created','order_stage','payment'])assert.ok(client.some(x=>x.event===event),event+' client');
+  for(const event of ['lead_created','lead_status','quote_status','order_created','order_stage','payment'])assert.ok(manager.some(x=>x.event===event),event+' manager');
+  assert.equal(client.filter(x=>x.event==='order_stage').length,5);
+  assert.equal(manager.filter(x=>x.event==='order_stage').length,5);
+  assert.ok(sent.some(x=>x.body.chat_id==='700'&&/готов к выдаче/.test(x.body.text)));
+  assert.ok(sent.some(x=>x.body.chat_id==='700'&&/оплата получена полностью/.test(x.body.text)));
+  assert.ok(sent.some(x=>x.body.chat_id==='800'&&/этап заказа/.test(x.body.text)));
+});
