@@ -128,6 +128,21 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
 
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-client-delivery'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const state=await store.loadState();
+      const lead=(Array.isArray(state.leads)?state.leads:[]).find(item=>/^\d+$/.test(String(item?.telegramUserId||'')));
+      if(!lead){json(res,{error:'client_telegram_not_linked'},409);return}
+      try{
+        const result=await telegram.send(String(lead.telegramUserId),`AUTO МИР · проверка уведомлений клиента\n\nСвязь с вашим заказом настроена. Здесь будут приходить важные изменения по заявке, оплате и этапам доставки автомобиля.`);
+        json(res,{ok:true,lead:{id:lead.id,name:lead.name||lead.clientName||''},messageId:result?.message_id||null},201);
+      }catch(error){
+        json(res,{error:String(error?.message||'telegram_send_failed'),telegramDescription:String(error?.telegramDescription||'')},Number(error?.statusCode)||500);
+      }
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-manager-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
