@@ -1,0 +1,133 @@
+name: Inspect AUTO SALE glass-dust glint v19
+
+on:
+  push:
+    branches:
+      - prototype/auto-sale-usa
+    paths:
+      - .github/workflows/inspect-auto-sale-glint-v19.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Wait for v19 live
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 48); do
+            if curl -fsSL --max-time 15 "https://autoworld.viiversion.com/?_glint_v19=$RANDOM" | grep -q "auto-sale-calc-cta-v19.css"; then
+              echo "v19 is live"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "v19 did not become live"
+          exit 8
+
+      - name: Capture live button phases in Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          mkdir -p /tmp/glint-inspect && cd /tmp/glint-inspect
+          npm init -y >/dev/null 2>&1
+          npm install puppeteer-core@24.16.0 >/dev/null 2>&1
+
+          cat > inspect.cjs <<'NODE'
+          const puppeteer=require('puppeteer-core');
+          const fs=require('fs');
+
+          (async()=>{
+            const browser=await puppeteer.launch({
+              executablePath:process.env.CHROME,
+              headless:'new',
+              args:['--no-sandbox','--disable-dev-shm-usage']
+            });
+            const page=await browser.newPage();
+            await page.setViewport({width:390,height:844,deviceScaleFactor:2});
+            await page.goto('https://autoworld.viiversion.com/?_inspect=v19',{
+              waitUntil:'networkidle2',
+              timeout:60000
+            });
+
+            const btnSel='.auto-calc-btn:not([disabled])';
+            const glintSel=btnSel+' .auto-calc-glint';
+            await page.waitForSelector(btnSel,{timeout:30000});
+            await page.evaluate(sel=>document.querySelector(sel)?.scrollIntoView({block:'center'}),btnSel);
+            await new Promise(r=>setTimeout(r,700));
+
+            const meta=await page.evaluate((bsel,gsel)=>{
+              const b=document.querySelector(bsel),g=document.querySelector(gsel);
+              if(!b||!g)return null;
+              const bs=getComputedStyle(b),gs=getComputedStyle(g);
+              const bef=getComputedStyle(g,'::before');
+              const aft=getComputedStyle(g,'::after');
+              return {
+                buttonText:b.textContent.trim(),
+                buttonWidth:b.getBoundingClientRect().width,
+                animationName:gs.animationName,
+                animationDuration:gs.animationDuration,
+                mixBlendMode:gs.mixBlendMode,
+                maskImage:gs.maskImage||gs.webkitMaskImage,
+                glintWidth:gs.width,
+                beforeWidth:bef.width,
+                beforeOpacity:bef.opacity,
+                afterOpacity:aft.opacity,
+                afterBackground:aft.backgroundImage
+              };
+            },btnSel,glintSel);
+            console.log('META='+JSON.stringify(meta));
+            if(!meta)process.exit(3);
+
+            const anim=await page.evaluateHandle(sel=>{
+              const el=document.querySelector(sel);
+              return el.getAnimations().find(a=>a.animationName==='autoCalcGlassDustV19') || el.getAnimations()[0];
+            },glintSel);
+
+            const phases=[
+              {name:'01_enter',t:0.075},
+              {name:'02_core',t:0.125},
+              {name:'03_exit',t:0.17}
+            ];
+
+            fs.mkdirSync('/tmp/glint-shots',{recursive:true});
+            for(const p of phases){
+              await page.evaluate((sel)=>document.querySelector(sel).getAnimations().forEach(a=>a.pause()),glintSel);
+              await page.evaluate((sel,f)=>{
+                const a=document.querySelector(sel).getAnimations().find(x=>x.animationName==='autoCalcGlassDustV19')||document.querySelector(sel).getAnimations()[0];
+                if(a){a.currentTime=7400*f;a.pause();}
+              },glintSel,p.t);
+              await new Promise(r=>setTimeout(r,120));
+              const btn=await page.$(btnSel);
+              await btn.screenshot({path:'/tmp/glint-shots/'+p.name+'.png'});
+            }
+
+            const summary=await page.evaluate(sel=>{
+              const g=document.querySelector(sel);
+              const a=g.getAnimations().find(x=>x.animationName==='autoCalcGlassDustV19')||g.getAnimations()[0];
+              return {
+                animationName:getComputedStyle(g).animationName,
+                duration:getComputedStyle(g).animationDuration,
+                hasBefore:getComputedStyle(g,'::before').content!=='none',
+                hasAfter:getComputedStyle(g,'::after').content!=='none',
+                playState:a?.playState||null
+              };
+            },glintSel);
+            console.log('SUMMARY='+JSON.stringify(summary));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(10)});
+          NODE
+
+          CHROME="$CHROME" node inspect.cjs
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: glint-v19-screens
+          path: /tmp/glint-shots/*.png
+          if-no-files-found: error
