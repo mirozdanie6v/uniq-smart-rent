@@ -3,7 +3,6 @@ import {createHmac} from 'node:crypto';
 const token=String(process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'').trim();
 const appUrl=String(process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/').trim();
 const webhookBaseUrl=String(process.env.AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL||appUrl).trim();
-const webhookBaseUrl=String(process.env.AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL||appUrl).trim();
 if(!token)throw new Error('AUTO_SALE_TELEGRAM_BOT_TOKEN is required');
 if(!/^https:\/\//i.test(appUrl))throw new Error('AUTO_SALE_TELEGRAM_APP_URL must be HTTPS');
 
