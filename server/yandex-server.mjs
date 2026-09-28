@@ -269,15 +269,8 @@ const server=http.createServer(async(req,res)=>{
       leads[index]={...leads[index],clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()};
       const replaced=await store.replaceState({...state,leads},{expectedRevision:state.revision});
       if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
-      // The lead was originally created before Telegram identity was persisted, so the
-      // ordinary state-diff notifier cannot address the client at creation time.
-      // Send the creation notifications immediately after the client identity is linked.
-      let notifications=[];
-      try{
-        const linkedState={...state,leads};
-        const linkedLead=leads[index];
-        const title=String(linkedLead.model||linkedLead.name||linkedLead.id||'заявка').trim();
-        const budget=linkedLead.budget?'
+      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision});
+      return;
     }
 
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
