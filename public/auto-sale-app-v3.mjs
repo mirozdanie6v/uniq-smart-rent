@@ -370,7 +370,7 @@ async function submitCatalogCar(form){
   let id=requestedId;if(!id)id=`CAR-${Date.now()}`;
   const existing=cars.find(x=>x.id===id)||{};
   const next={...existing,id,brand,model,year:Number(data.year)||new Date().getFullYear(),mileage:String(data.mileage||'').trim(),engine:String(data.engine||'').trim(),drive:String(data.drive||''),origin:origin||String(existing.origin||'Уточняется'),auction:String(data.auction||'').trim(),auctionDate:String(data.auctionDate||'').trim(),price:Number(data.price)||0,priceBeforeDiscountRub:beforeDiscount,priceAfterDiscountRub:beforeDiscount>currentRub&&currentRub>0?currentRub:0,priceRub:currentRub,delivery:String(data.delivery||'').trim()||'Срок по запросу',tag:String(data.tag||'').trim(),image,interiorPhotos,otherPhotos,active:form.elements.active.checked};
-  const saved=await commitEntities([{resource:'catalog',operation:isNew?'create':'patch',id,input:next}],form);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'catalog',operation:isNew?'create':'patch',id,input:next}],form):{ok:true,localOnly:true};if(!saved)return;
   const i=cars.findIndex(x=>x.id===id);if(i>=0)cars[i]=next;else cars.push(next);
   saveAll();state.modal=null;state.route='catalogAdmin';render();
 }
@@ -379,7 +379,7 @@ async function deleteCatalogCar(id){
   const ok=typeof confirm==='function'?confirm(`Удалить ${car.brand} ${car.model} из каталога? Это действие нельзя отменить.`):true;
   if(!ok)return;
   const photos=[car.image,...(Array.isArray(car.interiorPhotos)?car.interiorPhotos:[]),...(Array.isArray(car.otherPhotos)?car.otherPhotos:[])].filter(Boolean);
-  const removed=await commitEntities([{resource:'catalog',operation:'delete',id}]);if(!removed)return;
+  const removed=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'catalog',operation:'delete',id}]):{ok:true,localOnly:true};if(!removed)return;
   cars=cars.filter(x=>x.id!==id);
   saveAll();state.modal=null;state.route='catalogAdmin';render();
   for(const url of photos)await deleteCatalogPhoto(url);
@@ -433,7 +433,7 @@ async function quoteAction(id,status){
   const note=noteEntry('Расчёт '+current.id+' → '+status+'.');
   const operations=[{resource:'quote',operation:'patch',id,input:nextQuote}];
   if(nextLead)operations.push({resource:'lead',operation:'patch',id:nextLead.id,input:nextLead},{resource:'note',operation:'create',leadId:nextLead.id,input:note});
-  const saved=await commitEntities(operations);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities(operations):{ok:true,localOnly:true};if(!saved)return;
   Object.assign(current,nextQuote);if(lead&&nextLead)Object.assign(lead,nextLead);
   if(nextLead){notes[nextLead.id]=notes[nextLead.id]||[];notes[nextLead.id].push(note)}
   saveAll();render();
@@ -442,7 +442,7 @@ async function cloneQuote(id){
   const old=quotes.find(x=>x.id===id);if(!old)return;
   const q={...old,id:nextId('Q',quotes),version:(old.version||1)+1,status:'Черновик',validUntil:addDays(today,7),updatedAt:new Date().toISOString(),revisionOf:old.id};
   delete q.sentAt;delete q.agreedAt;
-  const saved=await commitEntities([{resource:'quote',operation:'create',id:q.id,input:q}]);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'quote',operation:'create',id:q.id,input:q}]):{ok:true,localOnly:true};if(!saved)return;
   quotes.push(q);saveAll();state.modal={type:'quote',id:q.id};render();
 }
 async function convertLeadToOrder(leadId){
@@ -453,7 +453,7 @@ async function convertLeadToOrder(leadId){
   const paymentPlan=q.origin==='США'?buildUsPaymentPlan(q,lead.deposit):[],payments=lead.deposit?[{id:'PAY-1',amount:Number(lead.deposit),date:lead.depositDate||today,method:lead.paymentMethod||'Банк',paymentStage:paymentPlan.length?'auction_deposit':'',note:paymentPlan.length?'Аукционный аванс до торгов':'Депозит до создания заказа'}]:[];
   const order={id:nextId('O',orders),leadId:lead.id,customer:lead.name,model:q.model,origin:q.origin||lead.origin||'Уточняется',transportMode:q.transportMode||defaultTransportMode(q.origin||lead.origin||'Уточняется'),manager:lead.manager,source:lead.source,total:q.total,cost:quoteCost(q),paid:paymentsTotal(payments),payments,paymentPlan,paymentPlanNeedsReview:false,stage:'Выкуп',eta:'',lot:q.verification?.lotNumber||'',vin:q.verification?.vin||'',location:'',riskType:'Нет',riskNote:'',risk:'Нет',updatedAt:new Date().toISOString()};
   const nextLead={...lead,status:'Сделка'},note=noteEntry('После согласования расчёта и депозита создан заказ '+order.id+'.');
-  const saved=await commitEntities([{resource:'order',operation:'create',id:order.id,input:order},{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}]);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'order',operation:'create',id:order.id,input:order},{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}]):{ok:true,localOnly:true};if(!saved)return;
   orders.push(order);Object.assign(lead,nextLead);notes[lead.id]=notes[lead.id]||[];notes[lead.id].push(note);
   saveAll();state.modal={type:'order',id:order.id};render();
 }
@@ -470,7 +470,7 @@ async function submitRequest(form){
   if(errors.length){showErrors(form,[...new Set(errors)]);return}
   const lead={id:nextId('L',leads),name:data.name.trim(),contact:data.contact.trim(),model:data.model.trim(),origin:String(data.origin||''),budget:Number(data.budget)||0,source:managerMode?data.source:'Mini App',manager:managerMode?data.manager:activeManagers()[0]||'',status:'Новый',priority:managerMode?data.priority:'Средний',createdAt:new Date().toISOString(),nextAction:managerMode?data.nextAction:today,note:data.note||'',clientCreated:!managerMode,yearFrom:managerMode?'':data.yearFrom||'',yearTo:managerMode?'':data.yearTo||'',mileageMax:managerMode?'':data.mileageMax||'',engine:managerMode?'Не важно':data.engine||'Не важно',drive:managerMode?'Не важно':data.drive||'Не важно',damage:managerMode?'Минимальные':data.damage||'Минимальные',deliveryCity:managerMode?'':data.deliveryCity||'',deposit:0,depositDate:'',paymentMethod:'',managerTelegramUsername:String(data.managerTelegram||'').trim().replace(/^@/,''),managerTelegramUserId:(window.__AUTO_SALE_TELEGRAM_USER__&&String(data.managerTelegram||'').trim().replace(/^@/,'')===String(window.__AUTO_SALE_TELEGRAM_USER__.username||''))?String(window.__AUTO_SALE_TELEGRAM_USER__.id||''):'',managerTelegramName:managerMode?data.manager:''};
   const note=noteEntry('Лид создан.');
-  const saved=await commitEntities([{resource:'lead',operation:'create',id:lead.id,input:lead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'lead',operation:'create',id:lead.id,input:lead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form):{ok:true,localOnly:true};if(!saved)return;
   leads.push(lead);notes[lead.id]=[note];saveAll();
   state.modal=null;state.role=managerMode?'manager':'client';state.route=managerMode?'leads':'orders';sessionStorage.setItem(KEYS.role,state.role);render();
 }
@@ -482,7 +482,7 @@ async function submitLead(form){
   if(errors.length){showErrors(form,errors);return}
   const nextLead={...lead,status:data.status,manager:data.manager,name:data.name.trim(),contact:data.contact.trim(),model:data.model.trim(),origin:String(data.origin||lead.origin||'Уточняется'),budget:Number(data.budget)||0,source:data.source,priority:data.priority,nextAction:data.nextAction,yearFrom:data.yearFrom,yearTo:data.yearTo,mileageMax:data.mileageMax,engine:data.engine,drive:data.drive,damage:data.damage,deliveryCity:data.deliveryCity,deposit:Number(data.deposit)||0,depositDate:data.depositDate||'',paymentMethod:data.paymentMethod||'',note:data.note||'',lostReason:data.status==='Отказ'?data.lostReason:'',managerTelegramUsername:String(data.managerTelegram||lead.managerTelegramUsername||'').trim().replace(/^@/,''),managerTelegramUserId:(window.__AUTO_SALE_TELEGRAM_USER__&&String(data.managerTelegram||'').trim().replace(/^@/,'')===String(window.__AUTO_SALE_TELEGRAM_USER__.username||''))?String(window.__AUTO_SALE_TELEGRAM_USER__.id||''):String(lead.managerTelegramUserId||''),managerTelegramName:data.manager};
   const note=noteEntry('Карточка обновлена: '+nextLead.status+', менеджер '+nextLead.manager+(nextLead.deposit?', депозит '+money(nextLead.deposit):'')+'.');
-  const saved=await commitEntities([{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form):{ok:true,localOnly:true};if(!saved)return;
   Object.assign(lead,nextLead);notes[lead.id]=notes[lead.id]||[];notes[lead.id].push(note);saveAll();state.modal={type:'lead',id:lead.id};render();
 }
 async function submitQuote(form){
@@ -496,7 +496,7 @@ async function submitQuote(form){
   if(data.status==='Отправлен'&&!q.sentAt)q.sentAt=q.updatedAt;if(data.status==='Согласован')q.agreedAt=q.updatedAt;
   const nextLead={...lead};if(!['Сделка','Отказ'].includes(nextLead.status))nextLead.status=data.status==='Черновик'?'Расчёт':'Ожидает клиента';nextLead.model=q.model;nextLead.origin=q.origin;
   const note=noteEntry('Расчёт '+q.id+' v'+q.version+': '+money(q.total)+', статус «'+q.status+'».');
-  const saved=await commitEntities([{resource:'quote',operation:existing?'patch':'create',id:q.id,input:q},{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities([{resource:'quote',operation:existing?'patch':'create',id:q.id,input:q},{resource:'lead',operation:'patch',id:lead.id,input:nextLead},{resource:'note',operation:'create',leadId:lead.id,input:note}],form):{ok:true,localOnly:true};if(!saved)return;
   if(existing)Object.assign(existing,q);else quotes.push(q);Object.assign(lead,nextLead);notes[lead.id]=notes[lead.id]||[];notes[lead.id].push(note);saveAll();
   state.modal=null;state.role='manager';state.route='quotes';sessionStorage.setItem(KEYS.role,'manager');render();
 }
@@ -511,7 +511,7 @@ async function submitOrder(form){
   const operations=[{resource:'order',operation:'patch',id:order.id,input:patch}];
   let payment=null;if(amount>0){payment={id:nextPaymentId(order.payments),amount,date:data.paymentDate,method:data.paymentMethod,paymentStage:order.paymentPlan?.length?data.paymentStage:'',note:data.paymentNote||''};operations.push({resource:'payment',operation:'create',orderId:order.id,input:payment})}
   const lead=leads.find(x=>x.id===order.leadId),nextLead=lead?{...lead,manager:patch.manager,status:'Сделка'}:null;if(nextLead)operations.push({resource:'lead',operation:'patch',id:nextLead.id,input:nextLead});
-  const saved=await commitEntities(operations,form);if(!saved)return;
+  const saved=window.__AUTO_SALE_ENTITY_BATCH__?await commitEntities(operations,form):{ok:true,localOnly:true};if(!saved)return;
   Object.assign(order,patch);if(payment){order.payments.push(payment);order.paid=paymentsTotal(order.payments)}if(lead&&nextLead)Object.assign(lead,nextLead);
   saveAll();state.modal={type:'order',id:order.id};render();
 }
