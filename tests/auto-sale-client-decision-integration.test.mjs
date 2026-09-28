@@ -47,7 +47,11 @@ test('incomplete dossier shows client error without changing status or opening a
 
 test('server rejection restores an actionable quote and displays a retry error',async()=>{
   const dom=await boot({flush:async()=>({ok:false,error:'offline'})});
-  document.querySelector('[data-client-quote-agree]').click();await tick();
+  document.querySelector('[data-client-quote-agree]').click();
+  for(let i=0;i<12;i++){
+    await tick();
+    if(JSON.parse(localStorage.getItem('auto-sale-quotes-v2'))[0].status==='Отправлен')break;
+  }
   assert.equal(JSON.parse(localStorage.getItem('auto-sale-quotes-v2'))[0].status,'Отправлен');
   assert.ok(document.querySelector('[data-client-quote-agree]'));
   assert.match(document.querySelector('[role="alert"]').textContent,/не сохранено на сервере/);
