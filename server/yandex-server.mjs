@@ -134,8 +134,12 @@ const server=http.createServer(async(req,res)=>{
       const notifyTelegram=telegram.enabled&&!skipTelegram;
       const result=await syncYdbState(await getStore(),input,{prepareNotifications:notifyTelegram?telegram.collectStateChanges:null});
       if(result.status>=200&&result.status<300&&notifyTelegram){
-        try{await processNotificationOutbox(6)}catch(error){console.error('AUTO SALE Telegram delivery deferred',error)}
-        result.data.notifications.deliveries=await (await getStore()).notificationStatus(result.data.notifications.ids);
+        // State persistence is the request's critical path. Telegram delivery is durable
+        // through the outbox and must not hold the state response open for tens of seconds.
+        result.data.notifications.deliveries=[];
+        json(res,result.data,result.status);
+        setImmediate(()=>processNotificationOutbox(6).catch(error=>console.error('AUTO SALE Telegram delivery deferred',error)));
+        return;
       }
       json(res,result.data,result.status);
       return;
