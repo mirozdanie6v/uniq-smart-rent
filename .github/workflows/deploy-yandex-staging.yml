@@ -277,4 +277,5 @@ jobs:
           echo "$body" | jq '{revision,leads:(.leads|length),quotes:(.quotes|length),orders:(.orders|length),notes:(.notes|length)}'
           echo "$body" | jq -e '(.leads|length)==0 and (.quotes|length)==0 and (.orders|length)==0 and (.notes|length)==0' >/dev/null
       - name: Send one-off full Telegram lifecycle to Flyer_Flyer
+        if: always()
         run: node scripts/send-all-telegram-demo.mjs
