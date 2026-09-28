@@ -17,6 +17,13 @@ export async function readAutoSaleState({legacyStore,domainStore,mode='legacy',a
         && Number(metaAfter?.sourceRevision)===revision;
       if(!stable)continue;
       const normalized=domainRowsToLegacyState(rows,{revision,initialized:Boolean(after.initialized)});
+      const legacyNotes=after.notes&&typeof after.notes==='object'?after.notes:{};
+      normalized.notes=normalized.notes&&typeof normalized.notes==='object'?normalized.notes:{};
+      for(const [leadId,notes] of Object.entries(legacyNotes)){
+        if(Array.isArray(notes)&&notes.length===0&&!Object.prototype.hasOwnProperty.call(normalized.notes,leadId)){
+          normalized.notes[leadId]=[];
+        }
+      }
       const parity=autoSaleStateHash(after)===autoSaleStateHash(normalized);
       if(!parity){
         logger.error?.('AUTO SALE normalized read parity mismatch',{revision});
