@@ -17,29 +17,34 @@ const publicDemoWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_PUBLIC
 const mediaBucket=String(process.env.AUTO_SALE_MEDIA_BUCKET||'').trim();
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
 if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
-const store=await createYdbStateStore({connectionString});
+let store=null;
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
+async function getStore(){
+  if(store)return store;
+  store=await createYdbStateStore({connectionString});
+  return store;
+}
 const notificationPumpIntervalMs=Math.max(15_000,Number(process.env.AUTO_SALE_NOTIFICATION_PUMP_MS||60_000));
 let notificationPumpBusy=false;
 async function processNotificationOutbox(limit=50){
-  if(notificationPumpBusy)return{ok:true,skipped:'busy',processed:0,stats:await store.notificationStats()};
+  if(notificationPumpBusy)return{ok:true,skipped:'busy',processed:0,stats:await (await getStore()).notificationStats()};
   notificationPumpBusy=true;
   const results=[];
   try{
-    const pending=await store.pendingNotifications(limit);
+    const pending=await (await getStore()).pendingNotifications(limit);
     for(const item of pending){
       try{
         const sent=await telegram.send(item.chatId,item.message);
-        await store.markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
+        await (await getStore()).markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
         results.push({id:item.id,ok:true,messageId:sent?.message_id||null});
       }catch(error){
         const message=String(error?.message||'telegram_send_failed');
-        await store.markNotification(item.id,{ok:false,error:message,attempts:item.attempts});
+        await (await getStore()).markNotification(item.id,{ok:false,error:message,attempts:item.attempts});
         results.push({id:item.id,ok:false,error:message});
       }
     }
-    return{ok:true,processed:results.length,results,stats:await store.notificationStats()};
+    return{ok:true,processed:results.length,results,stats:await (await getStore()).notificationStats()};
   }finally{notificationPumpBusy=false}
 }
 
@@ -106,13 +111,13 @@ const server=http.createServer(async(req,res)=>{
       res.writeHead(204,apiHeaders);res.end();return;
     }
     if(url.pathname==='/api/health'){
-      await store.ping();
+      await (await getStore()).ping();
       json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
-      json(res,await store.loadState());
+      json(res,await (await getStore()).loadState());
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
@@ -129,7 +134,7 @@ const server=http.createServer(async(req,res)=>{
           telegram.notifyStateChanges(before,nextState)
             .then(async deliveries=>{
               const failed=deliveries.filter(x=>!x.ok);
-              if(failed.length){await store.enqueueNotifications(failed);console.warn('AUTO SALE Telegram queued failed deliveries',failed.map(x=>x.id))}
+              if(failed.length){await (await getStore()).enqueueNotifications(failed);console.warn('AUTO SALE Telegram queued failed deliveries',failed.map(x=>x.id))}
             })
             .catch(error=>console.error('AUTO SALE Telegram state notification failed',error));
         });
@@ -139,9 +144,9 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/admin/clear-applications'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const cleared={...state,leads:[],quotes:[],orders:[],notes:{}};
-      const result=await store.replaceState(cleared,{expectedRevision:state.revision});
+      const result=await (await getStore()).replaceState(cleared,{expectedRevision:state.revision});
       if(result.status!==200){json(res,result.data,result.status);return}
       json(res,{ok:true,cleared:{leads:Array.isArray(state.leads)?state.leads.length:0,quotes:Array.isArray(state.quotes)?state.quotes.length:0,orders:Array.isArray(state.orders)?state.orders.length:0},revision:result.data.revision});
       return;
@@ -154,7 +159,7 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/status'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
-      json(res,{ok:true,stats:await store.notificationStats()});return;
+      json(res,{ok:true,stats:await (await getStore()).notificationStats()});return;
     }
 
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/telegram/diagnose'){
@@ -202,7 +207,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-conversation-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const team=Array.isArray(state.team)?state.team:[];
       const leads=Array.isArray(state.leads)?state.leads:[];
       let lead=leads.find(item=>/^\d+$/.test(String(item?.telegramUserId||''))&&team.some(member=>member?.active!==false&&String(member?.name||'').trim()===String(item?.manager||'').trim()&&/^\d+$/.test(String(member?.telegramUserId||''))));
@@ -225,7 +230,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-client-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const lead=(Array.isArray(state.leads)?state.leads:[]).find(item=>/^\d+$/.test(String(item?.telegramUserId||'')));
       if(!lead){json(res,{error:'client_telegram_not_linked'},409);return}
       try{
@@ -240,7 +245,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-manager-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const member=(Array.isArray(state.team)?state.team:[]).find(item=>item?.active!==false&&/^\d+$/.test(String(item?.telegramUserId||'')));
       if(!member){json(res,{error:'manager_telegram_not_linked'},409);return}
       try{
@@ -259,7 +264,7 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,20_000);
       const leadId=String(input?.leadId||'').trim();
       if(!leadId){json(res,{error:'lead_id_required'},400);return}
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const leads=Array.isArray(state.leads)?state.leads.map(item=>({...item})):[];
       const index=leads.findIndex(item=>String(item?.id||'')===leadId);
       if(index<0){json(res,{error:'lead_not_found'},404);return}
@@ -267,7 +272,7 @@ const server=http.createServer(async(req,res)=>{
       if(existing&&existing!==String(auth.user.id)){json(res,{error:'client_telegram_already_linked'},409);return}
       const username=String(auth.user.username||'').replace(/^@/,'');
       leads[index]={...leads[index],clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()};
-      const replaced=await store.replaceState({...state,leads},{expectedRevision:state.revision});
+      const replaced=await (await getStore()).replaceState({...state,leads},{expectedRevision:state.revision});
       if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
       json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision});
       return;
@@ -280,7 +285,7 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,20_000);
       const memberId=String(input?.memberId||'').trim();
       const memberName=String(input?.memberName||'').trim();
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const team=Array.isArray(state.team)?state.team.map(item=>({...item})):[];
       let index=memberId?team.findIndex(item=>String(item?.id||'')===memberId):-1;
       if(index<0&&memberName)index=team.findIndex(item=>String(item?.name||'').trim()===memberName);
@@ -288,7 +293,7 @@ const server=http.createServer(async(req,res)=>{
       const telegramUserId=String(auth.user.id);
       const username=String(auth.user.username||'').replace(/^@/,'');
       team[index]={...team[index],telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()};
-      const replaced=await store.replaceState({...state,team},{expectedRevision:state.revision});
+      const replaced=await (await getStore()).replaceState({...state,team},{expectedRevision:state.revision});
       if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
       json(res,{ok:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:replaced.data.revision});
       return;
@@ -314,7 +319,7 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,50_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       try{
-        const state=await store.loadState();
+        const state=await (await getStore()).loadState();
         const result=await telegram.sendManual(state,{
           leadId:input.leadId,
           target:input.target,
@@ -374,7 +379,7 @@ const shutdown=signal=>{
   console.log(`Received ${signal}`);
   clearInterval(notificationPump);
   server.close(async()=>{
-    await store.close();
+    if(store)await store.close();
     process.exit(0);
   });
   setTimeout(()=>process.exit(1),10000).unref();
@@ -389,7 +394,7 @@ process.on('SIGINT',()=>shutdown('SIGINT'));
       const input=await parseJson(req,20_000);
       const memberId=String(input?.memberId||'').trim();
       const memberName=String(input?.memberName||'').trim();
-      const state=await store.loadState();
+      const state=await (await getStore()).loadState();
       const team=Array.isArray(state.team)?state.team.map(item=>({...item})):[];
       let index=memberId?team.findIndex(item=>String(item?.id||'')===memberId):-1;
       if(index<0&&memberName)index=team.findIndex(item=>String(item?.name||'').trim()===memberName);
@@ -397,7 +402,7 @@ process.on('SIGINT',()=>shutdown('SIGINT'));
       const telegramUserId=String(auth.user.id);
       const username=String(auth.user.username||'').replace(/^@/,'');
       team[index]={...team[index],telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()};
-      const replaced=await store.replaceState({...state,team},{expectedRevision:state.revision});
+      const replaced=await (await getStore()).replaceState({...state,team},{expectedRevision:state.revision});
       if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
       json(res,{ok:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:replaced.data.revision});
       return;
@@ -423,7 +428,7 @@ process.on('SIGINT',()=>shutdown('SIGINT'));
       const input=await parseJson(req,50_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       try{
-        const state=await store.loadState();
+        const state=await (await getStore()).loadState();
         const result=await telegram.sendManual(state,{
           leadId:input.leadId,
           target:input.target,
@@ -483,7 +488,7 @@ const shutdown=signal=>{
   console.log(`Received ${signal}`);
   clearInterval(notificationPump);
   server.close(async()=>{
-    await store.close();
+    await (await getStore()).close();
     process.exit(0);
   });
   setTimeout(()=>process.exit(1),10000).unref();
