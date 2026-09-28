@@ -152,12 +152,13 @@ export async function ensureAutoSaleDomainSchema(sql){
 
 export async function createYdbDomainStore({
   connectionString,
-  credentialsProvider=new MetadataCredentialsProvider()
+  credentialsProvider=new MetadataCredentialsProvider(),
+  ensureSchema=true
 }){
   const driver=new Driver(connectionString,{credentialsProvider});
   await driver.ready();
   const sql=query(driver);
-  await ensureAutoSaleDomainSchema(sql);
+  if(ensureSchema)await ensureAutoSaleDomainSchema(sql);
 
   async function schemaVersion(){
     const component='auto-sale-domain';
@@ -247,30 +248,62 @@ export async function createYdbDomainStore({
     });
   }
 
-  async function loadRows(){
-    const [
-      leadsR,quotesR,ordersR,paymentsR,notesR,teamR,catalogR,bindingsR
-    ]=await Promise.all([
-      sql`SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads`,
-      sql`SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes`,
-      sql`SELECT id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at FROM auto_sale_orders`,
-      sql`SELECT order_id,id,sort_order,amount,payment_date,method,payload,created_at FROM auto_sale_payments`,
-      sql`SELECT lead_id,id,sort_order,text,payload,created_at FROM auto_sale_notes`,
-      sql`SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team`,
-      sql`SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog`,
-      sql`SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings`
-    ]);
-    const rows=result=>Array.isArray(result?.[0])?result[0]:[];
+  const mapDomainSets=sets=>{
+    const rows=index=>Array.isArray(sets?.[index])?sets[index]:[];
     return{
-      leads:rows(leadsR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),status:String(row.status||''),manager:String(row.manager||''),source:String(row.source||''),clientCreated:Boolean(row.client_created),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
-      quotes:rows(quotesR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),status:String(row.status||''),quoteVersion:Number(row.quote_version||0n),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
-      orders:rows(ordersR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),stage:String(row.stage||''),manager:String(row.manager||''),riskType:String(row.risk_type||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
-      payments:rows(paymentsR).map(row=>({orderId:String(row.order_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),amount:Number(row.amount)||0,paymentDate:String(row.payment_date||''),method:String(row.method||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
-      notes:rows(notesR).map(row=>({leadId:String(row.lead_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),text:String(row.text||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
-      team:rows(teamR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),name:String(row.name||''),role:String(row.role||''),active:Boolean(row.active),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
-      catalog:rows(catalogR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),origin:String(row.origin||''),active:Boolean(row.active),auctionDate:String(row.auction_date||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
-      telegramBindings:rows(bindingsR).map(row=>({subjectType:String(row.subject_type||''),subjectId:String(row.subject_id||''),telegramUserId:String(row.telegram_user_id||''),username:String(row.username||''),firstName:String(row.first_name||''),lastName:String(row.last_name||''),linkedAt:String(row.linked_at||''),updatedAt:String(row.updated_at||'')}))
+      leads:rows(0).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),status:String(row.status||''),manager:String(row.manager||''),source:String(row.source||''),clientCreated:Boolean(row.client_created),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      quotes:rows(1).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),status:String(row.status||''),quoteVersion:Number(row.quote_version||0n),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      orders:rows(2).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),stage:String(row.stage||''),manager:String(row.manager||''),riskType:String(row.risk_type||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      payments:rows(3).map(row=>({orderId:String(row.order_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),amount:Number(row.amount)||0,paymentDate:String(row.payment_date||''),method:String(row.method||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
+      notes:rows(4).map(row=>({leadId:String(row.lead_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),text:String(row.text||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
+      team:rows(5).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),name:String(row.name||''),role:String(row.role||''),active:Boolean(row.active),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      catalog:rows(6).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),origin:String(row.origin||''),active:Boolean(row.active),auctionDate:String(row.auction_date||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      telegramBindings:rows(7).map(row=>({subjectType:String(row.subject_type||''),subjectId:String(row.subject_id||''),telegramUserId:String(row.telegram_user_id||''),username:String(row.username||''),firstName:String(row.first_name||''),lastName:String(row.last_name||''),linkedAt:String(row.linked_at||''),updatedAt:String(row.updated_at||'')}))
     };
+  };
+
+  async function loadRows(){
+    const sets=await sql`
+      SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads;
+      SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes;
+      SELECT id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at FROM auto_sale_orders;
+      SELECT order_id,id,sort_order,amount,payment_date,method,payload,created_at FROM auto_sale_payments;
+      SELECT lead_id,id,sort_order,text,payload,created_at FROM auto_sale_notes;
+      SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team;
+      SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog;
+      SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings;
+    `;
+    return mapDomainSets(sets);
+  }
+
+  async function loadReadSnapshot(){
+    const stateId=u64(1);
+    const sets=await sql`
+      SELECT revision,payload FROM auto_sale_state WHERE id=${stateId};
+      SELECT compat_revision,schema_version,migration_status,source_revision,updated_at FROM auto_sale_state_meta WHERE id=${stateId};
+      SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads;
+      SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes;
+      SELECT id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at FROM auto_sale_orders;
+      SELECT order_id,id,sort_order,amount,payment_date,method,payload,created_at FROM auto_sale_payments;
+      SELECT lead_id,id,sort_order,text,payload,created_at FROM auto_sale_notes;
+      SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team;
+      SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog;
+      SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings;
+    `;
+    const stateRow=sets?.[0]?.[0];
+    const empty={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
+    let payload={...empty};
+    try{payload={...empty,...JSON.parse(String(stateRow?.payload||'{}'))}}catch{}
+    const legacy={...payload,revision:Number(stateRow?.revision||0n),initialized:Boolean(payload.initialized||payload.leads?.length)};
+    const metaRow=sets?.[1]?.[0];
+    const meta=metaRow?{
+      compatRevision:Number(metaRow.compat_revision||0n),
+      schemaVersion:Number(metaRow.schema_version||0n),
+      migrationStatus:String(metaRow.migration_status||''),
+      sourceRevision:Number(metaRow.source_revision||0n),
+      updatedAt:String(metaRow.updated_at||'')
+    }:null;
+    return{legacy,meta,rows:mapDomainSets(sets.slice(2))};
   }
 
   async function migrationMeta(){
@@ -307,5 +340,5 @@ export async function createYdbDomainStore({
 
   async function close(){driver.close()}
 
-  return{sql,schemaVersion,replaceSnapshot,loadRows,migrationMeta,counts,close};
+  return{sql,schemaVersion,replaceSnapshot,loadRows,loadReadSnapshot,migrationMeta,counts,close};
 }
