@@ -94,7 +94,13 @@ function clientTelegram(lead){
   const explicit=/^@[A-Za-z0-9_]{5,32}$/.test(contact)?contact.slice(1):(/^https?:\/\/t\.me\/[A-Za-z0-9_]{5,32}\/?$/i.test(contact)?contact.replace(/^https?:\/\/t\.me\//i,'').replace(/\/$/,''):'');
   return{username:stored||explicit,id:String(lead.telegramUserId||'')}
 }
-function managerTelegram(lead){return{username:String(lead.managerTelegramUsername||'').replace(/^@/,''),id:String(lead.managerTelegramUserId||'')}}
+function managerTelegram(lead){
+  const managerName=String(lead.manager||'').trim();
+  const member=teamRows().find(item=>item&&item.active!==false&&String(item.name||'').trim()===managerName);
+  const username=String(lead.managerTelegramUsername||member?.telegramUsername||member?.telegram||'').replace(/^@/,'').trim();
+  const id=String(lead.managerTelegramUserId||member?.telegramUserId||'').trim();
+  return{username,id,name:String(lead.managerTelegramName||member?.name||managerName)}
+}
 function hasTelegram(contact){return Boolean(contact.username||contact.id)}
 function openTelegram(contact){
   const username=String(contact?.username||'').replace(/^@/,'').trim();
