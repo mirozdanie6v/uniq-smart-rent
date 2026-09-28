@@ -204,6 +204,19 @@ jobs:
           path: ydb-entity-api-live-report.json
           if-no-files-found: ignore
 
+      - name: Verify Phase 5 frontend batch persistence
+        run: |
+          set -euo pipefail
+          node scripts/test-ydb-frontend-batch-live.mjs
+
+      - name: Upload Phase 5 frontend batch report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ydb-frontend-batch-live-report
+          path: ydb-frontend-batch-live-report.json
+          if-no-files-found: ignore
+
       - name: Verify normalized YDB dual-write live parity
         run: |
           set -euo pipefail
