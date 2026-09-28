@@ -38,7 +38,7 @@ test('active AUTO SALE save stack has no automatic page reload',()=>{
 test('all business forms are intercepted as SPA submits',()=>{
   const app=fs.readFileSync('public/auto-sale-app-v3.mjs','utf8');
   const guard=fs.readFileSync('public/auto-sale-ui-business-guard.mjs','utf8');
-  assert.match(app,/root\.addEventListener\(['"]submit['"],event=>\{event\.preventDefault\(\)/);
+  assert.match(app,/root\.addEventListener\(['"]submit['"],(?:async\s+)?event=>\{event\.preventDefault\(\)/);
   for(const id of ['requestForm','leadEditForm','quoteForm','orderForm'])assert.match(app,new RegExp(`formId===['"]${id}['"]`));
   assert.match(app,/getAttribute\?\.\('id'\)/);
   assert.match(guard,/form\.getAttribute\?\.\('id'\)===['"]clientEditForm['"]\)\{event\.preventDefault\(\)/);
