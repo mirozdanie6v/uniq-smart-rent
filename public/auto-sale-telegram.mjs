@@ -6,7 +6,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&
 const money=value=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(value)||0);
 const dateRu=value=>{if(!value)return'—';const d=new Date(`${value}T00:00:00`);return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString('ru-RU',{day:'2-digit',month:'short',year:'numeric'})};
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
-const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+const write=(key,value)=>{if(window.__AUTO_SALE_CACHE_WRITE__)window.__AUTO_SALE_CACHE_WRITE__(key,value);else localStorage.setItem(key,JSON.stringify(value))};
 const leads=()=>read(KEYS.leads,[]);
 const quotes=()=>read(KEYS.quotes,[]);
 const orders=()=>read(KEYS.orders,[]);
@@ -93,6 +93,7 @@ document.addEventListener('click',event=>{
   const roleButton=event.target.closest?.('[data-role="manager"],[data-role="owner"]');
   if(roleButton)setTimeout(()=>registerCurrentManager(),0);
 },true);
+window.addEventListener('auto-sale-entity-synced',()=>{if(['manager','owner'].includes(currentStaffRole()))registerCurrentManager()});
 window.addEventListener('auto-sale-server-synced',()=>{if(['manager','owner'].includes(currentStaffRole()))registerCurrentManager()});
 try{if(['manager','owner'].includes(currentStaffRole()))setTimeout(()=>registerCurrentManager(),0)}catch{}
 
@@ -203,8 +204,7 @@ document.addEventListener('submit',event=>{
         const identity={telegramUserId:pending.telegram.id,telegramUsername:pending.telegram.username,telegramFirstName:pending.telegram.firstName,telegramLastName:pending.telegram.lastName,telegramDisplayName:pending.telegram.displayName,contact:pending.contact};
         patchLead(lead.id,identity);
         try{
-          // Wait until the ordinary state sync has created the lead in YDB.
-          // link-client is deliberately a second atomic operation so Telegram identity cannot be lost in a revision race.
+          // The lead is created by the entity API first; link-client is a second entity-level binding operation.
           let linked=null,lastError=null;
           for(let attempt=0;attempt<8;attempt++){
             if(attempt)await new Promise(resolve=>setTimeout(resolve,150+attempt*100));
