@@ -1,10 +1,7 @@
 name: Isolated Yandex to Telegram egress diagnostic
 
 on:
-  push:
-    branches: [prototype/auto-sale-usa]
-    paths:
-      - .telegram-egress-isolated
+  workflow_dispatch:
 
 permissions:
   contents: read
