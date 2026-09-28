@@ -2,6 +2,11 @@ name: Deploy AUTO SALE to Yandex staging
 
 on:
   workflow_dispatch:
+    inputs:
+      telegram_lifecycle:
+        description: Send the full test lifecycle to the linked Flyer_Flyer account
+        type: boolean
+        default: false
   push:
     branches: [prototype/auto-sale-usa]
     paths:
@@ -178,104 +183,14 @@ jobs:
           echo "Revision network configuration:"
           yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
 
-      - name: Send real Telegram manager delivery test
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          response=$(curl -sS --connect-timeout 10 --max-time 30 -w '\n%{http_code}' -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-manager-delivery")
-          code=$(printf '%s' "$response" | tail -n1)
-          body=$(printf '%s' "$response" | sed '$d')
-          echo "$body" | jq .
-          test "$code" = "201"
-          echo "$body" | jq -e '.ok == true and (.messageId != null)' >/dev/null
-          echo "AUTO_SALE_TELEGRAM_MANAGER_DELIVERY_OK"
+      - name: Verify full lifecycle delivery to Flyer_Flyer
+        if: inputs.telegram_lifecycle == true || contains(github.event.head_commit.message, '[telegram-e2e]')
+        run: node scripts/test-telegram-lifecycle.mjs
 
-      - name: Verify real Telegram client delivery when linked
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          response=$(curl -sS --connect-timeout 10 --max-time 30 -w '\n%{http_code}' -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-client-delivery")
-          code=$(printf '%s' "$response" | tail -n1)
-          body=$(printf '%s' "$response" | sed '$d')
-          if [ "$code" = "409" ] && [ "$(echo "$body" | jq -r '.error')" = "client_telegram_not_linked" ]; then
-            echo "AUTO_SALE_TELEGRAM_CLIENT_NOT_LINKED"
-            exit 0
-          fi
-          echo "$body" | jq '{ok,lead,messageId}'
-          test "$code" = "201"
-          echo "$body" | jq -e '.ok == true and (.messageId != null)' >/dev/null
-          echo "AUTO_SALE_TELEGRAM_CLIENT_DELIVERY_OK"
-
-      - name: Verify manager-client Telegram conversation when linked
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          response=$(curl -sS --connect-timeout 10 --max-time 30 -w '\n%{http_code}' -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-conversation-delivery")
-          code=$(printf '%s' "$response" | tail -n1)
-          body=$(printf '%s' "$response" | sed '$d')
-          if [ "$code" = "409" ]; then
-            echo "$body" | jq .
-            echo "AUTO_SALE_TELEGRAM_CONVERSATION_LINKS_INCOMPLETE"
-            exit 0
-          fi
-          echo "$body" | jq '{ok,leadId,manager,managerToClientMessageId,clientToManagerMessageId}'
-          test "$code" = "201"
-          echo "$body" | jq -e '.ok == true and (.managerToClientMessageId != null) and (.clientToManagerMessageId != null)' >/dev/null
-          echo "AUTO_SALE_TELEGRAM_CONVERSATION_OK"
-
-      - name: Verify Telegram bot scenarios
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          body=$(curl -fsS --connect-timeout 10 --max-time 30 -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/telegram/test-bot-scenarios")
-          echo "$body" | jq .
-          echo "$body" | jq -e '.ok == true and ([.results[].ok] | all)' >/dev/null
-          echo "AUTO_SALE_TELEGRAM_BOT_SCENARIOS_OK"
-
-      - name: Verify notification outbox status
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          body=$(curl -fsS --connect-timeout 10 --max-time 30 -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/notifications/status")
-          echo "$body" | jq .
-          echo "$body" | jq -e '.ok == true and (.stats | type == "object")' >/dev/null
-          dead=$(echo "$body" | jq -r '.stats.dead // 0')
-          test "$dead" = "0"
-          echo "AUTO_SALE_NOTIFICATION_OUTBOX_OK"
-
-      - name: Run notification outbox processor
-        env:
-          URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
-        run: |
-          set -euo pipefail
-          body=$(curl -fsS --connect-timeout 10 --max-time 45 -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/notifications/process")
-          echo "$body" | jq .
-          echo "$body" | jq -e '.ok == true and (.stats | type == "object")' >/dev/null
-          echo "AUTO_SALE_NOTIFICATION_PROCESSOR_OK"
-
-      - name: Run reversible client-to-handoff Yandex E2E
-        run: node scripts/e2e-yandex-workflow.mjs
-      - name: Clear all applications after lifecycle verification
+      - name: Upload Telegram delivery receipts
         if: always()
-        run: |
-          set -euo pipefail
-          URL="${STAGING_URL%/}"
-          body=$(curl -fsS --connect-timeout 10 --max-time 30 -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/admin/clear-applications")
-          echo "$body" | jq .
-          echo "$body" | jq -e '.ok == true' >/dev/null
-      - name: Verify applications are empty
-        if: always()
-        run: |
-          set -euo pipefail
-          URL="${STAGING_URL%/}"
-          body=$(curl -fsS --connect-timeout 10 --max-time 30 -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/state")
-          echo "$body" | jq '{revision,leads:(.leads|length),quotes:(.quotes|length),orders:(.orders|length),notes:(.notes|length)}'
-          echo "$body" | jq -e '(.leads|length)==0 and (.quotes|length)==0 and (.orders|length)==0 and (.notes|length)==0' >/dev/null
-      - name: Send one-off full Telegram lifecycle to Flyer_Flyer
-        if: always()
-        run: node scripts/send-all-telegram-demo.mjs
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-lifecycle-report
+          path: telegram-lifecycle-report.json
+          if-no-files-found: ignore

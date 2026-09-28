@@ -28,9 +28,12 @@ function clientId(lead){return /^\d+$/.test(clean(lead?.telegramUserId))?clean(l
 function managerIds(lead,fallback=[],state=null){
   const managerName=clean(lead?.manager);
   const member=managerName?arr(state?.team).find(item=>clean(item?.name)===managerName&&item?.active!==false):null;
+  const username=clean(member?.telegramUsername||member?.telegram||lead?.managerTelegramUsername).replace(/^@/,'').toLowerCase();
+  const linked=username?arr(state?.team).find(item=>item.active!==false&&clean(item.telegramUsername).replace(/^@/,'').toLowerCase()===username&&/^\d+$/.test(clean(item.telegramUserId))):null;
   return unique([
     /^\d+$/.test(clean(lead?.managerTelegramUserId))?clean(lead.managerTelegramUserId):'',
     /^\d+$/.test(clean(member?.telegramUserId))?clean(member.telegramUserId):'',
+    clean(linked?.telegramUserId),
     ...fallback
   ]);
 }
@@ -43,10 +46,10 @@ function statusClientTitle(status){
   return ({'В работе':'Менеджер принял заявку в работу','Расчёт':'Менеджер готовит расчёт','Ожидает клиента':'Расчёт готов','Сделка':'Расчёт согласован — оформляем заказ'}[clean(status)]||('Статус заявки: '+(clean(status)||'обновлён')));
 }
 function stageClientTitle(stage){
-  return ({'Выкуп':'Автомобиль готовится к выкупу','Порт США':'Автомобиль доставлен в порт','В море':'Автомобиль отправлен морем','Таможня':'Автомобиль проходит таможенное оформление','Доставка':'Автомобиль направлен к месту выдачи','Выдача':'Автомобиль готов к выдаче'}[clean(stage)]||('Новый этап: '+(clean(stage)||'обновлён')));
+  return ({'Выкуп':'Автомобиль готовится к выкупу','Подготовка к отправке':'Автомобиль готовится к отправке','В пути':'Автомобиль в пути','Порт США':'Автомобиль доставлен в порт','В море':'Автомобиль отправлен морем','Таможня':'Автомобиль проходит таможенное оформление','Доставка':'Автомобиль направлен к месту выдачи','Выдача':'Автомобиль готов к выдаче'}[clean(stage)]||('Новый этап: '+(clean(stage)||'обновлён')));
 }
 function nextStageText(stage){
-  return ({'Выкуп':'Сообщим, когда автомобиль будет передан в логистику.','Порт США':'Сообщим после отправки автомобиля морем.','В море':'Сообщим после прибытия и перехода к таможенному оформлению.','Таможня':'Сообщим, когда автомобиль будет передан в доставку.','Доставка':'Сообщим, когда автомобиль будет готов к выдаче.','Выдача':'Свяжитесь с менеджером для согласования получения автомобиля.'}[clean(stage)]||'Следующее уведомление придёт при изменении этапа.');
+  return ({'Выкуп':'Сообщим, когда автомобиль будет передан в логистику.','Подготовка к отправке':'Сообщим после отправки автомобиля.','В пути':'Сообщим после прибытия автомобиля.','Порт США':'Сообщим после отправки автомобиля морем.','В море':'Сообщим после прибытия и перехода к таможенному оформлению.','Таможня':'Сообщим, когда автомобиль будет передан в доставку.','Доставка':'Сообщим, когда автомобиль будет готов к выдаче.','Выдача':'Свяжитесь с менеджером для согласования получения автомобиля.'}[clean(stage)]||'Следующее уведомление придёт при изменении этапа.');
 }
 
 export function createTelegramService({
@@ -74,7 +77,7 @@ export function createTelegramService({
     const response=await fetchImpl(`${telegramApiBase}/bot${botToken}/${method}`,{
       method:'POST',
       headers,
-      body:JSON.stringify(payload)
+      body:JSON.stringify(payload),signal:AbortSignal.timeout(8000)
     });
     let data={};
     try{data=await response.json()}catch{}
@@ -99,7 +102,7 @@ export function createTelegramService({
       const signature=createHmac('sha256',relayKey).update(timestamp+'.'+payload).digest('hex');
       const relayHeaders={'content-type':'application/json','x-relay-timestamp':timestamp,'x-relay-signature':signature};
       if(!telegramRelaySecret)relayHeaders['x-telegram-bot-token']=botToken;
-      const response=await fetchImpl(telegramRelayUrl,{method:'POST',headers:relayHeaders,body:payload});
+      const response=await fetchImpl(telegramRelayUrl,{method:'POST',headers:relayHeaders,body:payload,signal:AbortSignal.timeout(8000)});
       let data={};try{data=await response.json()}catch{}
       if(!response.ok||data?.ok===false){const error=new Error('telegram_relay_error');error.statusCode=502;error.telegramDescription=clean(data?.description)||clean(data?.error)||`HTTP ${response.status}`;throw error}
       return{message_id:data?.messageId||null};
@@ -166,10 +169,10 @@ export function createTelegramService({
     return{ok:true,chatId:recipient.chatId,messageId:result?.message_id||null};
   }
 
-  async function notifyStateChanges(previous,next){
+  async function collectStateChanges(previous,next){
     if(!enabled||!previous?.initialized)return[];
     const deliveries=[];
-    const eventKey=meta=>[meta.event,meta.leadId,meta.quoteId,meta.orderId,meta.paymentId].filter(Boolean).join(':');
+    const eventKey=meta=>[Number(previous.revision||0)+1,meta.event,meta.leadId,meta.quoteId,meta.orderId,meta.paymentId].filter(x=>x!==undefined&&x!=='').join(':');
     const prevLeads=new Map(arr(previous.leads).map(x=>[clean(x.id),x]));
     const prevQuotes=new Map(arr(previous.quotes).map(x=>[clean(x.id),x]));
     const prevOrders=new Map(arr(previous.orders).map(x=>[clean(x.id),x]));
@@ -177,12 +180,7 @@ export function createTelegramService({
     const appUrl=clean(process.env.AUTO_SALE_TELEGRAM_APP_URL||'');
     const actionMarkup=label=>appUrl?{inline_keyboard:[[{text:label,web_app:{url:appUrl}}]]}:null;
     const deliver=async(chatId,message,meta,replyMarkup=null)=>{
-      try{
-        const result=await send(chatId,message,{replyMarkup});
-        deliveries.push({ok:true,chatId,messageId:result?.message_id||null,id:eventKey(meta)+':'+meta.target+':'+chatId,...meta});
-      }catch(error){
-        deliveries.push({ok:false,chatId,error:clean(error?.message)||'telegram_send_failed',id:eventKey(meta)+':'+meta.target+':'+chatId,message,...meta});
-      }
+      deliveries.push({chatId,message,replyMarkup,id:eventKey(meta)+':'+meta.target+':'+chatId,...meta});
     };
     const toManagers=async(lead,message,meta,label='Открыть заявку')=>{
       for(const chatId of managerIds(lead,fallbackManagers,next))await deliver(chatId,message,{target:'manager',...meta},actionMarkup(label));
@@ -209,8 +207,15 @@ export function createTelegramService({
 
     for(const quote of arr(next?.quotes)){
       const before=prevQuotes.get(clean(quote.id));
-      if(!before||clean(before.status)===clean(quote.status))continue;
+      const decisionChanged=quote.clientDecision==='changes_requested'&&(before?.clientDecision!==quote.clientDecision||before?.clientDecisionAt!==quote.clientDecisionAt);
+      if(before&&clean(before.status)===clean(quote.status)&&!decisionChanged)continue;
       const lead=quoteLead(next,quote);if(!lead)continue;
+      if(decisionChanged){
+        const message=`✏️ AUTO МИР · клиент запросил изменения\n${leadTitle(lead)}\nРасчёт: ${clean(quote.id)}\n${clean(quote.clientComment)||'Уточните пожелания клиента.'}`;
+        await toClient(lead,message,{event:'quote_changes_requested',leadId:lead.id,quoteId:quote.id});
+        await toManagers(lead,message,{event:'quote_changes_requested',leadId:lead.id,quoteId:quote.id});
+        continue;
+      }
       const total=num(quote.total)?`\nСтоимость: ${money(quote.total)}`:'';
       const clientMsg=`💰 AUTO МИР · расчёт\n\n${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}\n\n${clean(quote.status)==='Отправлен'?'Расчёт готов. Откройте AUTO МИР, чтобы увидеть итоговую стоимость и детали.':clean(quote.status)==='Согласован'?'Расчёт согласован. Менеджер переходит к оформлению заказа.':'Следующее важное изменение мы также пришлём сюда.'}`;
       const managerMsg=`💰 AUTO МИР · расчёт\nКлиент: ${clean(lead.name)||'—'}\nАвтомобиль: ${clean(quote.model)||leadTitle(lead)}\nСтатус: ${clean(quote.status)}${total}`;
@@ -243,6 +248,15 @@ export function createTelegramService({
         await toClient(lead,clientMsg,{event:'payment',leadId:lead.id,orderId:order.id,paymentId:payment.id});
         await toManagers(lead,managerMsg,{event:'payment',leadId:lead.id,orderId:order.id,paymentId:payment.id});
       }
+    }
+    return deliveries;
+  }
+
+  async function notifyStateChanges(previous,next){
+    const deliveries=[];
+    for(const item of await collectStateChanges(previous,next)){
+      try{const result=await send(item.chatId,item.message,{replyMarkup:item.replyMarkup});deliveries.push({...item,ok:true,messageId:result?.message_id||null})}
+      catch(error){deliveries.push({...item,ok:false,error:clean(error.telegramDescription||error.message)||'telegram_send_failed'})}
     }
     return deliveries;
   }
@@ -299,6 +313,7 @@ export function createTelegramService({
     manualRecipient,
     managerIds:(lead,state)=>managerIds(lead,fallbackManagers,state),
     sendManual,
-    notifyStateChanges
+    notifyStateChanges,
+    collectStateChanges
   };
 }

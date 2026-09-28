@@ -32,14 +32,15 @@ async function processNotificationOutbox(limit=50){
   notificationPumpBusy=true;
   const results=[];
   try{
-    const pending=await (await getStore()).pendingNotifications(limit);
+    const pending=await (await getStore()).pendingNotifications(Math.min(limit,6));
     for(const item of pending){
       try{
-        const sent=await telegram.send(item.chatId,item.message);
+        const sent=await telegram.send(item.chatId,item.message,{replyMarkup:item.replyMarkup});
+        if(!sent?.message_id)throw new Error('telegram_message_id_missing');
         await (await getStore()).markNotification(item.id,{ok:true,messageId:sent?.message_id||'',attempts:item.attempts});
         results.push({id:item.id,ok:true,messageId:sent?.message_id||null});
       }catch(error){
-        const message=String(error?.message||'telegram_send_failed');
+        const message=String(error?.telegramDescription||error?.message||'telegram_send_failed');
         await (await getStore()).markNotification(item.id,{ok:false,error:message,attempts:item.attempts});
         results.push({id:item.id,ok:false,error:message});
       }
@@ -126,18 +127,10 @@ const server=http.createServer(async(req,res)=>{
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
       const notifyTelegram=telegram.enabled&&!skipTelegram;
-      const result=await syncYdbState(store,input,{includePrevious:notifyTelegram});
+      const result=await syncYdbState(await getStore(),input,{prepareNotifications:notifyTelegram?telegram.collectStateChanges:null});
       if(result.status>=200&&result.status<300&&notifyTelegram){
-        const before=result.previous;
-        const nextState={...input,initialized:true};
-        setImmediate(()=>{
-          telegram.notifyStateChanges(before,nextState)
-            .then(async deliveries=>{
-              const failed=deliveries.filter(x=>!x.ok);
-              if(failed.length){await (await getStore()).enqueueNotifications(failed);console.warn('AUTO SALE Telegram queued failed deliveries',failed.map(x=>x.id))}
-            })
-            .catch(error=>console.error('AUTO SALE Telegram state notification failed',error));
-        });
+        try{await processNotificationOutbox(6)}catch(error){console.error('AUTO SALE Telegram delivery deferred',error)}
+        result.data.notifications.deliveries=await (await getStore()).notificationStatus(result.data.notifications.ids);
       }
       json(res,result.data,result.status);
       return;
@@ -159,7 +152,8 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/status'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
-      json(res,{ok:true,stats:await (await getStore()).notificationStats()});return;
+      const ids=url.searchParams.getAll('id').slice(0,100);
+      json(res,{ok:true,stats:await (await getStore()).notificationStats(),deliveries:await (await getStore()).notificationStatus(ids)});return;
     }
 
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/telegram/diagnose'){

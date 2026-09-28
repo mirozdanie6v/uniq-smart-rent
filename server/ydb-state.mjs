@@ -56,7 +56,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     return{...payload,revision:Number(row.revision||0n),initialized:Boolean(payload.initialized||payload.leads?.length)};
   }
 
-  async function replaceState(state,{expectedRevision=null}={}){
+  async function replaceState(state,{expectedRevision=null,notifications=[]}={}){
     return sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
       const [rows]=await tx`
         SELECT revision
@@ -81,6 +81,11 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
         VALUES (${STATE_ID}, ${new Uint64(BigInt(next))}, ${JSON.stringify(payload)}, ${new Date().toISOString()})
       `;
+      const now=new Date().toISOString();
+      for(const item of notifications){
+        await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
+          VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
+      }
       return{status:200,data:{ok:true,revision:next}};
     });
   }
@@ -99,9 +104,13 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
   }
   async function pendingNotifications(limit=50){
     const now=new Date().toISOString();
-    const [rows]=await sql`SELECT id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id FROM auto_sale_notification_outbox
-      WHERE (status = ${'pending'} OR status = ${'retry'}) AND next_attempt_at <= ${now} ORDER BY created_at LIMIT ${new Uint64(BigInt(limit))}`;
-    return rows.map(row=>{let payload={};try{payload=JSON.parse(String(row.payload||'{}'))}catch{}return{id:String(row.id),status:String(row.status),attempts:Number(row.attempts||0n),...payload}});
+    return sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
+      const [rows]=await tx`SELECT id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id FROM auto_sale_notification_outbox
+        WHERE (status = ${'pending'} OR status = ${'retry'} OR status = ${'processing'}) AND next_attempt_at <= ${now} ORDER BY created_at, id LIMIT ${new Uint64(BigInt(limit))}`;
+      const lease=new Date(Date.now()+120_000).toISOString();
+      for(const row of rows)await tx`UPDATE auto_sale_notification_outbox SET status=${'processing'},next_attempt_at=${lease} WHERE id=${String(row.id)}`;
+      return rows.map(row=>{let payload={};try{payload=JSON.parse(String(row.payload||'{}'))}catch{}return{...payload,id:String(row.id),status:String(row.status),attempts:Number(row.attempts||0n)}});
+    });
   }
   async function markNotification(id,{ok,messageId='',error='',attempts=0}={}){
     const now=new Date(),current=Number(attempts)||0,nextAttempts=current+1,maxAttempts=8;
@@ -114,6 +123,14 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     const [rows]=await sql`SELECT status, COUNT(*) AS count FROM auto_sale_notification_outbox GROUP BY status`;
     return Object.fromEntries(rows.map(row=>[String(row.status),Number(row.count||0n)]));
   }
+  async function notificationStatus(ids=[]){
+    const results=[];
+    for(const id of ids){
+      const [rows]=await sql`SELECT id,status,payload,message_id,last_error,attempts FROM auto_sale_notification_outbox WHERE id=${String(id)}`;
+      for(const row of rows){const item=JSON.parse(String(row.payload));results.push({id:String(row.id),status:String(row.status),event:item.event,target:item.target,leadId:item.leadId,messageId:String(row.message_id||''),error:String(row.last_error||''),attempts:Number(row.attempts||0n)})}
+    }
+    return results;
+  }
 
   async function ping(){
     await sql`SELECT 1 AS ok`;
@@ -124,5 +141,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,enqueueNotifications,pendingNotifications,markNotification,notificationStats,ping,close};
+  return{loadState,replaceState,enqueueNotifications,pendingNotifications,markNotification,notificationStats,notificationStatus,ping,close};
 }

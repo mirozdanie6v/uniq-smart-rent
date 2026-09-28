@@ -2,8 +2,55 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac} from 'node:crypto';
 import {createTelegramService} from '../server/telegram-bot.mjs';
+import {syncYdbState} from '../server/ydb-sync.mjs';
 
 const TOKEN='123456:TEST_TOKEN';
+
+test('same manager Telegram username resolves only through an already linked team account',()=>{
+  const service=createTelegramService({token:TOKEN,managerChatIds:''});
+  const state={team:[{name:'Иван',telegram:'@Flyer_Flyer'},{name:'Дмитрий',telegramUsername:'Flyer_Flyer',telegramUserId:'700'}]};
+  assert.deepEqual(service.managerIds({manager:'Иван'},state),['700']);
+  assert.deepEqual(service.managerIds({manager:'Иван'},{team:[state.team[0]]}),[]);
+});
+
+test('outbox planning preserves both roles in one chat and unique IDs for every transition',async()=>{
+  let calls=0;
+  const service=createTelegramService({token:TOKEN,managerChatIds:'',relayUrl:'',fetchImpl:async()=>{calls++;throw new Error('offline')}});
+  let state={revision:1,initialized:true,leads:[{id:'L',name:'TEST',model:'TEST',contact:'@Flyer_Flyer',nextAction:'2026-10-01',status:'Новый',clientCreated:true,telegramUserId:'700',managerTelegramUserId:'700'}],quotes:[],orders:[]};
+  const ids=new Set();
+  for(const status of ['В работе','Расчёт','В работе','Расчёт','Ожидает клиента']){
+    const next=structuredClone(state);next.revision++;next.leads[0].status=status;
+    const planned=await service.collectStateChanges(state,next);
+    assert.equal(planned.length,2);assert.deepEqual(planned.map(x=>x.target),['client','manager']);
+    for(const item of planned){assert.equal(item.chatId,'700');assert.ok(!ids.has(item.id));ids.add(item.id)}
+    state=next;
+  }
+  assert.equal(calls,0,'planning must never send before commit');
+});
+
+test('new sent quote and changes request notify both roles even without a prior quote status transition',async()=>{
+  const service=createTelegramService({token:TOKEN,managerChatIds:'',relayUrl:'',fetchImpl:async()=>{}});
+  const previous={revision:1,initialized:true,leads:[{id:'L',telegramUserId:'700',managerTelegramUserId:'700'}],quotes:[],orders:[]};
+  const next=structuredClone(previous);next.quotes=[{id:'Q',leadId:'L',status:'Отправлен',total:100}];
+  assert.equal((await service.collectStateChanges(previous,next)).filter(x=>x.event==='quote_status').length,2);
+  const changes=structuredClone(next);changes.quotes[0].clientDecision='changes_requested';changes.quotes[0].clientComment='Другой цвет';
+  const events=await service.collectStateChanges(next,changes);
+  assert.equal(events.length,2);assert.ok(events.every(x=>x.event==='quote_changes_requested'&&x.message.includes('Другой цвет')));
+});
+
+test('state sync passes notifications into the same commit and never sends on rejected state',async()=>{
+  let committed=null,prepared=0;
+  const previous={revision:1,initialized:true,leads:[{id:'L',name:'TEST',model:'TEST',contact:'@test',nextAction:'2026-10-01',status:'Новый'}],quotes:[],orders:[],team:[],catalog:[],notes:{}};
+  const store={loadState:async()=>structuredClone(previous),replaceState:async(state,options)=>{committed={state,options};return{status:200,data:{ok:true,revision:2}}}};
+  const input=structuredClone(previous);input.leads[0].status='В работе';
+  const prepareNotifications=async()=>{prepared++;return[{id:'event-2',message:'message'}]};
+  const result=await syncYdbState(store,input,{prepareNotifications});
+  assert.equal(result.status,200);assert.deepEqual(committed.options.notifications,[{id:'event-2',message:'message'}]);
+  assert.deepEqual(result.data.notifications.ids,['event-2']);
+  input.leads[0].status='Сделка';committed=null;
+  assert.equal((await syncYdbState(store,input,{prepareNotifications})).status,400);
+  assert.equal(prepared,1);assert.equal(committed,null);
+});
 function initData(user,{authDate=2000000000}={}){
   const params=new URLSearchParams();
   params.set('auth_date',String(authDate));

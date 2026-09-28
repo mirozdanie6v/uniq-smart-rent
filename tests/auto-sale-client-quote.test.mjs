@@ -5,7 +5,7 @@ import {JSDOM} from 'jsdom';
 test('client can see and approve a sent quote from the client card',async()=>{
   const dom=new JSDOM(`<!doctype html><html><head></head><body><div data-client-detail-bg><div class="auto-tg-modal"><div class="auto-client-order-grid"></div><div class="auto-guide"><b>Что дальше</b><span>old</span></div><div class="auto-actions"><button data-tg-manager="L-109">Написать менеджеру</button></div></div></div></body></html>`,{url:'https://auto-sale.viiversion.com/'});
   global.window=dom.window;global.document=dom.window.document;global.localStorage=dom.window.localStorage;global.MutationObserver=dom.window.MutationObserver;global.CustomEvent=dom.window.CustomEvent;global.confirm=()=>true;
-  const quote={id:'Q-507',leadId:'L-109',model:'Ford Mustang Mach-E',version:1,status:'Отправлен',lot:1000,auction:200,inland:300,ocean:800,customs:500,repair:0,service:1400,total:4200,validUntil:'2026-09-19'};
+  const quote={id:'Q-507',leadId:'L-109',model:'Ford Mustang Mach-E',origin:'Грузия',version:1,status:'Отправлен',lot:1000,auction:200,inland:300,ocean:800,customs:500,repair:0,service:1400,total:4200,validUntil:'2026-09-19'};
   localStorage.setItem('auto-sale-quotes-v2',JSON.stringify([quote]));
   localStorage.setItem('auto-sale-notes-v2',JSON.stringify({}));
   await import(`../public/auto-sale-client-quote.mjs?test=${Date.now()}`);

@@ -13,7 +13,7 @@ const validPhoto=value=>{
   return /^https?:\/\//i.test(src)&&src.length<=4000;
 };
 
-export async function syncYdbState(store,input,{includePrevious=false}={}){
+export async function syncYdbState(store,input,{includePrevious=false,prepareNotifications=null}={}){
   const previous=await store.loadState();
   const current=Number(previous.revision)||0;
   const supplied=input?.baseRevision;
@@ -114,6 +114,9 @@ export async function syncYdbState(store,input,{includePrevious=false}={}){
     }
   }
 
-  const result=await store.replaceState({leads,quotes,orders,notes,team,catalog},{expectedRevision:current});
+  const nextState={initialized:true,leads,quotes,orders,notes,team,catalog};
+  const notifications=prepareNotifications?await prepareNotifications(previous,nextState):[];
+  const result=await store.replaceState(nextState,{expectedRevision:current,notifications});
+  if(result.status===200&&prepareNotifications)result.data.notifications={queued:notifications.length,ids:notifications.map(x=>x.id)};
   return includePrevious?{...result,previous}:result;
 }

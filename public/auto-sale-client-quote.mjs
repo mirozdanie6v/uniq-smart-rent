@@ -1,3 +1,4 @@
+import {validateQuote} from './auto-sale-business-rules.mjs';
 const K={quotes:'auto-sale-quotes-v2',notes:'auto-sale-notes-v2'};
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
 const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
@@ -16,7 +17,7 @@ function panel(leadId,q){
     <div class="auto-client-quote-head"><div><span>РАСЧЁТ · ${esc(q.id)} · V${Number(q.version)||1}</span><h3>${esc(q.model||'Расчёт автомобиля')}</h3></div><b class="auto-status ${agreed?'good':''}">${esc(q.status)}</b></div>
     <div class="auto-client-quote-lines">${rows.map(([key,label])=>`<div><span>${label}</span><strong>${money(q[key])}</strong></div>`).join('')}</div>
     <div class="auto-client-quote-total"><span><b>Итого под ключ</b><small>Расчёт действует до ${dateRu(q.validUntil)}</small></span><strong>${money(q.total)}</strong></div>
-    ${agreed?'<div class="auto-client-decision good"><b>Расчёт согласован</b><span>Менеджер получил ваше решение. Следующий шаг — депозит и оформление заказа.</span></div>':''}
+    ${agreed?(saving?'<div role="status" class="auto-client-decision"><b>Сохраняем решение…</b></div>':'<div class="auto-client-decision good"><b>Расчёт согласован</b><span>Решение сохранено. Следующий шаг — депозит и оформление заказа.</span></div>'):''}
     ${changes?`<div class="auto-client-decision warn"><b>Запрошены изменения</b><span>${esc(q.clientComment||'Менеджер получил ваш запрос и подготовит следующую версию расчёта.')}</span></div>`:''}
     ${actionable?`<div class="auto-client-quote-actions"><button type="button" class="auto-btn primary" data-client-quote-agree="${esc(q.id)}">Согласовать расчёт</button><button type="button" class="auto-btn ghost" data-client-quote-change="${esc(q.id)}">Нужны изменения</button></div><div class="auto-client-change" data-client-change-panel hidden><label>Что нужно изменить?<textarea data-client-quote-comment placeholder="Например: другой бюджет, комплектация, сроки доставки…"></textarea></label><div class="auto-actions"><button type="button" class="auto-btn primary" data-client-quote-send-change="${esc(q.id)}">Отправить менеджеру</button><button type="button" class="auto-btn ghost" data-client-quote-cancel-change>Отмена</button></div></div>`:''}
   </section>`;
@@ -25,7 +26,7 @@ function panel(leadId,q){
 function updateGuide(modal,q){
   const node=modal.querySelector('.auto-guide span');if(!node)return;
   let next='';
-  if(q?.status==='Согласован')next='Расчёт согласован. Следующий шаг — внесение депозита и создание заказа.';
+  if(q?.status==='Согласован')next=saving?'Сохраняем решение…':'Расчёт согласован. Следующий шаг — внесение депозита и создание заказа.';
   else if(q?.clientDecision==='changes_requested')next='Запрос на изменения отправлен. Менеджер подготовит обновлённый расчёт.';
   else if(q&&['Отправлен','На согласовании'].includes(q.status))next='Проверьте расчёт ниже и нажмите «Согласовать расчёт» или «Нужны изменения».';
   if(next&&node.textContent!==next)node.textContent=next;
@@ -36,7 +37,7 @@ function enhanceClient(){
   const id=modal.querySelector('[data-tg-manager]')?.dataset.tgManager||'';if(!id)return;
   const q=quoteFor(id);if(!q||q.status==='Черновик')return;
   const current=modal.querySelector('.auto-client-quote');
-  const state=`${q.status}|${q.clientDecision||''}|${q.clientComment||''}`;
+  const state=`${q.status}|${q.clientDecision||''}|${q.clientComment||''}|${saving}`;
   if(current?.dataset.clientQuote===q.id&&current.dataset.state===state){updateGuide(modal,q);return}
   current?.remove();
   const grid=modal.querySelector('.auto-client-order-grid');
@@ -60,32 +61,20 @@ function enhanceManager(){
 
 function enhance(){enhanceClient();enhanceManager()}
 
-function coreQuoteAction(id,status){
-  const app=document.getElementById('app');if(!app)return null;
-  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.quoteAction=status;button.dataset.id=id;app.append(button);
-  // The client decision listener is registered in capture phase. A synthetic click
-  // would be intercepted by that same listener before the core app sees it.
-  button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
-  button.remove();
-  return read(K.quotes,[]).find(q=>q.id===id)?.status===status;
-}
-function syncCoreQuote(id,decision){
-  if(!document.getElementById('app'))return null;
-  let q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
-  if(q.status==='Отправлен'){
-    if(coreQuoteAction(id,'На согласовании')!==true)return false;
-    q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
-  }
-  if(decision==='agreed'&&q.status==='На согласовании'){
-    if(coreQuoteAction(id,'Согласован')!==true)return false;
-    q=read(K.quotes,[]).find(x=>x.id===id);if(!q)return false;
-  }
-  return decision==='agreed'?q.status==='Согласован':q.status==='На согласовании';
+function decisionError(message){
+  const panel=document.querySelector('.auto-client-quote');if(!panel)return;
+  panel.querySelector('.auto-client-sync-error')?.remove();
+  panel.insertAdjacentHTML('beforeend',`<div role="alert" class="auto-client-sync-error auto-client-decision warn"><b>Не удалось согласовать расчёт</b><span>${esc(message)}</span></div>`);
 }
 
-function saveDecision(id,decision,comment=''){
+let saving=false;
+async function saveDecision(id,decision,comment=''){
+  if(saving)return false;
   const before=read(K.quotes,[]).find(q=>q.id===id);if(!before||!['Отправлен','На согласовании'].includes(before.status))return false;
-  const coreResult=syncCoreQuote(id,decision);if(coreResult===false)return false;
+  if(decision==='agreed'){
+    const errors=validateQuote({...before,status:'Согласован'});
+    if(errors.length){decisionError('Менеджеру нужно завершить проверку автомобиля и данные расчёта. '+errors.join(' '));return false}
+  }
   const list=read(K.quotes,[]),index=list.findIndex(q=>q.id===id);if(index<0)return false;
   const q=list[index],now=new Date().toISOString();
   if(decision==='agreed')list[index]={...q,status:'Согласован',clientDecision:'agreed',clientDecisionAt:now,agreedAt:q.agreedAt||now,updatedAt:now};
@@ -96,6 +85,21 @@ function saveDecision(id,decision,comment=''){
   write(K.notes,notes);
   window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision}}));
   queueMicrotask(enhance);
+  if(window.__AUTO_SALE_FLUSH__){
+    saving=true;
+    try{
+      const result=await window.__AUTO_SALE_FLUSH__();
+      if(!result?.ok){
+        const current=read(K.quotes,[]),row=current.findIndex(x=>x.id===id);
+        if(row>=0&&current[row].clientDecisionAt===now){current[row]=before;write(K.quotes,current)}
+        const currentNotes=read(K.notes,{});
+        currentNotes[q.leadId]=(currentNotes[q.leadId]||[]).filter(x=>x.at!==now);
+        write(K.notes,currentNotes);
+        window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision:'failed'}}));
+        saving=false;enhance();decisionError('Решение не сохранено на сервере. Проверьте соединение и повторите действие.');return false;
+      }
+    }finally{saving=false;enhance()}
+  }
   return true;
 }
 

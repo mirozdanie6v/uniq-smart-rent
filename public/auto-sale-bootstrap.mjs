@@ -10,6 +10,7 @@ let syncing=false;
 let pending=false;
 let baselineState=null;
 let lastPushedFingerprint='';
+let activeSync=null;
 
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
@@ -35,15 +36,21 @@ async function pullInitialState(){
   }
 }
 
-async function pushState(){
+function pushState(){
+  if(activeSync){pending=true;return activeSync.then(()=>pushState())}
+  activeSync=performPush().finally(()=>{activeSync=null});
+  return activeSync;
+}
+async function performPush(){
   if(QUOTE_AUDIT_MODE)return;
   const currentFingerprint=fingerprint();
-  if(currentFingerprint===lastPushedFingerprint)return;
+  if(currentFingerprint===lastPushedFingerprint)return{ok:true,revision};
   if(syncing){pending=true;return}
   syncing=true;
   try{
     for(let attempt=0;attempt<2;attempt++){
-      const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(payload())});
+      const sent=payload();
+      const response=await fetch('/api/auto-sale/state',{method:'PUT',headers:{'content-type':'application/json'},body:JSON.stringify(sent)});
       const data=await response.json().catch(()=>({}));
       if(response.status===409){
         const serverState=data.state&&data.state.initialized?data.state:null;
@@ -63,32 +70,35 @@ async function pushState(){
         window.__AUTO_SALE_SERVER__={online:true,revision,conflict:true,currentRevision,retrying:attempt===0};
         window.dispatchEvent(new CustomEvent('auto-sale-server-conflict',{detail:{revision,currentRevision,state:serverState,retrying:attempt===0}}));
         if(attempt===0)continue;
-        return;
+        return{ok:false,error:'revision_conflict'};
       }
       if(!response.ok){
         console.warn('AUTO SALE state rejected by server',data);
         window.__AUTO_SALE_SERVER__={online:true,revision,error:data.error||`http_${response.status}`};
         window.dispatchEvent(new CustomEvent('auto-sale-server-rejected',{detail:data}));
-        return;
+        return{ok:false,error:data.error||`http_${response.status}`};
       }
       revision=Number(data.revision||revision);
       sessionStorage.setItem(REVISION_KEY,String(revision));
-      baselineState=snapshotAutoSaleState({...localState(),revision,initialized:true});
-      lastPushedFingerprint=fingerprint();
+      baselineState=snapshotAutoSaleState({...sent,revision,initialized:true});
+      lastPushedFingerprint=fingerprint(sent);
+      if(fingerprint()!==lastPushedFingerprint)pending=true;
       window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};
       window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));
-      return;
+      return{ok:true,revision};
     }
   }catch(error){
     console.warn('AUTO SALE server sync deferred',error);
     window.__AUTO_SALE_SERVER__={online:false,revision};
     window.dispatchEvent(new CustomEvent('auto-sale-server-deferred',{detail:{revision}}));
+    return{ok:false,error:'offline'};
   }finally{
     syncing=false;
     if(pending){pending=false;scheduleSync(40)}
   }
 }
 function scheduleSync(delay=180){if(QUOTE_AUDIT_MODE)return;clearTimeout(timer);timer=setTimeout(pushState,delay)}
+window.__AUTO_SALE_FLUSH__=async()=>{clearTimeout(timer);let result=await pushState();if(result?.ok&&fingerprint()!==lastPushedFingerprint)result=await pushState();return result};
 
 function normalizeSettledPaymentField(){
   const form=document.querySelector('#orderForm');if(!form)return;
@@ -115,7 +125,7 @@ function normalizeSettledPaymentField(){
 await pullInitialState();
 Storage.prototype.setItem=function(key,value){const tracked=this===localStorage&&Object.values(DATA_KEYS).includes(String(key));const before=tracked?this.getItem(key):null;originalSet.call(this,key,value);if(tracked&&!suppress&&!QUOTE_AUDIT_MODE&&before!==String(value))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
-await import('./auto-sale-app-v3.mjs?v=20260927-real-glint-v11');
+await import('./auto-sale-app-v3.mjs?v=20260928-lifecycle-v1');
 await import('./auto-sale-ui-business-guard.mjs');
 await import('./auto-sale-quote-lead-serialization.mjs');
 await import('./auto-sale-quote-save-fix.mjs');
@@ -124,7 +134,7 @@ await import('./auto-sale-required-fields.mjs');
 await import('./auto-sale-director-team.mjs?v=20260926-responsive-manager-v1');
 await import('./auto-sale-telegram.mjs?v=20260927-safe-client-chat-v8');
 await import('./auto-sale-telegram-id.mjs?v=20260927-safe-chat-link-v2');
-await import('./auto-sale-client-quote.mjs');
+await import('./auto-sale-client-quote.mjs?v=20260928-lifecycle-v1');
 normalizeSettledPaymentField();
 const appRoot=document.querySelector('#app');
 if(appRoot)new MutationObserver(()=>queueMicrotask(normalizeSettledPaymentField)).observe(appRoot,{childList:true,subtree:true});
