@@ -19,7 +19,8 @@
     "migrate:yandex": "node scripts/migrate-auto-sale-to-ydb.mjs",
     "deploy": "wrangler d1 migrations apply auto-sale-db --remote && wrangler deploy",
     "test:yandex": "node --test tests/yandex-state-sync.test.mjs",
-    "prepare:ydb-domain": "node scripts/prepare-auto-sale-ydb-domain.mjs"
+    "prepare:ydb-domain": "node scripts/prepare-auto-sale-ydb-domain.mjs",
+    "backfill:ydb-domain": "node scripts/backfill-auto-sale-ydb-domain.mjs"
   },
   "dependencies": {
     "@ydbjs/auth": "latest",
