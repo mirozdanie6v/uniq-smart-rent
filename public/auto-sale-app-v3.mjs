@@ -28,7 +28,7 @@ const transportLabel=q=>q?.transportMode==='Море'?'Морская перев
 const defaultCars=[];
 const KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',catalog:'auto-sale-catalog-v1',team:'auto-sale-team-v1',role:'auto-sale-role-v2'};
 const parse=(storage,key,fallback)=>{try{const x=JSON.parse(storage.getItem(key)||'null');return x??fallback}catch{return fallback}};
-const persist=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value))}catch{}};
+const persist=(key,value)=>{try{if(window.__AUTO_SALE_CACHE_WRITE__)window.__AUTO_SALE_CACHE_WRITE__(key,value);else localStorage.setItem(key,JSON.stringify(value))}catch{}};
 const activeManagers=()=>{const team=parse(localStorage,KEYS.team,[]),savedLeads=parse(localStorage,KEYS.leads,[]),savedOrders=parse(localStorage,KEYS.orders,[]);const fromTeam=Array.isArray(team)?team.filter(x=>x&&x.active!==false&&x.role==='Менеджер').map(x=>String(x.name||'').trim()):[];const fromAssignments=[...(Array.isArray(savedLeads)?savedLeads:[]),...(Array.isArray(savedOrders)?savedOrders:[])].map(x=>String(x?.manager||'').trim()).filter(Boolean);return[...new Set([...fromTeam,...fromAssignments].filter(Boolean))]};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(v)||0);
@@ -287,7 +287,26 @@ let cars=Array.isArray(storedCatalog)&&storedCatalog.length?storedCatalog.map(ca
 leads=leads.map(x=>({...x,origin:String(x.origin||''),yearFrom:x.yearFrom||'',yearTo:x.yearTo||'',mileageMax:x.mileageMax||'',engine:x.engine||'Не важно',drive:x.drive||'Не важно',damage:x.damage||'Минимальные',deliveryCity:x.deliveryCity||'',deposit:Number(x.deposit)||0,depositDate:x.depositDate||'',paymentMethod:x.paymentMethod||''}));
 quotes=quotes.map(x=>{const origin=String(x.origin||'').trim()||(Number(x.auction)>0?'США':'Грузия');return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),version:Number(x.version)||1,validUntil:x.validUntil||addDays(today,7),verification:normalizeVehicleVerification(x)}});
 orders=orders.map(x=>{const rawPayments=normalizePayments(x),origin=String(x.origin||'').trim()||(x.lot?'США':'Уточняется'),lead=leads.find(l=>l.id===x.leadId),quote=quotes.filter(q=>q.leadId===x.leadId).sort((a,b)=>(b.version||1)-(a.version||1))[0],riskType=x.riskType||(x.risk==='Нет'?'Нет':RISK_TYPES.includes(x.risk)?x.risk:'Другое'),riskNote=x.riskNote||(riskType==='Другое'?x.risk:'');let paymentPlan=Array.isArray(x.paymentPlan)?x.paymentPlan:[],paymentPlanNeedsReview=Boolean(x.paymentPlanNeedsReview);if(origin==='США'&&quote&&paymentPlan.length!==4){const range=auctionDepositRange(x.total||quote.total),knownDeposit=Number(lead?.deposit)||0,deposit=knownDeposit||Math.round((range.min+range.max)/2);paymentPlan=buildUsPaymentPlan({...quote,origin,total:Number(x.total)||Number(quote.total)||0},deposit,{needsReview:!knownDeposit});paymentPlanNeedsReview=!knownDeposit;}const payments=paymentPlan.length?migratePaymentsToPlan(rawPayments,paymentPlan):rawPayments;return{...x,origin,transportMode:x.transportMode||defaultTransportMode(origin),paymentPlan,paymentPlanNeedsReview,payments,paid:paymentsTotal(payments),riskType,riskNote}});
-const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};saveAll();
+const saveAll=()=>{persist(KEYS.leads,leads);persist(KEYS.quotes,quotes);persist(KEYS.orders,orders);persist(KEYS.notes,notes);persist(KEYS.catalog,cars)};
+const noteEntry=value=>({id:'NOTE-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),at:new Date().toISOString(),text:value});
+const entityErrorText=error=>error?.code==='entity_conflict'
+  ?'Данные изменились в другом окне. Карточка обновлена с сервера — повторите действие.'
+  :Array.isArray(error?.data?.details)&&error.data.details.length?error.data.details.join(' ')
+  :'Не удалось сохранить изменения. Проверьте данные и повторите.';
+async function commitEntities(operations,form=null){
+  if(!window.__AUTO_SALE_ENTITY_BATCH__)return{ok:true,localOnly:true};
+  try{return await window.__AUTO_SALE_ENTITY_BATCH__(operations)}
+  catch(error){if(form)showErrors(form,[entityErrorText(error)]);else console.warn('AUTO SALE entity action rejected',error);return null}
+}
+function reloadFromCache(){
+  leads=parse(localStorage,KEYS.leads,[])||[];
+  quotes=parse(localStorage,KEYS.quotes,[])||[];
+  orders=parse(localStorage,KEYS.orders,[])||[];
+  notes=parse(localStorage,KEYS.notes,{})||{};
+  const nextCars=parse(localStorage,KEYS.catalog,[]);
+  if(Array.isArray(nextCars))cars=nextCars;
+}
+saveAll();
 
 const roleLabels={client:'Клиент',manager:'Менеджер',owner:'Директор'};
 const roleIcons={client:'user',manager:'briefcase',owner:'crown'};
