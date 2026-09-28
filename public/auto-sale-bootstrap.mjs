@@ -41,6 +41,25 @@ function applyReturnedVersions(map={}){
   }
   window.__AUTO_SALE_ROW_VERSIONS__=rowVersions;
 }
+async function ensureEntityVersion(resource,id){
+  const known=versionFor(resource,id);if(known!==null)return known;
+  const plural=({lead:'leads',quote:'quotes',order:'orders',team:'team',catalog:'catalog'})[resource];
+  if(!plural||!id)return null;
+  try{
+    const response=await fetch('/api/auto-sale/'+plural+'/'+encodeURIComponent(id),{headers:{accept:'application/json'},cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)return null;
+    const value=Number(data.rowVersion);
+    if(Number.isInteger(value)&&value>0){
+      if(!rowVersions[resource])rowVersions[resource]={};
+      rowVersions[resource][id]=value;
+      window.__AUTO_SALE_ROW_VERSIONS__=rowVersions;
+      return value;
+    }
+  }catch{}
+  return null;
+}
+
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{});writeCache(DATA_KEYS.team,state.team||[]);if(Array.isArray(state.catalog))writeCache(DATA_KEYS.catalog,state.catalog)}
 function localState(){return{revision,initialized:true,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{}),team:readCache(DATA_KEYS.team,[]),catalog:readCache(DATA_KEYS.catalog,[])}}
@@ -74,8 +93,11 @@ async function entityBatch(operations,{allowCompatFallback=false}={}){
     const ref=aggregateRef(operation);
     if(!ref.resource||!ref.id||operation.operation==='create'||created.has(ref.resource+':'+ref.id))continue;
     if(operation.baseRowVersion===undefined||operation.baseRowVersion===null){
-      const value=versionFor(ref.resource,ref.id);
-      if(value!==null)operation.baseRowVersion=value;
+      const value=await ensureEntityVersion(ref.resource,ref.id);
+      if(value===null){
+        const error=new Error('row_version_unavailable');error.code='row_version_unavailable';error.data={resource:ref.resource,id:ref.id};throw error;
+      }
+      operation.baseRowVersion=value;
     }
   }
   try{
