@@ -1,2 +1,2 @@
-Deploy durable Telegram lifecycle notifications and client quote approval feedback
+Deploy AutoWorld fix: stop manager registration save loop, prevent revision conflicts, restore status Telegram notifications
 2026-09-28
