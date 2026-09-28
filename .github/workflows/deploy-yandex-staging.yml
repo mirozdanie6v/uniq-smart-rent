@@ -191,6 +191,19 @@ jobs:
             | tee /tmp/read-parity.json \
             | jq -e '.ok == true and .configuredMode == "normalized" and .source == "normalized" and .fallback == false and .shadowVerified == true and (.revision|tonumber) >= 1' >/dev/null
 
+      - name: Verify optimistic entity API live
+        run: |
+          set -euo pipefail
+          node scripts/test-ydb-entity-api-live.mjs
+
+      - name: Upload entity API live report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ydb-entity-api-live-report
+          path: ydb-entity-api-live-report.json
+          if-no-files-found: ignore
+
       - name: Verify normalized YDB dual-write live parity
         run: |
           set -euo pipefail
