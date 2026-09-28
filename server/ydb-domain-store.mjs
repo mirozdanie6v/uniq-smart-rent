@@ -319,6 +319,19 @@ export async function createYdbDomainStore({
     }:null;
   }
 
+  async function entityRowVersion(resource,id){
+    const key=String(id||'').trim();
+    if(!key)return null;
+    let rows=[];
+    if(resource==='lead')[rows]=await sql`SELECT row_version FROM auto_sale_leads WHERE id=${key}`;
+    else if(resource==='quote')[rows]=await sql`SELECT row_version FROM auto_sale_quotes WHERE id=${key}`;
+    else if(resource==='order')[rows]=await sql`SELECT row_version FROM auto_sale_orders WHERE id=${key}`;
+    else if(resource==='team')[rows]=await sql`SELECT row_version FROM auto_sale_team WHERE id=${key}`;
+    else if(resource==='catalog')[rows]=await sql`SELECT row_version FROM auto_sale_catalog WHERE id=${key}`;
+    else throw new Error('unsupported_entity_resource');
+    return rows[0]?Number(rows[0].row_version||0n):null;
+  }
+
   async function counts(){
     const result={};
     const queries=[
@@ -340,5 +353,5 @@ export async function createYdbDomainStore({
 
   async function close(){driver.close()}
 
-  return{sql,schemaVersion,replaceSnapshot,loadRows,loadReadSnapshot,migrationMeta,counts,close};
+  return{sql,schemaVersion,replaceSnapshot,loadRows,loadReadSnapshot,migrationMeta,entityRowVersion,counts,close};
 }
