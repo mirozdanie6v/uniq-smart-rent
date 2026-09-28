@@ -297,6 +297,7 @@ export function createTelegramService({
     send,
     validateInitData,
     manualRecipient,
+    managerIds:(lead,state)=>managerIds(lead,fallbackManagers,state),
     sendManual,
     notifyStateChanges
   };
