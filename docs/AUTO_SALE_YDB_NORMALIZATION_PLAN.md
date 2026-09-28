@@ -2,6 +2,45 @@
 
 ## Implementation status — 2026-09-28
 
+### Phase 2 — COMPLETE
+
+Transactional dual-write is enabled on Yandex staging behind `AUTO_SALE_YDB_DUAL_WRITE=true`.
+
+Current write path:
+1. read legacy `auto_sale_state` inside a serializable YDB transaction;
+2. enforce legacy optimistic revision;
+3. write the new legacy blob;
+4. if shadow `source_revision` is stale, catch it up inside the same transaction;
+5. compute entity-level normalized diff;
+6. apply only changed normalized rows/deletes;
+7. enqueue notification outbox rows;
+8. commit once.
+
+This means legacy state, normalized shadow and notification intents share one transaction boundary.
+
+Live verification:
+- quality gate: 208 passed, 0 failed;
+- health: `ydbDomainDualWrite = enabled`;
+- temporary lead create: revision 2459;
+- normalized diff on create: leads +1 only;
+- legacy/normalized parity after create: 100%;
+- temporary lead delete: revision 2460;
+- normalized diff on delete: leads -1 only;
+- legacy/normalized parity after cleanup: 100%;
+- final legacy hash restored to the Phase 1 canonical hash;
+- catalog remained 149 rows;
+- no Telegram notification was sent during the verification.
+
+A permanent deploy gate now runs `scripts/test-ydb-dual-write-live.mjs` after every Yandex staging deployment. Deployment is not considered successful unless live create/delete parity succeeds.
+
+Important:
+- legacy `GET /api/auto-sale/state` is still the read source;
+- global revision still exists for the compatibility endpoint;
+- normalized tables are now continuously maintained, but the frontend has not been switched to entity APIs yet;
+- rollback remains immediate: disable `AUTO_SALE_YDB_DUAL_WRITE` and legacy behavior continues unchanged.
+
+Next step: Phase 3 normalized shadow reads / parity-read mode, while keeping the public response contract and a feature-flag fallback to legacy reads.
+
 ### Phase 1 — COMPLETE
 
 Live backfill result:
