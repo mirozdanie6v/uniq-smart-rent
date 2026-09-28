@@ -81,6 +81,7 @@ function retryQuoteSubmit(form,button){
   });
 }
 function settleLocal(form,button,type){
+  if(window.__AUTO_SALE_ENTITY_BATCH__)return;
   queueMicrotask(()=>{
     if(!form.isConnected){if(type==='lead')showSaved(document.querySelector('#leadEditForm'),'Сохранить карточку');return}
     const error=form.querySelector('.auto-form-error');
@@ -134,6 +135,18 @@ document.addEventListener('click',event=>{
 
 const observer=new MutationObserver(patchForms);observer.observe(document.documentElement,{childList:true,subtree:true});patchForms();
 
+window.addEventListener('auto-sale-entity-synced',()=>{
+  const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;
+  form.dataset.fallbackSaved='0';
+  showSaved(form,form.id==='leadEditForm'?'Сохранить карточку':form.id==='quoteForm'?'Сохранить расчёт':'Сохранить заказ');
+});
+window.addEventListener('auto-sale-entity-rejected',()=>{
+  const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;
+  resetButton(buttonFor(form));feedback(form,'Не удалось сохранить изменения. Проверьте данные и повторите.','error');
+});
+window.addEventListener('auto-sale-entity-conflict',()=>{
+  const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(form){resetButton(buttonFor(form));feedback(form,'Карточка была изменена в другом окне или другим пользователем. Данные обновлены — повторите изменения.','warn')}
+});
 window.addEventListener('auto-sale-server-synced',()=>{
   const form=document.querySelector('#leadEditForm,#quoteForm,#orderForm');if(!form)return;
   form.dataset.fallbackSaved='0';
