@@ -172,7 +172,13 @@ try{
   const latest=await getState();
   const restore={...clone(original),baseRevision:Number(latest.revision)||0};
   delete restore.revision;
-  const {response,data}=await request('/api/auto-sale/state',{method:'PUT',body:JSON.stringify(restore)});
+  let {response,data}=await request('/api/auto-sale/state',{method:'PUT',body:JSON.stringify(restore)});
+  if(!response.ok){
+    const fresh=await getState();
+    const retry={...clone(original),baseRevision:Number(fresh.revision)||0};
+    delete retry.revision;
+    ({response,data}=await request('/api/auto-sale/state',{method:'PUT',body:JSON.stringify(retry)}));
+  }
   if(!response.ok)throw new Error(`restore_failed: ${response.status} ${JSON.stringify(data)}`);
   const restored=await getState();
   const counts={
