@@ -229,3 +229,140 @@ export async function addAutoSalePayment({
   }
   return bad(503,'entity_retry_exhausted',{resource:'order',id});
 }
+
+
+function aggregateKey(resource,id){return resource+':'+text(id)}
+
+async function validateBatchVersions(domainStore,checks){
+  for(const check of checks){
+    if(check.operation==='create')continue;
+    const currentRowVersion=await domainStore.entityRowVersion(check.resource,check.id);
+    if(currentRowVersion===null)return bad(404,`${check.resource}_not_found`,{id:check.id});
+    const expected=requireExpectedVersion(check.baseRowVersion);
+    if(expected===null)return bad(428,'row_version_required',{resource:check.resource,id:check.id,currentRowVersion});
+    if(expected!==currentRowVersion)return bad(409,'entity_conflict',{resource:check.resource,id:check.id,expectedRowVersion:expected,currentRowVersion});
+  }
+  return null;
+}
+
+export async function mutateAutoSaleEntityBatch({
+  legacyStore,
+  domainStore,
+  operations=[],
+  prepareNotifications=null,
+  maxAttempts=6
+}){
+  if(!legacyStore?.domainDualWriteEnabled)return bad(503,'entity_api_requires_dual_write');
+  const ops=arr(operations);
+  if(!ops.length)return bad(400,'operations_required');
+
+  for(let attempt=1;attempt<=maxAttempts;attempt++){
+    const state=await legacyStore.loadState();
+    const next=clone(state);
+    const checksByKey=new Map();
+    const touched=new Map();
+
+    for(const raw of ops){
+      const operation=text(raw.operation);
+      const resource=text(raw.resource);
+      if(!RESOURCE_CONFIG[resource]&&!['note','payment'].includes(resource))return bad(400,'unsupported_entity_resource',{resource});
+
+      if(resource==='note'){
+        const leadId=text(raw.leadId||raw.id);
+        if(!leadId)return bad(400,'lead_id_required');
+        const lead=findEntity(next,'lead',leadId);
+        if(!lead)return bad(404,'lead_not_found',{id:leadId});
+        const key=aggregateKey('lead',leadId);
+        if(!checksByKey.has(key))checksByKey.set(key,{resource:'lead',id:leadId,operation:'patch',baseRowVersion:raw.baseRowVersion});
+        const body=text(raw.input?.text);
+        if(!body)return bad(400,'note_text_required',{leadId});
+        const note={...(raw.input&&typeof raw.input==='object'?clone(raw.input):{}),id:text(raw.input?.id)||nextChildId('NOTE'),text:body,at:text(raw.input?.at)||new Date().toISOString()};
+        next.notes=next.notes&&typeof next.notes==='object'?next.notes:{};
+        next.notes[leadId]=arr(next.notes[leadId]).map(item=>clone(item));
+        if(next.notes[leadId].some(item=>text(item.id)===note.id))return bad(409,'note_exists',{leadId,id:note.id});
+        next.notes[leadId].push(note);
+        touched.set(key,{resource:'lead',id:leadId});
+        continue;
+      }
+
+      if(resource==='payment'){
+        const orderId=text(raw.orderId||raw.id);
+        if(!orderId)return bad(400,'order_id_required');
+        const index=arr(next.orders).findIndex(item=>text(item.id)===orderId);
+        if(index<0)return bad(404,'order_not_found',{id:orderId});
+        const key=aggregateKey('order',orderId);
+        if(!checksByKey.has(key))checksByKey.set(key,{resource:'order',id:orderId,operation:'patch',baseRowVersion:raw.baseRowVersion});
+        const order=clone(next.orders[index]);
+        const payment={...(raw.input&&typeof raw.input==='object'?clone(raw.input):{}),id:text(raw.input?.id)||nextChildId('PAY'),amount:num(raw.input?.amount),date:text(raw.input?.date),method:text(raw.input?.method)||'Банк',createdAt:text(raw.input?.createdAt)||new Date().toISOString()};
+        const payments=arr(order.payments).map(item=>clone(item));
+        if(payments.some(item=>text(item.id)===payment.id))return bad(409,'payment_exists',{orderId,id:payment.id});
+        payments.push(payment);
+        order.payments=payments;
+        order.paid=recalcPaid(order);
+        next.orders[index]=order;
+        touched.set(key,{resource:'order',id:orderId});
+        continue;
+      }
+
+      const id=text(raw.id||raw.input?.id);
+      if(!id)return bad(400,'entity_id_required',{resource});
+      const {collection}=config(resource);
+      const list=arr(next[collection]).map(item=>clone(item));
+      const index=list.findIndex(item=>text(item.id)===id);
+      const key=aggregateKey(resource,id);
+
+      if(operation==='create'){
+        if(index>=0)return bad(409,'entity_exists',{resource,id});
+        const patch=sanitizePatch(raw.input||{},id);
+        if(!patch)return bad(400,'entity_id_locked',{resource,id});
+        list.push(patch);
+        next[collection]=list;
+        if(!checksByKey.has(key))checksByKey.set(key,{resource,id,operation:'create'});
+      }else if(operation==='patch'){
+        if(index<0)return bad(404,`${resource}_not_found`,{id});
+        if(!checksByKey.has(key))checksByKey.set(key,{resource,id,operation:'patch',baseRowVersion:raw.baseRowVersion});
+        const patch=sanitizePatch(raw.input||{},id);
+        if(!patch)return bad(400,'entity_id_locked',{resource,id});
+        list[index]={...list[index],...patch,id};
+        next[collection]=list;
+      }else if(operation==='delete'){
+        if(index<0)return bad(404,`${resource}_not_found`,{id});
+        if(!checksByKey.has(key))checksByKey.set(key,{resource,id,operation:'delete',baseRowVersion:raw.baseRowVersion});
+        if(resource==='lead'){
+          const hasQuote=arr(next.quotes).some(item=>text(item.leadId)===id);
+          const hasOrder=arr(next.orders).some(item=>text(item.leadId)===id);
+          if(hasQuote||hasOrder)return bad(409,'lead_has_dependencies',{id,hasQuote,hasOrder});
+        }
+        if(!['lead','catalog'].includes(resource))return bad(405,'entity_delete_not_allowed',{resource});
+        list.splice(index,1);
+        next[collection]=list;
+        if(resource==='lead'&&next.notes&&typeof next.notes==='object')delete next.notes[id];
+      }else return bad(405,'entity_operation_not_allowed',{resource,operation});
+
+      touched.set(key,{resource,id,deleted:operation==='delete'});
+    }
+
+    const versionError=await validateBatchVersions(domainStore,[...checksByKey.values()]);
+    if(versionError)return versionError;
+
+    const result=await syncYdbState(
+      legacyStore,
+      {...next,baseRevision:Number(state.revision)||0},
+      {prepareNotifications}
+    );
+    if(result.status===409&&result.data?.error==='revision_conflict')continue;
+    if(result.status!==200)return result;
+
+    const revision=Number(result.data.revision)||0;
+    return{
+      status:200,
+      data:{
+        ...result.data,
+        operation:'batch',
+        retries:attempt-1,
+        rowVersions:Object.fromEntries([...touched.entries()].map(([key,item])=>[key,item.deleted?null:revision]))
+      }
+    };
+  }
+  return bad(503,'entity_retry_exhausted',{operation:'batch'});
+}
