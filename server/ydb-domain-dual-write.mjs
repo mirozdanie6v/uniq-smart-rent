@@ -109,3 +109,29 @@ export async function applyDomainDiff(tx,diff,{compatRevision=0,status='dual-wri
     VALUES (${metaId},${revision},${schemaVersion},${text(status)},${revision},${now})
   `;
 }
+
+
+export async function replaceDomainSnapshotInTransaction(tx,state,{compatRevision=0,status='dual-write-catchup'}={}){
+  const [paymentKeys]=await tx`SELECT order_id,id FROM auto_sale_payments`;
+  for(const row of paymentKeys)await tx`DELETE FROM auto_sale_payments WHERE order_id=${text(row.order_id)} AND id=${text(row.id)}`;
+  const [noteKeys]=await tx`SELECT lead_id,id FROM auto_sale_notes`;
+  for(const row of noteKeys)await tx`DELETE FROM auto_sale_notes WHERE lead_id=${text(row.lead_id)} AND id=${text(row.id)}`;
+  const [bindingKeys]=await tx`SELECT subject_type,subject_id FROM auto_sale_telegram_bindings`;
+  for(const row of bindingKeys)await tx`DELETE FROM auto_sale_telegram_bindings WHERE subject_type=${text(row.subject_type)} AND subject_id=${text(row.subject_id)}`;
+
+  const [quoteKeys]=await tx`SELECT id FROM auto_sale_quotes`;
+  for(const row of quoteKeys)await tx`DELETE FROM auto_sale_quotes WHERE id=${text(row.id)}`;
+  const [orderKeys]=await tx`SELECT id FROM auto_sale_orders`;
+  for(const row of orderKeys)await tx`DELETE FROM auto_sale_orders WHERE id=${text(row.id)}`;
+  const [leadKeys]=await tx`SELECT id FROM auto_sale_leads`;
+  for(const row of leadKeys)await tx`DELETE FROM auto_sale_leads WHERE id=${text(row.id)}`;
+  const [teamKeys]=await tx`SELECT id FROM auto_sale_team`;
+  for(const row of teamKeys)await tx`DELETE FROM auto_sale_team WHERE id=${text(row.id)}`;
+  const [catalogKeys]=await tx`SELECT id FROM auto_sale_catalog`;
+  for(const row of catalogKeys)await tx`DELETE FROM auto_sale_catalog WHERE id=${text(row.id)}`;
+
+  const empty={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
+  const fullDiff=buildDomainDiff(empty,state);
+  await applyDomainDiff(tx,fullDiff,{compatRevision,status});
+  return summarizeDomainDiff(fullDiff);
+}
