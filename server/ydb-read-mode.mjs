@@ -1,7 +1,44 @@
 import {autoSaleStateHash,domainRowsToLegacyState} from './ydb-domain-migration.mjs';
 
+function preserveLegacyEmptyNotes(normalized,legacy){
+  const legacyNotes=legacy?.notes&&typeof legacy.notes==='object'?legacy.notes:{};
+  normalized.notes=normalized.notes&&typeof normalized.notes==='object'?normalized.notes:{};
+  for(const [leadId,notes] of Object.entries(legacyNotes)){
+    if(Array.isArray(notes)&&notes.length===0&&!Object.prototype.hasOwnProperty.call(normalized.notes,leadId)){
+      normalized.notes[leadId]=[];
+    }
+  }
+  return normalized;
+}
+
 export async function readAutoSaleState({legacyStore,domainStore,mode='legacy',attempts=3,logger=console}){
   if(mode==='legacy')return{state:await legacyStore.loadState(),source:'legacy',fallback:false};
+
+  if(typeof domainStore?.loadReadSnapshot==='function'){
+    try{
+      const snapshot=await domainStore.loadReadSnapshot();
+      const legacy=snapshot.legacy;
+      const revision=Number(legacy?.revision)||0;
+      const metaRevision=Number(snapshot.meta?.sourceRevision)||0;
+      if(metaRevision!==revision){
+        return{state:legacy,source:'legacy',fallback:true,reason:'revision_mismatch'};
+      }
+      const normalized=preserveLegacyEmptyNotes(
+        domainRowsToLegacyState(snapshot.rows,{revision,initialized:Boolean(legacy.initialized)}),
+        legacy
+      );
+      if(autoSaleStateHash(legacy)!==autoSaleStateHash(normalized)){
+        logger.error?.('AUTO SALE normalized read parity mismatch',{revision});
+        return{state:legacy,source:'legacy',fallback:true,reason:'parity_mismatch'};
+      }
+      if(mode==='shadow')return{state:legacy,source:'legacy',fallback:false,shadowVerified:true};
+      return{state:normalized,source:'normalized',fallback:false,shadowVerified:true};
+    }catch(error){
+      logger.error?.('AUTO SALE normalized snapshot read failed',String(error?.message||error));
+      return{state:await legacyStore.loadState(),source:'legacy',fallback:true,reason:'snapshot_error'};
+    }
+  }
+
   let lastLegacy=null;
   for(let attempt=1;attempt<=attempts;attempt++){
     try{
@@ -16,22 +53,16 @@ export async function readAutoSaleState({legacyStore,domainStore,mode='legacy',a
         && Number(metaBefore?.sourceRevision)===revision
         && Number(metaAfter?.sourceRevision)===revision;
       if(!stable)continue;
-      const normalized=domainRowsToLegacyState(rows,{revision,initialized:Boolean(after.initialized)});
-      const legacyNotes=after.notes&&typeof after.notes==='object'?after.notes:{};
-      normalized.notes=normalized.notes&&typeof normalized.notes==='object'?normalized.notes:{};
-      for(const [leadId,notes] of Object.entries(legacyNotes)){
-        if(Array.isArray(notes)&&notes.length===0&&!Object.prototype.hasOwnProperty.call(normalized.notes,leadId)){
-          normalized.notes[leadId]=[];
-        }
-      }
+      const normalized=preserveLegacyEmptyNotes(
+        domainRowsToLegacyState(rows,{revision,initialized:Boolean(after.initialized)}),
+        after
+      );
       const parity=autoSaleStateHash(after)===autoSaleStateHash(normalized);
       if(!parity){
         logger.error?.('AUTO SALE normalized read parity mismatch',{revision});
         return{state:after,source:'legacy',fallback:true,reason:'parity_mismatch'};
       }
-      if(mode==='shadow'){
-        return{state:after,source:'legacy',fallback:false,shadowVerified:true};
-      }
+      if(mode==='shadow')return{state:after,source:'legacy',fallback:false,shadowVerified:true};
       return{state:normalized,source:'normalized',fallback:false,shadowVerified:true};
     }catch(error){
       logger.error?.('AUTO SALE normalized read failed',String(error?.message||error));
