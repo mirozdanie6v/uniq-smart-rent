@@ -62,7 +62,11 @@ function enhance(){enhanceClient();enhanceManager()}
 
 function coreQuoteAction(id,status){
   const app=document.getElementById('app');if(!app)return null;
-  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.quoteAction=status;button.dataset.id=id;app.append(button);button.click();button.remove();
+  const button=document.createElement('button');button.type='button';button.hidden=true;button.dataset.quoteAction=status;button.dataset.id=id;app.append(button);
+  // The client decision listener is registered in capture phase. A synthetic click
+  // would be intercepted by that same listener before the core app sees it.
+  button.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  button.remove();
   return read(K.quotes,[]).find(q=>q.id===id)?.status===status;
 }
 function syncCoreQuote(id,decision){
@@ -102,6 +106,7 @@ const style=document.createElement('style');style.id='auto-client-quote-style';s
 
 new MutationObserver(enhance).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',event=>{
+  const syntheticCore=event.target.closest?.('[data-quote-action]');if(syntheticCore)return;
   const agree=event.target.closest?.('[data-client-quote-agree]');if(agree){event.preventDefault();const q=read(K.quotes,[]).find(x=>x.id===agree.dataset.clientQuoteAgree);if(!q)return;const ok=typeof confirm==='function'?confirm(`Согласовать расчёт на ${money(q.total)}?`):true;if(ok)saveDecision(q.id,'agreed');return}
   const change=event.target.closest?.('[data-client-quote-change]');if(change){event.preventDefault();const p=change.closest('.auto-client-quote')?.querySelector('[data-client-change-panel]');if(p){p.hidden=false;p.querySelector('textarea')?.focus()}return}
   const cancel=event.target.closest?.('[data-client-quote-cancel-change]');if(cancel){event.preventDefault();const p=cancel.closest('[data-client-change-panel]');if(p)p.hidden=true;return}
