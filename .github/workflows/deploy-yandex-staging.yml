@@ -24,6 +24,7 @@ env:
   AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
   AUTO_SALE_TELEGRAM_APP_URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
+  AUTO_SALE_ROLLBACK_SHA: 4884fffaeebd00a7d185eac13f8ac6bd0b88f60a
 
 jobs:
   deploy:
@@ -89,7 +90,7 @@ jobs:
       - name: Build and push image
         run: |
           set -euo pipefail
-          IMAGE="cr.yandex/${YC_REGISTRY_ID}/auto-sale:${GITHUB_SHA}"
+          IMAGE="cr.yandex/${YC_REGISTRY_ID}/auto-sale:${AUTO_SALE_ROLLBACK_SHA:-$GITHUB_SHA}"
           echo "$YC_IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
           docker build -f Dockerfile.yandex -t "$IMAGE" .
           docker push "$IMAGE"
