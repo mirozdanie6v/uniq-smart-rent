@@ -195,10 +195,16 @@ export async function createYdbDomainStore({
       const [bindingKeys]=await tx`SELECT subject_type,subject_id FROM auto_sale_telegram_bindings`;
       for(const row of bindingKeys)await tx`DELETE FROM auto_sale_telegram_bindings WHERE subject_type=${String(row.subject_type)} AND subject_id=${String(row.subject_id)}`;
 
-      for(const table of ['auto_sale_quotes','auto_sale_orders','auto_sale_leads','auto_sale_team','auto_sale_catalog']){
-        const [keys]=await tx.raw(`SELECT id FROM ${table}`);
-        for(const row of keys)await tx.raw(`DELETE FROM ${table} WHERE id = $id`,{id:String(row.id)});
-      }
+      const [quoteKeys]=await tx`SELECT id FROM auto_sale_quotes`;
+      for(const row of quoteKeys)await tx`DELETE FROM auto_sale_quotes WHERE id=${String(row.id)}`;
+      const [orderKeys]=await tx`SELECT id FROM auto_sale_orders`;
+      for(const row of orderKeys)await tx`DELETE FROM auto_sale_orders WHERE id=${String(row.id)}`;
+      const [leadKeys]=await tx`SELECT id FROM auto_sale_leads`;
+      for(const row of leadKeys)await tx`DELETE FROM auto_sale_leads WHERE id=${String(row.id)}`;
+      const [teamKeys]=await tx`SELECT id FROM auto_sale_team`;
+      for(const row of teamKeys)await tx`DELETE FROM auto_sale_team WHERE id=${String(row.id)}`;
+      const [catalogKeys]=await tx`SELECT id FROM auto_sale_catalog`;
+      for(const row of catalogKeys)await tx`DELETE FROM auto_sale_catalog WHERE id=${String(row.id)}`;
 
       for(const row of rows.leads||[])await tx`
         UPSERT INTO auto_sale_leads (id,row_version,sort_order,status,manager,source,client_created,payload,updated_at)
