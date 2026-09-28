@@ -69,11 +69,11 @@ export async function applyDomainDiff(tx,diff,{compatRevision=0,status='dual-wri
 
   for(const row of c.leads.upserts)await tx`
     UPSERT INTO auto_sale_leads (id,row_version,sort_order,status,manager,source,client_created,payload,updated_at)
-    VALUES (${text(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${text(row.status)},${text(row.manager)},${text(row.source)},${Boolean(row.clientCreated)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
+    VALUES (${text(row.id)},${u64(compatRevision)},${u64(row.sortOrder)},${text(row.status)},${text(row.manager)},${text(row.source)},${Boolean(row.clientCreated)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
   `;
   for(const row of c.quotes.upserts)await tx`
     UPSERT INTO auto_sale_quotes (id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at)
-    VALUES (${text(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${text(row.leadId)},${text(row.status)},${u64(row.quoteVersion)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
+    VALUES (${text(row.id)},${u64(compatRevision)},${u64(row.sortOrder)},${text(row.leadId)},${text(row.status)},${u64(row.quoteVersion)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
   `;
   for(const row of c.orders.upserts)await tx`
     UPSERT INTO auto_sale_orders (id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at)
@@ -89,11 +89,11 @@ export async function applyDomainDiff(tx,diff,{compatRevision=0,status='dual-wri
   `;
   for(const row of c.team.upserts)await tx`
     UPSERT INTO auto_sale_team (id,row_version,sort_order,name,role,active,payload,updated_at)
-    VALUES (${text(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${text(row.name)},${text(row.role)},${Boolean(row.active)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
+    VALUES (${text(row.id)},${u64(compatRevision)},${u64(row.sortOrder)},${text(row.name)},${text(row.role)},${Boolean(row.active)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
   `;
   for(const row of c.catalog.upserts)await tx`
     UPSERT INTO auto_sale_catalog (id,row_version,sort_order,origin,active,auction_date,payload,updated_at)
-    VALUES (${text(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${text(row.origin)},${Boolean(row.active)},${text(row.auctionDate)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
+    VALUES (${text(row.id)},${u64(compatRevision)},${u64(row.sortOrder)},${text(row.origin)},${Boolean(row.active)},${text(row.auctionDate)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
   `;
   const now=new Date().toISOString();
   for(const row of c.telegramBindings.upserts)await tx`
