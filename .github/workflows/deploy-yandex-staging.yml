@@ -34,7 +34,7 @@ env:
   AUTO_SALE_TELEGRAM_APP_URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
   AUTO_SALE_YDB_DUAL_WRITE: "true"
-  AUTO_SALE_YDB_READ_MODE: legacy
+  AUTO_SALE_YDB_READ_MODE: normalized
 
 jobs:
   deploy:
@@ -175,7 +175,7 @@ jobs:
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .ydbDomainDualWrite == "enabled" and .ydbStateReadMode == "legacy" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .ydbDomainDualWrite == "enabled" and .ydbStateReadMode == "normalized" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
               break
             fi
             test "$attempt" -lt 20 || exit 1
@@ -189,7 +189,7 @@ jobs:
           set -euo pipefail
           curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "${STAGING_URL%/}/api/auto-sale/admin/read-parity" \
             | tee /tmp/read-parity.json \
-            | jq -e '.ok == true and .configuredMode == "legacy" and .source == "legacy" and .fallback == false and (.revision|tonumber) >= 1' >/dev/null
+            | jq -e '.ok == true and .configuredMode == "normalized" and .source == "normalized" and .fallback == false and .shadowVerified == true and (.revision|tonumber) >= 1' >/dev/null
 
       - name: Verify normalized YDB dual-write live parity
         run: |
