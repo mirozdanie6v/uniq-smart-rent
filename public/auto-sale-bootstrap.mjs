@@ -9,12 +9,14 @@ let timer=null;
 let syncing=false;
 let pending=false;
 let baselineState=null;
+let lastPushedFingerprint='';
 
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{});writeCache(DATA_KEYS.team,state.team||[]);if(Array.isArray(state.catalog))writeCache(DATA_KEYS.catalog,state.catalog)}
 function localState(){return{revision,initialized:true,leads:readCache(DATA_KEYS.leads,[]),quotes:readCache(DATA_KEYS.quotes,[]),orders:readCache(DATA_KEYS.orders,[]),notes:readCache(DATA_KEYS.notes,{}),team:readCache(DATA_KEYS.team,[]),catalog:readCache(DATA_KEYS.catalog,[])}}
 function payload(){const state=localState();return{baseRevision:revision,leads:state.leads,quotes:state.quotes,orders:state.orders,notes:state.notes,team:state.team,catalog:state.catalog}}
+function fingerprint(state=localState()){return JSON.stringify({leads:state.leads,quotes:state.quotes,orders:state.orders,notes:state.notes,team:state.team,catalog:state.catalog})}
 
 async function pullInitialState(){
   try{
@@ -25,6 +27,7 @@ async function pullInitialState(){
     sessionStorage.setItem(REVISION_KEY,String(revision));
     applyServerState(state);
     baselineState=snapshotAutoSaleState(state);
+    lastPushedFingerprint=fingerprint();
     window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};
   }catch(error){
     console.warn('AUTO SALE using offline cache',error);
@@ -34,6 +37,8 @@ async function pullInitialState(){
 
 async function pushState(){
   if(QUOTE_AUDIT_MODE)return;
+  const currentFingerprint=fingerprint();
+  if(currentFingerprint===lastPushedFingerprint)return;
   if(syncing){pending=true;return}
   syncing=true;
   try{
@@ -69,6 +74,7 @@ async function pushState(){
       revision=Number(data.revision||revision);
       sessionStorage.setItem(REVISION_KEY,String(revision));
       baselineState=snapshotAutoSaleState({...localState(),revision,initialized:true});
+      lastPushedFingerprint=fingerprint();
       window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true};
       window.dispatchEvent(new CustomEvent('auto-sale-server-synced',{detail:{revision}}));
       return;
