@@ -9,6 +9,7 @@ import {readAutoSaleState} from './ydb-read-mode.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
+import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,readAutoSaleEntity} from './ydb-entity-commands.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -163,6 +164,100 @@ const server=http.createServer(async(req,res)=>{
       json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),revision:Number(read.state?.revision)||0});
       return;
     }
+    const entityMatch=url.pathname.match(/^\/api\/auto-sale\/(leads|quotes|orders|catalog|team)(?:\/([^/]+))?(?:\/(notes|payments))?$/);
+    if(entityMatch){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const [,plural,rawId,child]=entityMatch;
+      const resource=({leads:'lead',quotes:'quote',orders:'order',catalog:'catalog',team:'team'})[plural];
+      const id=rawId?decodeURIComponent(rawId):'';
+      if(req.method==='GET'&&id&&!child){
+        const result=await readAutoSaleEntity({legacyStore:await getStore(),domainStore:await getDomainStore(),resource,id});
+        json(res,result.data,result.status);return;
+      }
+      if(req.method==='POST'&&child==='notes'&&resource==='lead'&&id){
+        const input=await parseJson(req);
+        const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
+        const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const result=await addAutoSaleNote({
+          legacyStore:await getStore(),domainStore:await getDomainStore(),leadId:id,input,
+          expectedRowVersion:input?.baseRowVersion,
+          prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
+        });
+        if(result.status>=200&&result.status<300&&notifyTelegram){
+          result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
+          json(res,result.data,result.status);
+          const queuedIds=[...(result.data.notifications?.ids||[])];
+          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          return;
+        }
+        json(res,result.data,result.status);return;
+      }
+      if(req.method==='POST'&&child==='payments'&&resource==='order'&&id){
+        const input=await parseJson(req);
+        const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
+        const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const result=await addAutoSalePayment({
+          legacyStore:await getStore(),domainStore:await getDomainStore(),orderId:id,input,
+          expectedRowVersion:input?.baseRowVersion,
+          prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
+        });
+        if(result.status>=200&&result.status<300&&notifyTelegram){
+          result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
+          json(res,result.data,result.status);
+          const queuedIds=[...(result.data.notifications?.ids||[])];
+          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          return;
+        }
+        json(res,result.data,result.status);return;
+      }
+      if(child){json(res,{error:'entity_child_route_not_found'},404);return}
+      if(req.method==='POST'&&!id){
+        const input=await parseJson(req);
+        const entityId=String(input?.id||'').trim();
+        const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
+        const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const result=await mutateAutoSaleEntity({
+          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'create',
+          id:entityId,input,prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
+        });
+        if(result.status>=200&&result.status<300&&notifyTelegram){
+          result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
+          json(res,result.data,201);
+          const queuedIds=[...(result.data.notifications?.ids||[])];
+          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          return;
+        }
+        json(res,result.data,result.status===200?201:result.status);return;
+      }
+      if(req.method==='PATCH'&&id){
+        const input=await parseJson(req);
+        const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
+        const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const result=await mutateAutoSaleEntity({
+          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'patch',
+          id,input,expectedRowVersion:input?.baseRowVersion,
+          prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
+        });
+        if(result.status>=200&&result.status<300&&notifyTelegram){
+          result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
+          json(res,result.data,result.status);
+          const queuedIds=[...(result.data.notifications?.ids||[])];
+          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          return;
+        }
+        json(res,result.data,result.status);return;
+      }
+      if(req.method==='DELETE'&&id){
+        const input=await parseJson(req);
+        const result=await mutateAutoSaleEntity({
+          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'delete',
+          id,expectedRowVersion:input?.baseRowVersion,prepareNotifications:null
+        });
+        json(res,result.data,result.status);return;
+      }
+      json(res,{error:'entity_method_not_allowed'},405);return;
+    }
+
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
