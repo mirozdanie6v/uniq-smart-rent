@@ -66,7 +66,7 @@ test('entity deletion produces targeted deletes including its Telegram binding',
   next.leads=next.leads.filter(x=>x.id!=='L-1');
   delete next.notes['L-1'];
   const summary=summarizeDomainDiff(buildDomainDiff(previous,next));
-  assert.deepEqual(summary.leads,{upserts:0,deletes:1});
+  assert.deepEqual(summary.leads,{upserts:1,deletes:1}); // L-2 is reindexed after L-1 removal
   assert.deepEqual(summary.telegramBindings,{upserts:0,deletes:1});
   assert.deepEqual(summary.catalog,{upserts:0,deletes:0});
 });
