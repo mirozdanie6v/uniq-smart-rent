@@ -137,6 +137,14 @@ jobs:
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
             "${EXTRA_ENV[@]}"
 
+      - name: Diagnose Yandex runtime logs
+        run: |
+          set +e
+          echo "=== Container ==="
+          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          echo "=== Recent runtime logs ==="
+          yc logging read --folder-id "$YC_FOLDER_ID" --since 20m --limit 200 --format json || true
+
       - name: Verify public demo read/write boundary
         run: |
           set -euo pipefail
