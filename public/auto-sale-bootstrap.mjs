@@ -53,6 +53,7 @@ async function pullInitialState(){
     if(!response.ok)return;
     const state=await response.json();
     revision=Number(state.revision||0);
+    setRowVersions(state._rowVersions||{});
     sessionStorage.setItem(REVISION_KEY,String(revision));
     applyServerState(state);
     baselineState=snapshotAutoSaleState(state);
