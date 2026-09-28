@@ -3,7 +3,7 @@ import {query} from '@ydbjs/query';
 import {MetadataCredentialsProvider} from '@ydbjs/auth/metadata';
 import {Uint64} from '@ydbjs/value/primitive';
 import {ensureAutoSaleDomainSchema} from './ydb-domain-store.mjs';
-import {applyDomainDiff,buildDomainDiff,summarizeDomainDiff} from './ydb-domain-dual-write.mjs';
+import {applyDomainDiff,buildDomainDiff,replaceDomainSnapshotInTransaction,summarizeDomainDiff} from './ydb-domain-dual-write.mjs';
 
 const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
 const STATE_ID=new Uint64(1n);
@@ -108,7 +108,17 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         VALUES (${STATE_ID}, ${new Uint64(BigInt(next))}, ${JSON.stringify(payload)}, ${new Date().toISOString()})
       `;
       let domainDiff=null;
+      let domainCatchup=null;
       if(domainDualWrite){
+        const [metaRows]=await tx`
+          SELECT source_revision
+          FROM auto_sale_state_meta
+          WHERE id = ${STATE_ID}
+        `;
+        const shadowRevision=Number(metaRows[0]?.source_revision||0n);
+        if(shadowRevision!==current){
+          domainCatchup=await replaceDomainSnapshotInTransaction(tx,previous,{compatRevision:current,status:'dual-write-catchup'});
+        }
         domainDiff=buildDomainDiff(previous,{...payload,revision:next});
         await applyDomainDiff(tx,domainDiff,{compatRevision:next,status:'dual-write'});
       }
@@ -117,7 +127,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
           VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
       }
-      return{status:200,data:{ok:true,revision:next,...(domainDualWrite?{domainDualWrite:{enabled:true,diff:summarizeDomainDiff(domainDiff)}}:{})}};
+      return{status:200,data:{ok:true,revision:next,...(domainDualWrite?{domainDualWrite:{enabled:true,catchup:domainCatchup,diff:summarizeDomainDiff(domainDiff)}}:{})}};
     });
   }
 
