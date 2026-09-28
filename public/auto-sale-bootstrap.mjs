@@ -1,7 +1,10 @@
 import {rebaseAutoSaleState,snapshotAutoSaleState} from './auto-sale-sync-merge.mjs?v=20260926-concurrency-1';
 const DATA_KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2',notes:'auto-sale-notes-v2',team:'auto-sale-team-v1',catalog:'auto-sale-catalog-v1'};
 const REVISION_KEY='auto-sale-server-revision-v1';
-const QUOTE_AUDIT_MODE=new URLSearchParams(location.search).has('quoteAudit');
+const QUERY_PARAMS=new URLSearchParams(location.search);
+const QUOTE_AUDIT_MODE=QUERY_PARAMS.has('quoteAudit');
+const LEGACY_AUTOSYNC=QUERY_PARAMS.has('legacyAutosync');
+window.__AUTO_SALE_LEGACY_AUTOSYNC__=LEGACY_AUTOSYNC;
 const originalSet=Storage.prototype.setItem;
 let suppress=false;
 let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
@@ -201,7 +204,7 @@ function normalizeSettledPaymentField(){
 }
 
 await pullInitialState();
-Storage.prototype.setItem=function(key,value){const tracked=this===localStorage&&Object.values(DATA_KEYS).includes(String(key));const before=tracked?this.getItem(key):null;originalSet.call(this,key,value);if(tracked&&!suppress&&!QUOTE_AUDIT_MODE&&before!==String(value))scheduleSync()};
+Storage.prototype.setItem=function(key,value){const tracked=this===localStorage&&Object.values(DATA_KEYS).includes(String(key));const before=tracked?this.getItem(key):null;originalSet.call(this,key,value);if(tracked&&!suppress&&!QUOTE_AUDIT_MODE&&LEGACY_AUTOSYNC&&before!==String(value))scheduleSync()};
 await import('./auto-sale-submit-bridge.mjs?v=20260921-live-values-1');
 await import('./auto-sale-app-v3.mjs?v=20260929-entity-cutover-1');
 await import('./auto-sale-ui-business-guard.mjs');
