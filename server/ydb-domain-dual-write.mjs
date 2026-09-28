@@ -77,7 +77,7 @@ export async function applyDomainDiff(tx,diff,{compatRevision=0,status='dual-wri
   `;
   for(const row of c.orders.upserts)await tx`
     UPSERT INTO auto_sale_orders (id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at)
-    VALUES (${text(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${text(row.leadId)},${text(row.stage)},${text(row.manager)},${text(row.riskType)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
+    VALUES (${text(row.id)},${u64(compatRevision)},${u64(row.sortOrder)},${text(row.leadId)},${text(row.stage)},${text(row.manager)},${text(row.riskType)},${JSON.stringify(row.payload||{})},${text(row.updatedAt)})
   `;
   for(const row of c.payments.upserts)await tx`
     UPSERT INTO auto_sale_payments (order_id,id,sort_order,amount,payment_date,method,payload,created_at)
