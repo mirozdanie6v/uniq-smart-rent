@@ -1,2 +1,2 @@
-Stabilize YDB state API and rerun complete Telegram lifecycle through handoff [telegram-e2e]
+Decouple durable Telegram outbox from state PUT and rerun complete lifecycle [telegram-e2e]
 2026-09-28
