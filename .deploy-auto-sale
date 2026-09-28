@@ -1,2 +1,2 @@
-Verify targeted Telegram outbox delivery and stable YDB lifecycle under writer lock [telegram-e2e]
+Final targeted lifecycle verification after cancelling stale run [telegram-e2e]
 2026-09-28
