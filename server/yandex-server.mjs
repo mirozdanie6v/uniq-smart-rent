@@ -269,7 +269,140 @@ const server=http.createServer(async(req,res)=>{
       leads[index]={...leads[index],clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()};
       const replaced=await store.replaceState({...state,leads},{expectedRevision:state.revision});
       if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
-      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision});
+      // The lead was originally created before Telegram identity was persisted, so the
+      // ordinary state-diff notifier cannot address the client at creation time.
+      // Send the creation notifications immediately after the client identity is linked.
+      let notifications=[];
+      try{
+        const linkedState={...state,leads};
+        const linkedLead=leads[index];
+        const title=String(linkedLead.model||linkedLead.name||linkedLead.id||'заявка').trim();
+        const budget=linkedLead.budget?'
+    }
+
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
+      if(!auth.ok){json(res,{error:auth.error},401);return}
+      const input=await parseJson(req,20_000);
+      const memberId=String(input?.memberId||'').trim();
+      const memberName=String(input?.memberName||'').trim();
+      const state=await store.loadState();
+      const team=Array.isArray(state.team)?state.team.map(item=>({...item})):[];
+      let index=memberId?team.findIndex(item=>String(item?.id||'')===memberId):-1;
+      if(index<0&&memberName)index=team.findIndex(item=>String(item?.name||'').trim()===memberName);
+      if(index<0){json(res,{error:'manager_team_member_required',team:team.filter(item=>item?.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item?.role||''))).map(item=>({id:item.id,name:item.name,role:item.role}))},409);return}
+      const telegramUserId=String(auth.user.id);
+      const username=String(auth.user.username||'').replace(/^@/,'');
+      team[index]={...team[index],telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()};
+      const replaced=await store.replaceState({...state,team},{expectedRevision:state.revision});
+      if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
+      json(res,{ok:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:replaced.data.revision});
+      return;
+    }
+
+    if(req.method==='POST'&&telegram.isWebhookPath(url.pathname)){
+      const input=await parseJson(req,100_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      try{
+        const result=await telegram.handleWebhookUpdate(input,{appUrl:process.env.AUTO_SALE_TELEGRAM_APP_URL||'https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/',webhookReply:true});
+        if(result?.webhookMethod&&result?.webhookPayload){json(res,{method:result.webhookMethod,...result.webhookPayload},200);return}
+        json(res,result,200);
+      }catch(error){
+        const status=Number(error?.statusCode)||500;
+        json(res,{error:String(error?.message||'telegram_webhook_failed'),telegramDescription:String(error?.telegramDescription||''),detail:String(error?.cause?.message||error?.cause||'')},status);
+      }
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/telegram/message'&&req.method==='POST'){
+      if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
+      const auth=telegram.validateInitData(req.headers['x-telegram-init-data']);
+      if(!auth.ok){json(res,{error:auth.error},401);return}
+      const input=await parseJson(req,50_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      try{
+        const state=await store.loadState();
+        const result=await telegram.sendManual(state,{
+          leadId:input.leadId,
+          target:input.target,
+          text:input.text,
+          senderId:auth.user.id
+        });
+        json(res,result,201);
+      }catch(error){
+        const status=Number(error?.statusCode)||500;
+        json(res,{error:String(error?.message||'telegram_send_failed'),telegramDescription:String(error?.telegramDescription||''),detail:String(error?.cause?.message||error?.cause||'')},status);
+      }
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/media'&&req.method==='POST'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
+      const input=await parseJson(req,3_000_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const result=await media.upload({
+        carId:input.carId,
+        category:input.category,
+        dataUrl:input.dataUrl,
+        fileName:input.fileName
+      });
+      json(res,{ok:true,...result},201);
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/media'&&req.method==='DELETE'){
+      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
+      const input=await parseJson(req,50_000);
+      if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
+      const result=await media.remove(input.url);
+      json(res,result);
+      return;
+    }
+    if(url.pathname.startsWith('/api/')){
+      json(res,{error:'not_found'},404);
+      return;
+    }
+    await staticFile(res,url);
+  }catch(error){
+    console.error('AUTO SALE Yandex request failed',error);
+    const status=Number(error?.statusCode)||500;
+    const code=String(error?.message||'internal_error');
+    json(res,{error:status===413?(code==='image_too_large'?'image_too_large':'payload_too_large'):status===400?code:status===503?code:'internal_error'},status);
+  }
+});
+server.listen(port,'0.0.0.0',()=>{
+  console.log(`AUTO SALE Yandex listening on ${port}`);
+  setTimeout(()=>processNotificationOutbox().catch(error=>console.error('AUTO SALE notification pump failed',error)),5_000).unref();
+});
+const notificationPump=setInterval(()=>processNotificationOutbox().catch(error=>console.error('AUTO SALE notification pump failed',error)),notificationPumpIntervalMs);
+notificationPump.unref();
+
+const shutdown=signal=>{
+  console.log(`Received ${signal}`);
+  clearInterval(notificationPump);
+  server.close(async()=>{
+    await store.close();
+    process.exit(0);
+  });
+  setTimeout(()=>process.exit(1),10000).unref();
+};
+process.on('SIGTERM',()=>shutdown('SIGTERM'));
+process.on('SIGINT',()=>shutdown('SIGINT'));
++new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(linkedLead.budget)||0):'не указан';
+        const contact=String(linkedLead.contact||'—').trim();
+        const clientText='🚗 AUTO МИР · заявка принята\n\n'+title+'\nБюджет: '+budget+'\nСтатус: '+String(linkedLead.status||'Новый')+'\n\nЗаявка передана менеджеру. Мы сообщим здесь, когда будет готов расчёт, а после оформления заказа — об оплатах и этапах доставки.';
+        const clientResult=await telegram.send(String(auth.user.id),clientText);
+        notifications.push({target:'client',ok:true,messageId:clientResult?.message_id||null});
+        const managerIds=telegram.managerIds?telegram.managerIds(linkedLead,linkedState):[];
+        for(const chatId of managerIds){
+          const managerText='🚗 AUTO МИР · новая заявка клиента\n'+String(linkedLead.name||'Клиент')+'\n'+title+'\nБюджет: '+budget+'\nКонтакт: '+contact;
+          const managerResult=await telegram.send(chatId,managerText);
+          notifications.push({target:'manager',chatId,ok:true,messageId:managerResult?.message_id||null});
+        }
+      }catch(error){
+        notifications.push({ok:false,error:String(error?.message||'telegram_send_failed')});
+      }
+      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision,notifications});
       return;
     }
 
