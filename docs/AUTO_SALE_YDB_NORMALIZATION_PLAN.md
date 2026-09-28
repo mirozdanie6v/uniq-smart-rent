@@ -2,6 +2,63 @@
 
 ## Implementation status — 2026-09-28
 
+### Phase 5 — COMPLETE
+
+The browser persistence path is now server-primary on Yandex staging.
+
+Frontend persistence:
+- initial state includes normalized aggregate `_rowVersions`;
+- bootstrap hydrates and maintains lead/quote/order/team/catalog row-version maps;
+- ordinary business actions use `POST /api/auto-sale/entities/batch`;
+- linked operations are committed atomically, e.g. quote + lead + note and order + payment + lead;
+- localStorage is updated only after a successful entity response and acts as UI cache;
+- cache writes use `__AUTO_SALE_CACHE_WRITE__` and do not trigger compatibility state sync;
+- missing row versions are recovered through a targeted entity GET before mutation;
+- stale versions refresh server state and surface an entity conflict to the UI.
+
+Migrated UI paths:
+- client/manager lead creation and lead editing;
+- client pre-work request editing;
+- quote creation, editing, status changes, cloning and client decision;
+- order creation and order updates;
+- payment append;
+- notes/history append;
+- catalog create/edit/delete;
+- director team create/edit and manager rename propagation;
+- Telegram client/staff bindings and manager Telegram cache updates.
+
+Legacy autosave:
+- automatic `Storage.prototype.setItem -> PUT /api/auto-sale/state` is disabled by default;
+- compatibility autosync can only be opted into with `?legacyAutosync`;
+- `__AUTO_SALE_FLUSH__` remains available as an explicit rollback/debug path;
+- the compatibility `PUT /api/auto-sale/state` remains on the server during the rollback window.
+
+Entity batch semantics:
+- aggregate preconditions use `baseRowVersion`, not global revision;
+- notes version the parent lead;
+- payments version the parent order;
+- unrelated global revision changes are retried internally;
+- compound actions validate all affected aggregates and then commit once through the existing serializable YDB transaction.
+
+Final verification:
+- quality gate: 227 passed, 0 failed;
+- staging deploy: success;
+- normalized read source: verified;
+- individual entity live test: create 2474 -> patch 2475 -> note 2476 -> stale 2475 rejected -> cleanup 2477;
+- Phase 5 frontend-style batch live test: create rowVersion 2478 -> patch 2479 -> stale 2478 rejected with current 2479 -> cleanup revision 2480 -> normalized parity verified;
+- full dual-write parity then passed at revisions 2481/2482;
+- final canonical legacy hash = normalized hash;
+- final counts returned to leads 7, quotes 7, orders 3, payments 8, notes 2, team 3, catalog 149, Telegram bindings 8.
+
+Permanent deploy gates now cover normalized reads, individual entity optimistic locking, frontend-style entity batches and legacy/normalized dual-write parity.
+
+Important rollback/security state:
+- legacy compatibility blob is still maintained by dual-write;
+- legacy whole-state endpoint is still present but is no longer the default browser persistence path;
+- staging is still configured with `AUTO_SALE_PUBLIC_DEMO_WRITE=true`; entity/browser authorization must be hardened before real production use.
+
+Next step: Phase 6 compatibility retirement and authorization hardening. Disable public whole-state writes, introduce real staff/client authorization boundaries, observe zero legacy frontend writes, archive the final compatibility snapshot, then stop dual-writing the blob after the rollback window.
+
 ### Phase 4 — COMPLETE
 
 Optimistic entity mutation API is live on Yandex staging.
