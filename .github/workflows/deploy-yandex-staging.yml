@@ -2,7 +2,7 @@ name: Deploy AUTO SALE to Yandex staging
 
 concurrency:
   group: auto-sale-yandex-live-writer
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   workflow_dispatch:
