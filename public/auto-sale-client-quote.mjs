@@ -96,7 +96,7 @@ async function saveDecision(id,decision,comment=''){
       if(window.__AUTO_SALE_FLUSH__){
         const result=await window.__AUTO_SALE_FLUSH__();
         if(!result?.ok){
-          const current=read(K.quotes,[]),row=current.findIndex(x=>x.id===id);if(row>=0&&current[row].clientDecisionAt===now){current[row]=before;write(K.quotes,current)}
+          const current=read(K.quotes,[]),row=current.findIndex(x=>x.id===id);if(row>=0){current[row]=before;write(K.quotes,current)}
           const currentNotes=read(K.notes,{});currentNotes[q.leadId]=(currentNotes[q.leadId]||[]).filter(x=>x.id!==note.id);write(K.notes,currentNotes);
           window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision:'failed'}}));
           decisionError('Решение не сохранено на сервере. Проверьте соединение и повторите действие.');
