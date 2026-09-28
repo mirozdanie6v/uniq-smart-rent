@@ -1,2 +1,2 @@
-Clean isolated YDB and Telegram lifecycle verification under shared writer lock [telegram-e2e]
+Verify targeted Telegram outbox delivery and stable YDB lifecycle under writer lock [telegram-e2e]
 2026-09-28
