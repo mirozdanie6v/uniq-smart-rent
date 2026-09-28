@@ -1,0 +1,216 @@
+name: Isolated Yandex Compute Telegram egress test
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .telegram-compute-egress-test
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+  AUTOWORLD_URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Resolve Telegram test chat
+        run: |
+          set -euo pipefail
+          TEST_CHAT_ID=$(curl -fsS "${AUTOWORLD_URL%/}/api/auto-sale/state" | jq -r '
+            [.team[]? |
+              select(.active != false) |
+              select((((.telegramUsername // .telegram // "") | ascii_downcase | ltrimstr("@")) == "flyer_flyer")) |
+              (.telegramUserId // "")
+            ] | map(select(test("^-?[0-9]+$"))) | first // empty')
+          test -n "$TEST_CHAT_ID"
+          echo "::add-mask::$TEST_CHAT_ID"
+          echo "TEST_CHAT_ID=$TEST_CHAT_ID" >> "$GITHUB_ENV"
+
+      - name: Request OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$CODE" = "200"
+          TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$TOKEN" && test "$TOKEN" != "null"
+          echo "::add-mask::$TOKEN"
+          echo "YC_IAM_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install yc
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Discover VPC subnet
+        run: |
+          set -euo pipefail
+          SUBNETS=$(yc vpc subnet list --folder-id "$YC_FOLDER_ID" --format json)
+          echo "$SUBNETS" | jq '[.[] | {id,name,zone_id,network_id}]'
+          SUBNET_ID=$(echo "$SUBNETS" | jq -r '.[0].id // empty')
+          ZONE_ID=$(echo "$SUBNETS" | jq -r '.[0].zone_id // empty')
+          test -n "$SUBNET_ID" && test -n "$ZONE_ID"
+          echo "SUBNET_ID=$SUBNET_ID" >> "$GITHUB_ENV"
+          echo "ZONE_ID=$ZONE_ID" >> "$GITHUB_ENV"
+
+      - name: Prepare SSH and diagnostic
+        run: |
+          set -euo pipefail
+          ssh-keygen -q -t ed25519 -N '' -f "$RUNNER_TEMP/tg_diag_key"
+          cat > "$RUNNER_TEMP/diag.py" <<'PY'
+          import os, socket, ssl, json, time, urllib.request
+
+          TOKEN=os.environ["BOT_TOKEN"]
+          CHAT_ID=os.environ["CHAT_ID"]
+          TIMEOUT=8
+
+          def ms(t): return round((time.perf_counter()-t)*1000,1)
+
+          def tcp(ip):
+              t=time.perf_counter()
+              try:
+                  s=socket.create_connection((ip,443),timeout=TIMEOUT)
+                  peer=s.getpeername()[0]; s.close()
+                  return {"ok":True,"remoteAddress":peer,"ms":ms(t)}
+              except Exception as e:
+                  return {"ok":False,"error":type(e).__name__,"detail":str(e),"ms":ms(t)}
+
+          def tls_probe(ip):
+              t=time.perf_counter()
+              try:
+                  raw=socket.create_connection((ip,443),timeout=TIMEOUT)
+                  s=ssl.create_default_context().wrap_socket(raw,server_hostname="api.telegram.org")
+                  out={"ok":True,"remoteAddress":s.getpeername()[0],"protocol":s.version(),"cipher":s.cipher()[0],"ms":ms(t)}
+                  s.close(); return out
+              except Exception as e:
+                  return {"ok":False,"error":type(e).__name__,"detail":str(e),"ms":ms(t)}
+
+          def http(url, method="GET", payload=None):
+              t=time.perf_counter()
+              try:
+                  data=json.dumps(payload).encode() if payload is not None else None
+                  headers={"content-type":"application/json"} if payload is not None else {}
+                  req=urllib.request.Request(url,data=data,headers=headers,method=method)
+                  with urllib.request.urlopen(req,timeout=TIMEOUT) as r:
+                      raw=r.read()
+                      body=None
+                      try: body=json.loads(raw.decode())
+                      except: pass
+                      return {"ok":True,"httpStatus":r.status,"body":body,"ms":ms(t)}
+              except Exception as e:
+                  return {"ok":False,"error":type(e).__name__,"detail":str(e),"ms":ms(t)}
+
+          rounds=[]
+          for i in range(1,4):
+              t=time.perf_counter()
+              try:
+                  infos=socket.getaddrinfo("api.telegram.org",443,socket.AF_INET,socket.SOCK_STREAM)
+                  ips=sorted(set(x[4][0] for x in infos))
+                  dns={"ok":True,"addresses":ips,"ms":ms(t)}
+              except Exception as e:
+                  ips=[]; dns={"ok":False,"error":type(e).__name__,"detail":str(e),"addresses":[],"ms":ms(t)}
+              connectivity=[{"address":ip,"tcp":tcp(ip),"tls":tls_probe(ip)} for ip in ips]
+              generic=http("https://example.com/")
+              getme=http("https://api.telegram.org/bot"+TOKEN+"/getMe")
+              send=http("https://api.telegram.org/bot"+TOKEN+"/sendMessage","POST",{
+                  "chat_id":CHAT_ID,
+                  "text":f"AUTO МИР · Yandex Compute VM → Telegram test · {i}/3 · {time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime())}",
+                  "disable_notification":True
+              })
+              if getme.get("body") and isinstance(getme["body"],dict):
+                  getme["telegramOk"]=getme["body"].get("ok")
+                  getme["botUsername"]=(getme["body"].get("result") or {}).get("username")
+                  getme.pop("body",None)
+              if send.get("body") and isinstance(send["body"],dict):
+                  send["telegramOk"]=send["body"].get("ok")
+                  send["messageId"]=(send["body"].get("result") or {}).get("message_id")
+                  send.pop("body",None)
+              rounds.append({"index":i,"dns":dns,"connectivity":connectivity,"genericInternet":generic,"getMe":getme,"sendMessage":send})
+              if i<3: time.sleep(1.5)
+
+          print(json.dumps({
+              "environment":{"platform":"Yandex Compute VM","relayConfigured":False},
+              "hostname":socket.gethostname(),
+              "rounds":rounds
+          }))
+          PY
+
+      - name: Create temporary public Compute VM
+        run: |
+          set -euo pipefail
+          VM_NAME="tg-vm-egress-${GITHUB_RUN_ID}"
+          echo "VM_NAME=$VM_NAME" >> "$GITHUB_ENV"
+          yc compute instance create \
+            --name "$VM_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --zone "$ZONE_ID" \
+            --platform standard-v3 \
+            --cores 2 \
+            --memory 2GB \
+            --network-interface "subnet-id=$SUBNET_ID,nat-ip-version=ipv4" \
+            --create-boot-disk "image-folder-id=standard-images,image-family=ubuntu-2404-lts,size=20GB,auto-delete=true" \
+            --ssh-key "$RUNNER_TEMP/tg_diag_key.pub"
+          PUBLIC_IP=$(yc compute instance get --name "$VM_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.network_interfaces[0].primary_v4_address.one_to_one_nat.address // empty')
+          test -n "$PUBLIC_IP"
+          echo "PUBLIC_IP=$PUBLIC_IP" >> "$GITHUB_ENV"
+          echo "Temporary VM public IPv4: $PUBLIC_IP"
+
+      - name: Run direct Telegram probes from VM
+        run: |
+          set -euo pipefail
+          trap 'yc compute instance delete "$VM_NAME" --folder-id "$YC_FOLDER_ID" --async || true' EXIT
+          for attempt in $(seq 1 40); do
+            if ssh -i "$RUNNER_TEMP/tg_diag_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 yc-user@"$PUBLIC_IP" 'python3 --version' >/dev/null 2>&1; then
+              break
+            fi
+            test "$attempt" -lt 40 || { echo "SSH never became ready"; exit 1; }
+            sleep 5
+          done
+          scp -q -i "$RUNNER_TEMP/tg_diag_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$RUNNER_TEMP/diag.py" yc-user@"$PUBLIC_IP":/tmp/diag.py
+          ssh -i "$RUNNER_TEMP/tg_diag_key" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null yc-user@"$PUBLIC_IP" \
+            "BOT_TOKEN='$AUTO_SALE_TELEGRAM_BOT_TOKEN' CHAT_ID='$TEST_CHAT_ID' python3 /tmp/diag.py" \
+            | tee telegram-compute-egress-report.json
+          jq -e '.environment.platform=="Yandex Compute VM" and (.rounds|length)==3' telegram-compute-egress-report.json >/dev/null
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-compute-egress-report
+          path: telegram-compute-egress-report.json
+          if-no-files-found: warn
+
+      - name: Ensure temporary VM deleted
+        if: always()
+        run: |
+          set +e
+          if [ -n "${VM_NAME:-}" ]; then
+            yc compute instance delete "$VM_NAME" --folder-id "$YC_FOLDER_ID" --async || true
+          fi
