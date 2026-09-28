@@ -2,6 +2,38 @@
 
 ## Implementation status — 2026-09-28
 
+### Phase 1 — COMPLETE
+
+Live backfill result:
+- source revision: `2458`;
+- schema version: `1`;
+- migration status: `backfilled`;
+- canonical legacy hash = normalized hash;
+- ID parity: passed;
+- diff paths: none;
+- source revision stayed stable during copy and parity verification.
+
+Backfilled shadow counts:
+- leads: 7;
+- quotes: 7;
+- orders: 3;
+- payments: 8;
+- notes: 2;
+- team: 3;
+- catalog: 149;
+- Telegram bindings: 8.
+
+A first strict parity attempt identified only legacy empty note buckets such as `notes[leadId] = []`. Canonical parity now treats an absent empty note bucket and an explicit empty array as equivalent; non-empty notes still compare field-for-field. After that normalization, parity is 100%.
+
+Important:
+- normalized tables are now a shadow copy only;
+- `auto_sale_state` remains the production source of truth;
+- no production endpoint has been switched;
+- no dual-write is active yet;
+- no legacy data was deleted or modified by the migration.
+
+Next step: Phase 2 transactional dual-write behind a feature flag, with the legacy blob still serving reads and remaining the immediate rollback path.
+
 ### Phase 0 — COMPLETE
 
 Implemented:
