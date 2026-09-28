@@ -4,6 +4,7 @@ import {
   addAutoSaleNote,
   addAutoSalePayment,
   mutateAutoSaleEntity,
+  mutateAutoSaleEntityBatch,
   readAutoSaleEntity
 } from '../server/ydb-entity-commands.mjs';
 
@@ -148,4 +149,55 @@ test('catalog item can be patched and deleted by row version',async()=>{
   });
   assert.equal(deleted.status,200);
   assert.equal(stores.getState().catalog.length,0);
+});
+
+
+test('entity batch commits quote lead and note as one versioned operation',async()=>{
+  const stores=makeStores(base());
+  const result=await mutateAutoSaleEntityBatch({
+    ...stores,
+    operations:[
+      {resource:'quote',operation:'create',id:'Q-1',input:{id:'Q-1',leadId:'L-1',model:'BMW X5',status:'Черновик',version:1}},
+      {resource:'lead',operation:'patch',id:'L-1',baseRowVersion:10,input:{status:'Расчёт'}},
+      {resource:'note',operation:'create',leadId:'L-1',baseRowVersion:10,input:{id:'N-1',text:'Расчёт создан.'}}
+    ]
+  });
+  assert.equal(result.status,200);
+  assert.equal(result.data.revision,11);
+  assert.equal(result.data.rowVersions['lead:L-1'],11);
+  assert.equal(result.data.rowVersions['quote:Q-1'],11);
+  const state=stores.getState();
+  assert.equal(state.leads[0].status,'Расчёт');
+  assert.equal(state.quotes[0].id,'Q-1');
+  assert.equal(state.notes['L-1'][0].text,'Расчёт создан.');
+});
+
+test('entity batch rejects stale aggregate version before mutating state',async()=>{
+  const stores=makeStores(base());
+  const before=stores.getState();
+  const result=await mutateAutoSaleEntityBatch({
+    ...stores,
+    operations:[
+      {resource:'lead',operation:'patch',id:'L-1',baseRowVersion:9,input:{priority:'Высокий'}},
+      {resource:'note',operation:'create',leadId:'L-1',baseRowVersion:9,input:{id:'N-STALE',text:'Не должно сохраниться'}}
+    ]
+  });
+  assert.equal(result.status,409);
+  assert.equal(result.data.error,'entity_conflict');
+  assert.equal(result.data.currentRowVersion,10);
+  assert.deepEqual(stores.getState(),before);
+});
+
+test('entity batch allows child operation on aggregate created in the same batch',async()=>{
+  const stores=makeStores(base());
+  const result=await mutateAutoSaleEntityBatch({
+    ...stores,
+    operations:[
+      {resource:'lead',operation:'create',id:'L-NEW',input:{id:'L-NEW',name:'New',contact:'@new',model:'Kia K5',status:'Новый',nextAction:'2026-10-03',source:'Mini App'}},
+      {resource:'note',operation:'create',leadId:'L-NEW',input:{id:'N-NEW',text:'Лид создан.'}}
+    ]
+  });
+  assert.equal(result.status,200);
+  assert.equal(result.data.rowVersions['lead:L-NEW'],11);
+  assert.equal(stores.getState().notes['L-NEW'][0].text,'Лид создан.');
 });
