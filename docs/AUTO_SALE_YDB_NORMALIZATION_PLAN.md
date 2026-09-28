@@ -2,6 +2,66 @@
 
 ## Implementation status — 2026-09-28
 
+### Phase 4 — COMPLETE
+
+Optimistic entity mutation API is live on Yandex staging.
+
+New API-key protected command surface:
+- `GET /api/auto-sale/leads/:id`
+- `POST /api/auto-sale/leads`
+- `PATCH /api/auto-sale/leads/:id`
+- `DELETE /api/auto-sale/leads/:id` when no quote/order dependencies exist
+- `POST /api/auto-sale/leads/:id/notes`
+- equivalent `GET/POST/PATCH` entity endpoints for quotes, orders, catalog and team
+- `POST /api/auto-sale/orders/:id/payments`
+- `DELETE /api/auto-sale/catalog/:id`
+
+Concurrency model:
+- callers no longer submit the global state revision for entity commands;
+- update/delete commands require `baseRowVersion`;
+- stale aggregate versions return `409 entity_conflict`;
+- unrelated global state writes are retried internally and do not surface as entity conflicts;
+- payments advance the parent order `row_version`;
+- notes advance the parent lead `row_version`.
+
+Transitional transaction model:
+1. entity command reads current compatibility state and aggregate row version;
+2. business rules are validated through the existing server rule engine;
+3. the compatibility blob is updated;
+4. normalized diff updates only affected rows;
+5. notification intents are inserted into the outbox;
+6. all writes share the existing serializable YDB transaction;
+7. the response returns the new aggregate `rowVersion`.
+
+This keeps rollback compatibility while exposing entity-level concurrency semantics before the legacy blob is retired.
+
+Telegram binding hardening:
+- `/telegram/link-client` no longer calls global `replaceState` directly;
+- `/telegram/register-manager` no longer calls global `replaceState` directly;
+- both use the entity command path and aggregate row versions;
+- Telegram bindings continue to be mirrored into `auto_sale_telegram_bindings`.
+
+Security:
+- Phase 4 entity endpoints are API-key protected even while the legacy demo whole-state endpoint remains public-demo;
+- public frontend migration/auth is intentionally deferred to Phase 5.
+
+Final verification:
+- quality gate: 220 passed, 0 failed;
+- normalized reads remain enabled;
+- live entity create: rowVersion 2468;
+- live entity patch: rowVersion 2469;
+- stale patch using 2468 was rejected with `409 entity_conflict` and currentRowVersion 2469;
+- live note append advanced the lead aggregate to rowVersion 2470;
+- cleanup delete committed at revision 2471;
+- normalized read parity after cleanup: verified;
+- legacy/normalized dual-write verification then passed at revisions 2472/2473;
+- final canonical hash returned to the baseline;
+- final data counts remain leads 7, quotes 7, orders 3, payments 8, notes 2, team 3, catalog 149, Telegram bindings 8.
+
+A permanent deploy gate now runs `scripts/test-ydb-entity-api-live.mjs` on every staging deployment.
+
+Next step: Phase 5 frontend cutover. Replace browser-first full-state persistence and `Storage.prototype.setItem` interception with server-primary entity commands, while retaining a temporary compatibility fallback.
+
 ### Phase 3 — COMPLETE
 
 Normalized reads are enabled on Yandex staging with verified legacy fallback.
