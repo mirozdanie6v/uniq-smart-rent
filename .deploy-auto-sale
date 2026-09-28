@@ -1,2 +1,2 @@
-Deploy AutoWorld fix: stop manager registration save loop, prevent revision conflicts, restore status Telegram notifications
+Verify client-card autosave-loop repair and full Telegram lifecycle including New to In progress notifications [telegram-e2e]
 2026-09-28
