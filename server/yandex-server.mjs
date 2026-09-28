@@ -9,7 +9,7 @@ import {readAutoSaleState} from './ydb-read-mode.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
-import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,readAutoSaleEntity} from './ydb-entity-commands.mjs';
+import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,mutateAutoSaleEntityBatch,readAutoSaleEntity} from './ydb-entity-commands.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -159,11 +159,32 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
-      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
       json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),revision:Number(read.state?.revision)||0});
       return;
     }
+    if(url.pathname==='/api/auto-sale/entities/batch'&&req.method==='POST'){
+      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const input=await parseJson(req);
+      const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
+      const notifyTelegram=telegram.enabled&&!skipTelegram;
+      const result=await mutateAutoSaleEntityBatch({
+        legacyStore:await getStore(),
+        domainStore:await getDomainStore(),
+        operations:Array.isArray(input?.operations)?input.operations:[],
+        prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
+      });
+      if(result.status>=200&&result.status<300&&notifyTelegram){
+        result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
+        json(res,result.data,result.status);
+        const queuedIds=[...(result.data.notifications?.ids||[])];
+        setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity batch Telegram delivery deferred',error)));
+        return;
+      }
+      json(res,result.data,result.status);return;
+    }
+
     const entityMatch=url.pathname.match(/^\/api\/auto-sale\/(leads|quotes|orders|catalog|team)(?:\/([^/]+))?(?:\/(notes|payments))?$/);
     if(entityMatch){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
