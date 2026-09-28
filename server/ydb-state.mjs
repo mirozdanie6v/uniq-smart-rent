@@ -8,7 +8,7 @@ import {applyDomainDiff,buildDomainDiff,replaceDomainSnapshotInTransaction,summa
 const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
 const STATE_ID=new Uint64(1n);
 
-export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider(),domainDualWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_YDB_DUAL_WRITE||''))}){
+export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider(),domainDualWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_YDB_DUAL_WRITE||'')),ensureSchema=true}){
   const driver=new Driver(connectionString,{credentialsProvider});
   await driver.ready();
   const sql=query(driver);
@@ -39,37 +39,39 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     throw lastError;
   }
 
-  await sql`
-    CREATE TABLE IF NOT EXISTS auto_sale_state (
-      id Uint64 NOT NULL,
-      revision Uint64 NOT NULL,
-      payload Utf8 NOT NULL,
-      updated_at Utf8 NOT NULL,
-      PRIMARY KEY (id)
-    )
-  `;
-  await ensureAutoSaleDomainSchema(sql);
-  await sql`
-    CREATE TABLE IF NOT EXISTS auto_sale_notification_outbox (
-      id Utf8 NOT NULL,
-      status Utf8 NOT NULL,
-      payload Utf8 NOT NULL,
-      attempts Uint64 NOT NULL,
-      next_attempt_at Utf8 NOT NULL,
-      created_at Utf8 NOT NULL,
-      updated_at Utf8 NOT NULL,
-      last_error Utf8,
-      message_id Utf8,
-      PRIMARY KEY (id)
-    )
-  `;
-
-  const [rows]=await readQuery(()=>sql`SELECT id FROM auto_sale_state WHERE id = ${STATE_ID}`,'state-init');
-  if(!rows.length){
+  if(ensureSchema){
     await sql`
-      UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
-      VALUES (${STATE_ID}, ${new Uint64(0n)}, ${JSON.stringify(EMPTY)}, ${new Date().toISOString()})
+      CREATE TABLE IF NOT EXISTS auto_sale_state (
+        id Uint64 NOT NULL,
+        revision Uint64 NOT NULL,
+        payload Utf8 NOT NULL,
+        updated_at Utf8 NOT NULL,
+        PRIMARY KEY (id)
+      )
     `;
+    await ensureAutoSaleDomainSchema(sql);
+    await sql`
+      CREATE TABLE IF NOT EXISTS auto_sale_notification_outbox (
+        id Utf8 NOT NULL,
+        status Utf8 NOT NULL,
+        payload Utf8 NOT NULL,
+        attempts Uint64 NOT NULL,
+        next_attempt_at Utf8 NOT NULL,
+        created_at Utf8 NOT NULL,
+        updated_at Utf8 NOT NULL,
+        last_error Utf8,
+        message_id Utf8,
+        PRIMARY KEY (id)
+      )
+    `;
+  
+    const [rows]=await readQuery(()=>sql`SELECT id FROM auto_sale_state WHERE id = ${STATE_ID}`,'state-init');
+    if(!rows.length){
+      await sql`
+        UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
+        VALUES (${STATE_ID}, ${new Uint64(0n)}, ${JSON.stringify(EMPTY)}, ${new Date().toISOString()})
+      `;
+    }
   }
 
   async function loadState(){
