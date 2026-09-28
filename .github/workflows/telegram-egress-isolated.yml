@@ -237,7 +237,6 @@ jobs:
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN" \
             --environment "TEST_CHAT_ID=$TEST_CHAT_ID"
-          yc serverless container allow-unauthenticated-invoke "$DIAG_CONTAINER" --folder-id "$YC_FOLDER_ID"
           DIAG_URL=$(yc serverless container get --name "$DIAG_CONTAINER" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$DIAG_URL" && test "$DIAG_URL" != "null"
           echo "DIAG_URL=$DIAG_URL" >> "$GITHUB_ENV"
@@ -247,7 +246,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 20); do
-            code=$(curl -sS --connect-timeout 5 --max-time 190 -o /tmp/diag-report -w '%{http_code}' "${DIAG_URL%/}/run" || true)
+            code=$(curl -sS --connect-timeout 5 --max-time 190 -H "Authorization: Bearer $YC_IAM_TOKEN" -o /tmp/diag-report -w '%{http_code}' "${DIAG_URL%/}/run" || true)
             if [ "$code" = "200" ]; then break; fi
             test "$attempt" -lt 20 || { echo "Diagnostic endpoint did not become ready (HTTP $code)"; cat /tmp/diag-report || true; exit 1; }
             sleep 3
