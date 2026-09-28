@@ -134,6 +134,22 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
       return rows.map(row=>{let payload={};try{payload=JSON.parse(String(row.payload||'{}'))}catch{}return{...payload,id:String(row.id),status:String(row.status),attempts:Number(row.attempts||0n)}});
     });
   }
+  async function pendingNotificationsByIds(ids=[]){
+    const wanted=[...new Set(ids.map(id=>String(id||'').trim()).filter(Boolean))].slice(0,50);
+    if(!wanted.length)return[];
+    const now=new Date().toISOString();
+    return sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
+      const rows=[];
+      for(const id of wanted){
+        const [found]=await tx`SELECT id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id FROM auto_sale_notification_outbox
+          WHERE id=${id} AND (status = ${'pending'} OR status = ${'retry'} OR status = ${'processing'}) AND next_attempt_at <= ${now}`;
+        if(found[0])rows.push(found[0]);
+      }
+      const lease=new Date(Date.now()+120_000).toISOString();
+      for(const row of rows)await tx`UPDATE auto_sale_notification_outbox SET status=${'processing'},next_attempt_at=${lease} WHERE id=${String(row.id)}`;
+      return rows.map(row=>{let payload={};try{payload=JSON.parse(String(row.payload||'{}'))}catch{}return{...payload,id:String(row.id),status:String(row.status),attempts:Number(row.attempts||0n)}});
+    });
+  }
   async function markNotification(id,{ok,messageId='',error='',attempts=0}={}){
     const now=new Date(),current=Number(attempts)||0,nextAttempts=current+1,maxAttempts=8;
     const delay=Math.min(3600,Math.max(5,5*(2**Math.min(current,8))));
@@ -163,5 +179,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,enqueueNotifications,pendingNotifications,markNotification,notificationStats,notificationStatus,ping,close};
+  return{loadState,replaceState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close};
 }
