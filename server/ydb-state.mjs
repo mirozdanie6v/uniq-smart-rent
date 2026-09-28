@@ -2,11 +2,13 @@ import {Driver} from '@ydbjs/core';
 import {query} from '@ydbjs/query';
 import {MetadataCredentialsProvider} from '@ydbjs/auth/metadata';
 import {Uint64} from '@ydbjs/value/primitive';
+import {ensureAutoSaleDomainSchema} from './ydb-domain-store.mjs';
+import {applyDomainDiff,buildDomainDiff,summarizeDomainDiff} from './ydb-domain-dual-write.mjs';
 
 const EMPTY={initialized:false,leads:[],quotes:[],orders:[],notes:{},team:[],catalog:[]};
 const STATE_ID=new Uint64(1n);
 
-export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider()}){
+export async function createYdbStateStore({connectionString,credentialsProvider=new MetadataCredentialsProvider(),domainDualWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_YDB_DUAL_WRITE||''))}){
   const driver=new Driver(connectionString,{credentialsProvider});
   await driver.ready();
   const sql=query(driver);
@@ -46,6 +48,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
       PRIMARY KEY (id)
     )
   `;
+  await ensureAutoSaleDomainSchema(sql);
   await sql`
     CREATE TABLE IF NOT EXISTS auto_sale_notification_outbox (
       id Utf8 NOT NULL,
@@ -90,6 +93,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         return{status:409,data:{error:'revision_conflict',currentRevision:current,state:decodeStateRow(rows[0])}};
       }
       const next=current+1;
+      const previous=decodeStateRow(rows[0]);
       const payload={
         initialized:true,
         leads:Array.isArray(state.leads)?state.leads:[],
@@ -103,12 +107,17 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         UPSERT INTO auto_sale_state (id, revision, payload, updated_at)
         VALUES (${STATE_ID}, ${new Uint64(BigInt(next))}, ${JSON.stringify(payload)}, ${new Date().toISOString()})
       `;
+      let domainDiff=null;
+      if(domainDualWrite){
+        domainDiff=buildDomainDiff(previous,{...payload,revision:next});
+        await applyDomainDiff(tx,domainDiff,{compatRevision:next,status:'dual-write'});
+      }
       const now=new Date().toISOString();
       for(const item of notifications){
         await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
           VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
       }
-      return{status:200,data:{ok:true,revision:next}};
+      return{status:200,data:{ok:true,revision:next,...(domainDualWrite?{domainDualWrite:{enabled:true,diff:summarizeDomainDiff(domainDiff)}}:{})}};
     });
   }
 
@@ -179,5 +188,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close};
+  return{loadState,replaceState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close,domainDualWriteEnabled:domainDualWrite};
 }
