@@ -107,9 +107,14 @@ function openTelegram(contact){
   if(!/^[A-Za-z0-9_]{5,32}$/.test(username))return false;
   const selfUsername=String(currentTelegram?.username||'').replace(/^@/,'').trim().toLowerCase();
   if(selfUsername&&username.toLowerCase()===selfUsername)return false;
-  const url=`https://t.me/${username}`;
-  try{if(tg?.openTelegramLink){tg.openTelegramLink(url);return true}}catch{}
-  window.open(url,'_blank','noopener,noreferrer');return true;
+  const tgUrl=`https://t.me/${username}`;
+  try{
+    if(tg?.openTelegramLink){tg.openTelegramLink(tgUrl);return true}
+    if(tg?.openLink){tg.openLink(tgUrl);return true}
+  }catch(error){console.warn('AUTO SALE Telegram link open failed',error)}
+  try{window.location.href=`tg://resolve?domain=${encodeURIComponent(username)}`;return true}catch{}
+  try{window.location.assign(tgUrl);return true}catch{}
+  return false;
 }
 
 function patchLead(id,patch){
