@@ -1,5 +1,35 @@
 # AUTO SALE — YDB/state/outbox audit and zero-downtime normalization plan
 
+## Implementation status — 2026-09-28
+
+### Phase 0 — COMPLETE
+
+Implemented:
+- normalized YDB schema v1;
+- idempotent schema version table `auto_sale_schema_meta`;
+- `server/ydb-domain-store.mjs`;
+- legacy → normalized → legacy mapping/parity helpers;
+- explicit `sort_order` preservation for collection/payment/note order;
+- Telegram identity extraction model;
+- schema preparation script;
+- parity/round-trip tests.
+
+Live YDB preparation result:
+- schema version: `1`;
+- normalized domain tables created successfully;
+- all normalized domain tables are currently empty;
+- no backfill has been executed;
+- `auto_sale_state` remains the production source of truth;
+- current outbox and all runtime endpoints remain unchanged.
+
+Quality gate:
+- lint: passed;
+- typecheck: passed;
+- build: passed;
+- tests: 202 passed, 0 failed.
+
+Next step: Phase 1 idempotent backfill + live parity report. Do not change read/write source yet.
+
 Date: 2026-09-28
 Branch: `prototype/auto-sale-usa`
 
