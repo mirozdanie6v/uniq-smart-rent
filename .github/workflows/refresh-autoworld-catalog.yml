@@ -1,5 +1,9 @@
 name: Refresh AutoWorld Georgia catalog
 
+concurrency:
+  group: auto-sale-yandex-live-writer
+  cancel-in-progress: false
+
 on:
   push:
     branches: [prototype/auto-sale-usa]
