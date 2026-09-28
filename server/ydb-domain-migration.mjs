@@ -168,12 +168,14 @@ export function domainRowsToLegacyState(rows={},options={}){
 }
 
 export function canonicalAutoSaleState(state={}){
+  const sourceNotes=state.notes&&typeof state.notes==='object'?state.notes:{};
+  const notes=Object.fromEntries(Object.entries(sourceNotes).filter(([,value])=>!(Array.isArray(value)&&value.length===0)));
   return stable({
     initialized:Boolean(state.initialized),
     leads:arr(state.leads),
     quotes:arr(state.quotes),
     orders:arr(state.orders),
-    notes:state.notes&&typeof state.notes==='object'?state.notes:{},
+    notes,
     team:arr(state.team),
     catalog:arr(state.catalog)
   });
