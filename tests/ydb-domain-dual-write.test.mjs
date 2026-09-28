@@ -34,13 +34,13 @@ test('single lead edit does not rewrite unrelated normalized collections',()=>{
   }
 });
 
-test('payment append updates only the payment row shadow',()=>{
+test('payment append updates payment row and owner order version',()=>{
   const previous=base();
   const next=structuredClone(previous);
   next.orders[0].payments.push({id:'P-2',amount:50,date:'2026-09-29',method:'Банк'});
   const summary=summarizeDomainDiff(buildDomainDiff(previous,next));
   assert.deepEqual(summary.payments,{upserts:1,deletes:0});
-  assert.deepEqual(summary.orders,{upserts:0,deletes:0});
+  assert.deepEqual(summary.orders,{upserts:1,deletes:0});
   assert.deepEqual(summary.catalog,{upserts:0,deletes:0});
 });
 
