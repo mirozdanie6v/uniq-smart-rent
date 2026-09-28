@@ -261,6 +261,7 @@ jobs:
       - name: Run reversible client-to-handoff Yandex E2E
         run: node scripts/e2e-yandex-workflow.mjs
       - name: Clear all applications after lifecycle verification
+        if: always()
         run: |
           set -euo pipefail
           URL="${STAGING_URL%/}"
@@ -268,6 +269,7 @@ jobs:
           echo "$body" | jq .
           echo "$body" | jq -e '.ok == true' >/dev/null
       - name: Verify applications are empty
+        if: always()
         run: |
           set -euo pipefail
           URL="${STAGING_URL%/}"
