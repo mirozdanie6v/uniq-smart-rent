@@ -381,23 +381,6 @@ const shutdown=signal=>{
 };
 process.on('SIGTERM',()=>shutdown('SIGTERM'));
 process.on('SIGINT',()=>shutdown('SIGINT'));
-+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(linkedLead.budget)||0):'не указан';
-        const contact=String(linkedLead.contact||'—').trim();
-        const clientText='🚗 AUTO МИР · заявка принята\n\n'+title+'\nБюджет: '+budget+'\nСтатус: '+String(linkedLead.status||'Новый')+'\n\nЗаявка передана менеджеру. Мы сообщим здесь, когда будет готов расчёт, а после оформления заказа — об оплатах и этапах доставки.';
-        const clientResult=await telegram.send(String(auth.user.id),clientText);
-        notifications.push({target:'client',ok:true,messageId:clientResult?.message_id||null});
-        const managerIds=telegram.managerIds?telegram.managerIds(linkedLead,linkedState):[];
-        for(const chatId of managerIds){
-          const managerText='🚗 AUTO МИР · новая заявка клиента\n'+String(linkedLead.name||'Клиент')+'\n'+title+'\nБюджет: '+budget+'\nКонтакт: '+contact;
-          const managerResult=await telegram.send(chatId,managerText);
-          notifications.push({target:'manager',chatId,ok:true,messageId:managerResult?.message_id||null});
-        }
-      }catch(error){
-        notifications.push({ok:false,error:String(error?.message||'telegram_send_failed')});
-      }
-      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision,notifications});
-      return;
-    }
 
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/register-manager'){
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
