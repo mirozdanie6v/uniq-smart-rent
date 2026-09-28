@@ -132,3 +132,11 @@ test('parity hash ignores global revision but detects business-state changes',()
   assert.notEqual(autoSaleStateHash(a),autoSaleStateHash(b));
   assert.deepEqual(canonicalAutoSaleState(a).catalog,a.catalog);
 });
+
+test('canonical parity treats missing and empty note groups as equivalent',()=>{
+  const left=sample();
+  left.notes['L-2']=[];
+  const right=structuredClone(left);
+  delete right.notes['L-2'];
+  assert.equal(autoSaleStateHash(left),autoSaleStateHash(right));
+});
