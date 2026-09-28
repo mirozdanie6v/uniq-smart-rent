@@ -27,7 +27,7 @@ let domainStorePromise=null;
 async function getDomainStore(){
   if(domainStore)return domainStore;
   if(!domainStorePromise){
-    domainStorePromise=createYdbDomainStore({connectionString})
+    domainStorePromise=createYdbDomainStore({connectionString,ensureSchema:false})
       .then(created=>{domainStore=created;return created})
       .catch(error=>{domainStorePromise=null;throw error});
   }
