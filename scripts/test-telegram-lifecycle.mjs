@@ -30,7 +30,8 @@ async function delivered(notifications,expected,label){
     if(attempt>=12)throw new Error(label+' deliveries not confirmed: '+JSON.stringify(rows));
     if(!apiKey)throw new Error('Delivery pending; authenticated outbox check required: '+JSON.stringify(rows));
     await sleep(5500);
-    const processed=await req('/api/auto-sale/notifications/process',{method:'POST'});
+    const processQuery=new URLSearchParams();for(const id of notifications.ids)processQuery.append('id',id);
+    const processed=await req('/api/auto-sale/notifications/process?'+processQuery,{method:'POST'});
     if(!processed.response.ok)throw new Error(label+' outbox processor HTTP '+processed.response.status+': '+JSON.stringify(processed.data));
     const query=new URLSearchParams();for(const id of notifications.ids)query.append('id',id);
     const checked=await req('/api/auto-sale/notifications/status?'+query);
