@@ -43,7 +43,7 @@ const telegram=createTelegramService();
 async function getStore(){
   if(store)return store;
   if(!storePromise){
-    storePromise=createYdbStateStore({connectionString})
+    storePromise=createYdbStateStore({connectionString,ensureSchema:false})
       .then(created=>{store=created;return created})
       .catch(error=>{storePromise=null;throw error});
   }
