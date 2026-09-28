@@ -34,7 +34,9 @@ async function getDomainStore(){
   return domainStorePromise;
 }
 async function getApiState(){
-  return readAutoSaleState({legacyStore:await getStore(),domainStore:await getDomainStore(),mode:ydbReadMode});
+  const legacyStore=await getStore();
+  if(ydbReadMode==='legacy')return readAutoSaleState({legacyStore,domainStore:null,mode:'legacy'});
+  return readAutoSaleState({legacyStore,domainStore:await getDomainStore(),mode:ydbReadMode});
 }
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
