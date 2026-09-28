@@ -6,3 +6,4 @@ workers_dev = true
 [[routes]]
 pattern = "integration-telegram.viiversion.com"
 custom_domain = true
+zone_name = "viiversion.com"
