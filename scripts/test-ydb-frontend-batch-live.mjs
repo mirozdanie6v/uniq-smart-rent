@@ -1,0 +1,118 @@
+import {writeFile} from 'node:fs/promises';
+
+const base=String(process.env.STAGING_URL||'').replace(/\/$/,'');
+const apiKey=String(process.env.AUTO_SALE_API_KEY||'');
+if(!base)throw new Error('STAGING_URL is required');
+if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
+
+const suffix=Date.now().toString(36).toUpperCase();
+const leadId='L-FRONTEND-'+suffix;
+const headers={'content-type':'application/json','x-auto-sale-key':apiKey,'x-auto-sale-skip-telegram':'1'};
+const report={leadId,baseline:null,created:null,patched:null,stale:null,cleanup:null,parity:null};
+
+async function request(path,{method='GET',body=null,admin=false}={}){
+  const response=await fetch(base+path,{
+    method,
+    headers:method==='GET'?{'x-auto-sale-key':apiKey}:headers,
+    body:body===null?undefined:JSON.stringify(body)
+  });
+  const data=await response.json().catch(()=>({}));
+  return{status:response.status,data};
+}
+async function state(){
+  const result=await request('/api/auto-sale/state');
+  if(result.status!==200)throw new Error('state_read_failed:'+JSON.stringify(result));
+  return result.data;
+}
+async function batch(operations){
+  return request('/api/auto-sale/entities/batch',{method:'POST',body:{operations}});
+}
+const rowVersion=(snapshot,resource,id)=>Number(snapshot?._rowVersions?.[resource]?.[id]||0);
+
+try{
+  const before=await state();
+  report.baseline={revision:Number(before.revision)||0,leadCount:(before.leads||[]).length};
+
+  const note1={id:'NOTE-'+suffix+'-1',text:'Phase 5 frontend batch create',at:new Date().toISOString()};
+  const create=await batch([
+    {resource:'lead',operation:'create',id:leadId,input:{
+      id:leadId,name:'Phase 5 Frontend',contact:'phase5-'+suffix.toLowerCase()+'@example.invalid',
+      model:'Frontend entity validation',budget:41000,source:'Mini App',manager:'Не назначен',
+      status:'Новый',priority:'Средний',nextAction:new Date().toISOString().slice(0,10),
+      createdAt:new Date().toISOString(),clientCreated:false
+    }},
+    {resource:'note',operation:'create',leadId,input:note1}
+  ]);
+  report.created=create;
+  if(create.status!==200||!Number(create.data?.rowVersions?.['lead:'+leadId])){
+    throw new Error('frontend_batch_create_failed:'+JSON.stringify(create));
+  }
+
+  const afterCreate=await state();
+  const v1=rowVersion(afterCreate,'lead',leadId);
+  if(!v1||!(afterCreate.leads||[]).some(item=>String(item.id)===leadId)){
+    throw new Error('frontend_batch_create_not_visible');
+  }
+  if(!(afterCreate.notes?.[leadId]||[]).some(item=>String(item.id)===note1.id)){
+    throw new Error('frontend_batch_note_not_visible');
+  }
+
+  const note2={id:'NOTE-'+suffix+'-2',text:'Phase 5 frontend batch patch',at:new Date().toISOString()};
+  const patch=await batch([
+    {resource:'lead',operation:'patch',id:leadId,baseRowVersion:v1,input:{priority:'Высокий'}},
+    {resource:'note',operation:'create',leadId,baseRowVersion:v1,input:note2}
+  ]);
+  report.patched=patch;
+  if(patch.status!==200)throw new Error('frontend_batch_patch_failed:'+JSON.stringify(patch));
+
+  const afterPatch=await state();
+  const v2=rowVersion(afterPatch,'lead',leadId);
+  const patchedLead=(afterPatch.leads||[]).find(item=>String(item.id)===leadId);
+  if(!(v2>v1)||patchedLead?.priority!=='Высокий')throw new Error('frontend_batch_version_not_advanced');
+
+  const stale=await batch([
+    {resource:'lead',operation:'patch',id:leadId,baseRowVersion:v1,input:{priority:'Низкий'}}
+  ]);
+  report.stale=stale;
+  if(stale.status!==409||stale.data?.error!=='entity_conflict'||Number(stale.data?.currentRowVersion)!==v2){
+    throw new Error('frontend_batch_stale_not_rejected:'+JSON.stringify(stale));
+  }
+
+  const cleanup=await batch([
+    {resource:'lead',operation:'delete',id:leadId,baseRowVersion:v2}
+  ]);
+  report.cleanup=cleanup;
+  if(cleanup.status!==200||cleanup.data?.rowVersions?.['lead:'+leadId]!==null){
+    throw new Error('frontend_batch_cleanup_failed:'+JSON.stringify(cleanup));
+  }
+
+  const finalState=await state();
+  if((finalState.leads||[]).some(item=>String(item.id)===leadId))throw new Error('frontend_batch_cleanup_lead_still_present');
+  if(Object.prototype.hasOwnProperty.call(finalState.notes||{},leadId)&&(finalState.notes[leadId]||[]).length){
+    throw new Error('frontend_batch_cleanup_notes_still_present');
+  }
+
+  const parity=await request('/api/auto-sale/admin/read-parity');
+  report.parity=parity;
+  if(parity.status!==200||parity.data?.source!=='normalized'||parity.data?.fallback!==false||parity.data?.shadowVerified!==true){
+    throw new Error('frontend_batch_parity_failed:'+JSON.stringify(parity));
+  }
+
+  report.ok=true;
+  report.versions={created:v1,patched:v2};
+  report.finalRevision=Number(finalState.revision)||0;
+  await writeFile('ydb-frontend-batch-live-report.json',JSON.stringify(report,null,2));
+  console.log('AUTO_SALE_PHASE5_FRONTEND_BATCH_LIVE_OK',JSON.stringify({
+    leadId,createdRowVersion:v1,patchedRowVersion:v2,
+    staleCurrentRowVersion:stale.data.currentRowVersion,
+    cleanupRevision:cleanup.data.revision,parityRevision:parity.data.revision
+  }));
+}finally{
+  try{
+    const current=await state();
+    const version=rowVersion(current,'lead',leadId);
+    if(version){
+      await batch([{resource:'lead',operation:'delete',id:leadId,baseRowVersion:version}]);
+    }
+  }catch{}
+}
