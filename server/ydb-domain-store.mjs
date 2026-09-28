@@ -169,6 +169,117 @@ export async function createYdbDomainStore({
     return Number(rows[0]?.version||0n);
   }
 
+  const u64=value=>new Uint64(BigInt(Math.max(0,Number(value)||0)));
+  const parsePayload=value=>{try{return JSON.parse(String(value||'{}'))}catch{return{}}};
+
+  async function replaceSnapshot(rows,{sourceRevision=0,status='backfilled'}={}){
+    const now=new Date().toISOString();
+    const required=[
+      ['lead',rows?.leads],['quote',rows?.quotes],['order',rows?.orders],
+      ['payment',rows?.payments],['note',rows?.notes],['team member',rows?.team],
+      ['catalog car',rows?.catalog]
+    ];
+    for(const [label,list] of required){
+      for(const row of Array.isArray(list)?list:[]){
+        if(!String(row?.id||'').trim())throw new Error(`normalized_${label.replace(/\s+/g,'_')}_id_required`);
+      }
+    }
+
+    await sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
+      const [paymentKeys]=await tx`SELECT order_id,id FROM auto_sale_payments`;
+      for(const row of paymentKeys)await tx`DELETE FROM auto_sale_payments WHERE order_id=${String(row.order_id)} AND id=${String(row.id)}`;
+
+      const [noteKeys]=await tx`SELECT lead_id,id FROM auto_sale_notes`;
+      for(const row of noteKeys)await tx`DELETE FROM auto_sale_notes WHERE lead_id=${String(row.lead_id)} AND id=${String(row.id)}`;
+
+      const [bindingKeys]=await tx`SELECT subject_type,subject_id FROM auto_sale_telegram_bindings`;
+      for(const row of bindingKeys)await tx`DELETE FROM auto_sale_telegram_bindings WHERE subject_type=${String(row.subject_type)} AND subject_id=${String(row.subject_id)}`;
+
+      for(const table of ['auto_sale_quotes','auto_sale_orders','auto_sale_leads','auto_sale_team','auto_sale_catalog']){
+        const [keys]=await tx.raw(`SELECT id FROM ${table}`);
+        for(const row of keys)await tx.raw(`DELETE FROM ${table} WHERE id = $id`,{id:String(row.id)});
+      }
+
+      for(const row of rows.leads||[])await tx`
+        UPSERT INTO auto_sale_leads (id,row_version,sort_order,status,manager,source,client_created,payload,updated_at)
+        VALUES (${String(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${String(row.status||'')},${String(row.manager||'')},${String(row.source||'')},${Boolean(row.clientCreated)},${JSON.stringify(row.payload||{})},${String(row.updatedAt||'')})
+      `;
+      for(const row of rows.quotes||[])await tx`
+        UPSERT INTO auto_sale_quotes (id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at)
+        VALUES (${String(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${String(row.leadId||'')},${String(row.status||'')},${u64(row.quoteVersion)},${JSON.stringify(row.payload||{})},${String(row.updatedAt||'')})
+      `;
+      for(const row of rows.orders||[])await tx`
+        UPSERT INTO auto_sale_orders (id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at)
+        VALUES (${String(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${String(row.leadId||'')},${String(row.stage||'')},${String(row.manager||'')},${String(row.riskType||'')},${JSON.stringify(row.payload||{})},${String(row.updatedAt||'')})
+      `;
+      for(const row of rows.payments||[])await tx`
+        UPSERT INTO auto_sale_payments (order_id,id,sort_order,amount,payment_date,method,payload,created_at)
+        VALUES (${String(row.orderId||'')},${String(row.id)},${u64(row.sortOrder)},${Number(row.amount)||0},${String(row.paymentDate||'')},${String(row.method||'')},${JSON.stringify(row.payload||{})},${String(row.createdAt||'')})
+      `;
+      for(const row of rows.notes||[])await tx`
+        UPSERT INTO auto_sale_notes (lead_id,id,sort_order,text,payload,created_at)
+        VALUES (${String(row.leadId||'')},${String(row.id)},${u64(row.sortOrder)},${String(row.text||'')},${JSON.stringify(row.payload||{})},${String(row.createdAt||'')})
+      `;
+      for(const row of rows.team||[])await tx`
+        UPSERT INTO auto_sale_team (id,row_version,sort_order,name,role,active,payload,updated_at)
+        VALUES (${String(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${String(row.name||'')},${String(row.role||'')},${Boolean(row.active)},${JSON.stringify(row.payload||{})},${String(row.updatedAt||'')})
+      `;
+      for(const row of rows.catalog||[])await tx`
+        UPSERT INTO auto_sale_catalog (id,row_version,sort_order,origin,active,auction_date,payload,updated_at)
+        VALUES (${String(row.id)},${u64(row.rowVersion)},${u64(row.sortOrder)},${String(row.origin||'')},${Boolean(row.active)},${String(row.auctionDate||'')},${JSON.stringify(row.payload||{})},${String(row.updatedAt||'')})
+      `;
+      for(const row of rows.telegramBindings||[])await tx`
+        UPSERT INTO auto_sale_telegram_bindings (subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at)
+        VALUES (${String(row.subjectType||'')},${String(row.subjectId||'')},${String(row.telegramUserId||'')},${String(row.username||'')},${String(row.firstName||'')},${String(row.lastName||'')},${String(row.linkedAt||'')},${now})
+      `;
+
+      const metaId=u64(1),revision=u64(sourceRevision),schema=u64(AUTO_SALE_DOMAIN_SCHEMA_VERSION);
+      await tx`
+        UPSERT INTO auto_sale_state_meta (id,compat_revision,schema_version,migration_status,source_revision,updated_at)
+        VALUES (${metaId},${revision},${schema},${String(status)},${revision},${now})
+      `;
+    });
+  }
+
+  async function loadRows(){
+    const [
+      leadsR,quotesR,ordersR,paymentsR,notesR,teamR,catalogR,bindingsR
+    ]=await Promise.all([
+      sql`SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads`,
+      sql`SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes`,
+      sql`SELECT id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at FROM auto_sale_orders`,
+      sql`SELECT order_id,id,sort_order,amount,payment_date,method,payload,created_at FROM auto_sale_payments`,
+      sql`SELECT lead_id,id,sort_order,text,payload,created_at FROM auto_sale_notes`,
+      sql`SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team`,
+      sql`SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog`,
+      sql`SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings`
+    ]);
+    const rows=result=>Array.isArray(result?.[0])?result[0]:[];
+    return{
+      leads:rows(leadsR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),status:String(row.status||''),manager:String(row.manager||''),source:String(row.source||''),clientCreated:Boolean(row.client_created),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      quotes:rows(quotesR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),status:String(row.status||''),quoteVersion:Number(row.quote_version||0n),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      orders:rows(ordersR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),leadId:String(row.lead_id||''),stage:String(row.stage||''),manager:String(row.manager||''),riskType:String(row.risk_type||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      payments:rows(paymentsR).map(row=>({orderId:String(row.order_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),amount:Number(row.amount)||0,paymentDate:String(row.payment_date||''),method:String(row.method||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
+      notes:rows(notesR).map(row=>({leadId:String(row.lead_id||''),id:String(row.id),sortOrder:Number(row.sort_order||0n),text:String(row.text||''),payload:parsePayload(row.payload),createdAt:String(row.created_at||'')})),
+      team:rows(teamR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),name:String(row.name||''),role:String(row.role||''),active:Boolean(row.active),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      catalog:rows(catalogR).map(row=>({id:String(row.id),rowVersion:Number(row.row_version||0n),sortOrder:Number(row.sort_order||0n),origin:String(row.origin||''),active:Boolean(row.active),auctionDate:String(row.auction_date||''),payload:parsePayload(row.payload),updatedAt:String(row.updated_at||'')})),
+      telegramBindings:rows(bindingsR).map(row=>({subjectType:String(row.subject_type||''),subjectId:String(row.subject_id||''),telegramUserId:String(row.telegram_user_id||''),username:String(row.username||''),firstName:String(row.first_name||''),lastName:String(row.last_name||''),linkedAt:String(row.linked_at||''),updatedAt:String(row.updated_at||'')}))
+    };
+  }
+
+  async function migrationMeta(){
+    const id=u64(1);
+    const [rows]=await sql`SELECT compat_revision,schema_version,migration_status,source_revision,updated_at FROM auto_sale_state_meta WHERE id=${id}`;
+    const row=rows[0];
+    return row?{
+      compatRevision:Number(row.compat_revision||0n),
+      schemaVersion:Number(row.schema_version||0n),
+      migrationStatus:String(row.migration_status||''),
+      sourceRevision:Number(row.source_revision||0n),
+      updatedAt:String(row.updated_at||'')
+    }:null;
+  }
+
   async function counts(){
     const result={};
     const queries=[
@@ -190,5 +301,5 @@ export async function createYdbDomainStore({
 
   async function close(){driver.close()}
 
-  return{sql,schemaVersion,counts,close};
+  return{sql,schemaVersion,replaceSnapshot,loadRows,migrationMeta,counts,close};
 }
