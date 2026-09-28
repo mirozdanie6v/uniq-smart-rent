@@ -407,17 +407,20 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,20_000);
       const leadId=String(input?.leadId||'').trim();
       if(!leadId){json(res,{error:'lead_id_required'},400);return}
-      const state=await (await getStore()).loadState();
-      const leads=Array.isArray(state.leads)?state.leads.map(item=>({...item})):[];
-      const index=leads.findIndex(item=>String(item?.id||'')===leadId);
-      if(index<0){json(res,{error:'lead_not_found'},404);return}
-      const existing=String(leads[index].telegramUserId||'').trim();
+      const current=await readAutoSaleEntity({legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'lead',id:leadId});
+      if(current.status!==200){json(res,current.data,current.status);return}
+      const lead=current.data.entity;
+      const existing=String(lead.telegramUserId||'').trim();
       if(existing&&existing!==String(auth.user.id)){json(res,{error:'client_telegram_already_linked'},409);return}
       const username=String(auth.user.username||'').replace(/^@/,'');
-      leads[index]={...leads[index],clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()};
-      const replaced=await (await getStore()).replaceState({...state,leads},{expectedRevision:state.revision});
-      if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
-      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:replaced.data.revision});
+      const patched=await mutateAutoSaleEntity({
+        legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'lead',operation:'patch',id:leadId,
+        expectedRowVersion:current.data.rowVersion,
+        input:{clientCreated:true,telegramUserId:String(auth.user.id),telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramDisplayName:[auth.user.first_name,auth.user.last_name].filter(Boolean).join(' ')||username||String(auth.user.id),telegramLinkedAt:new Date().toISOString()},
+        prepareNotifications:null
+      });
+      if(patched.status!==200){json(res,patched.data,patched.status);return}
+      json(res,{ok:true,leadId,telegramUserId:String(auth.user.id),revision:patched.data.revision,rowVersion:patched.data.rowVersion});
       return;
     }
 
@@ -429,21 +432,27 @@ const server=http.createServer(async(req,res)=>{
       const memberId=String(input?.memberId||'').trim();
       const memberName=String(input?.memberName||'').trim();
       const state=await (await getStore()).loadState();
-      const team=Array.isArray(state.team)?state.team.map(item=>({...item})):[];
-      let index=memberId?team.findIndex(item=>String(item?.id||'')===memberId):-1;
-      if(index<0&&memberName)index=team.findIndex(item=>String(item?.name||'').trim()===memberName);
-      if(index<0){json(res,{error:'manager_team_member_required',team:team.filter(item=>item?.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item?.role||''))).map(item=>({id:item.id,name:item.name,role:item.role}))},409);return}
+      const team=Array.isArray(state.team)?state.team:[];
+      let member=memberId?team.find(item=>String(item?.id||'')===memberId):null;
+      if(!member&&memberName)member=team.find(item=>String(item?.name||'').trim()===memberName);
+      if(!member){json(res,{error:'manager_team_member_required',team:team.filter(item=>item?.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item?.role||''))).map(item=>({id:item.id,name:item.name,role:item.role}))},409);return}
+      const current=await readAutoSaleEntity({legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'team',id:String(member.id)});
+      if(current.status!==200){json(res,current.data,current.status);return}
       const telegramUserId=String(auth.user.id);
       const username=String(auth.user.username||'').replace(/^@/,'');
-      const alreadyLinked=String(team[index].telegramUserId||'')===telegramUserId&&String(team[index].telegramUsername||'')===username;
+      const alreadyLinked=String(current.data.entity.telegramUserId||'')===telegramUserId&&String(current.data.entity.telegramUsername||'')===username;
       if(alreadyLinked){
-        json(res,{ok:true,unchanged:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:state.revision});
+        json(res,{ok:true,unchanged:true,telegramUserId,username,member:{id:member.id,name:member.name,role:member.role},revision:state.revision,rowVersion:current.data.rowVersion});
         return;
       }
-      team[index]={...team[index],telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()};
-      const replaced=await (await getStore()).replaceState({...state,team},{expectedRevision:state.revision});
-      if(replaced.status!==200){json(res,replaced.data,replaced.status);return}
-      json(res,{ok:true,telegramUserId,username,member:{id:team[index].id,name:team[index].name,role:team[index].role},revision:replaced.data.revision});
+      const patched=await mutateAutoSaleEntity({
+        legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'team',operation:'patch',id:String(member.id),
+        expectedRowVersion:current.data.rowVersion,
+        input:{telegramUserId,telegramUsername:username,telegramFirstName:String(auth.user.first_name||''),telegramLastName:String(auth.user.last_name||''),telegramLinkedAt:new Date().toISOString()},
+        prepareNotifications:null
+      });
+      if(patched.status!==200){json(res,patched.data,patched.status);return}
+      json(res,{ok:true,telegramUserId,username,member:{id:member.id,name:member.name,role:member.role},revision:patched.data.revision,rowVersion:patched.data.rowVersion});
       return;
     }
 
