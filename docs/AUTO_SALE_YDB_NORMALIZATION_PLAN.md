@@ -2,6 +2,45 @@
 
 ## Implementation status — 2026-09-28
 
+### Phase 3 — COMPLETE
+
+Normalized reads are enabled on Yandex staging with verified legacy fallback.
+
+Runtime configuration:
+- `AUTO_SALE_YDB_DUAL_WRITE=true`;
+- `AUTO_SALE_YDB_READ_MODE=normalized`.
+
+Read path:
+1. one YDB multi-result query reads the legacy compatibility row, migration meta and all normalized tables in one request;
+2. normalized rows are reconstructed into the exact legacy API response shape;
+3. empty legacy note buckets are preserved for response compatibility;
+4. source revision must match normalized `source_revision`;
+5. canonical legacy and normalized hashes must match;
+6. only then is the normalized snapshot returned;
+7. any query error, revision mismatch or parity mismatch falls back to the legacy blob.
+
+Cold-start hardening completed during this phase:
+- runtime containers no longer execute DDL;
+- schema creation/migrations run once in the deploy workflow via `prepare:ydb-runtime`;
+- normalized reader does not repeat schema initialization;
+- legacy mode does not initialize the normalized reader at all.
+
+The first Phase 3 live rollout was rejected by the deployment gate because the original normalized read path made too many YDB round trips and could hit the 60s container timeout. Staging was returned to legacy reads, the read path was redesigned, and the optimized rollout was repeated successfully.
+
+Final live verification:
+- quality gate: 213 passed, 0 failed;
+- deploy-time schema preparation: passed;
+- health: `ydbStateReadMode=normalized`;
+- protected read diagnostic: `source=normalized`, `fallback=false`, `shadowVerified=true`;
+- temporary lead create: revision 2466, parity 100%;
+- temporary lead delete: revision 2467, parity 100%;
+- final hash returned to the baseline canonical hash;
+- final counts: leads 7, quotes 7, orders 3, payments 8, notes 2, team 3, catalog 149, Telegram bindings 8.
+
+The legacy blob remains maintained by dual-write and is the immediate read fallback. The frontend contract has not changed.
+
+Next step: Phase 4 entity mutation API with per-aggregate optimistic locking. Keep the compatibility `PUT /api/auto-sale/state` during the rollback window, then move frontend actions from browser-first full-state persistence to server-primary entity commands.
+
 ### Phase 2 — COMPLETE
 
 Transactional dual-write is enabled on Yandex staging behind `AUTO_SALE_YDB_DUAL_WRITE=true`.
