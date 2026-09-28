@@ -11,7 +11,18 @@ async function req(path,options={}){
   const response=await fetch(base+path,{...options,headers:{...headers,...options.headers},signal:AbortSignal.timeout(55000)});
   return{response,data:await response.json()};
 }
-async function state(){const {response,data}=await req('/api/auto-sale/state');assert.ok(response.ok,'state read');return data}
+async function state(){
+  let lastError=null;
+  for(let attempt=1;attempt<=4;attempt++){
+    try{
+      const {response,data}=await req('/api/auto-sale/state');
+      if(response.ok)return data;
+      lastError=new Error('state read HTTP '+response.status+': '+JSON.stringify(data));
+    }catch(error){lastError=error}
+    if(attempt<4)await sleep(600*attempt);
+  }
+  throw lastError||new Error('state read failed');
+}
 async function delivered(notifications,expected,label){
   assert.equal(notifications?.queued,expected,label+' queued count');
   let rows=notifications.deliveries||[];
