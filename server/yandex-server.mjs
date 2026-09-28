@@ -155,11 +155,16 @@ const server=http.createServer(async(req,res)=>{
       json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
+    if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const read=await getApiState();
+      json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),revision:Number(read.state?.revision)||0});
+      return;
+    }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
       json(res,read.state);
-      return;
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
