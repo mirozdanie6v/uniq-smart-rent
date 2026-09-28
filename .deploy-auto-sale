@@ -1,2 +1,2 @@
-Decouple durable Telegram outbox from state PUT and rerun complete lifecycle [telegram-e2e]
+Clean isolated YDB and Telegram lifecycle verification under shared writer lock [telegram-e2e]
 2026-09-28
