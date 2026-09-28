@@ -1,7 +1,7 @@
 import {validateQuote} from './auto-sale-business-rules.mjs';
 const K={quotes:'auto-sale-quotes-v2',notes:'auto-sale-notes-v2'};
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};
-const write=(key,value)=>localStorage.setItem(key,JSON.stringify(value));
+const write=(key,value)=>{if(window.__AUTO_SALE_CACHE_WRITE__)window.__AUTO_SALE_CACHE_WRITE__(key,value);else localStorage.setItem(key,JSON.stringify(value))};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=v=>'$'+new Intl.NumberFormat('en-US',{maximumFractionDigits:0}).format(Number(v)||0);
 const dateRu=v=>{if(!v)return'—';const d=new Date(`${v}T00:00:00`);return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'})};
@@ -77,30 +77,37 @@ async function saveDecision(id,decision,comment=''){
   }
   const list=read(K.quotes,[]),index=list.findIndex(q=>q.id===id);if(index<0)return false;
   const q=list[index],now=new Date().toISOString();
-  if(decision==='agreed')list[index]={...q,status:'Согласован',clientDecision:'agreed',clientDecisionAt:now,agreedAt:q.agreedAt||now,updatedAt:now};
-  else list[index]={...q,status:q.status==='Отправлен'?'На согласовании':q.status,clientDecision:'changes_requested',clientDecisionAt:now,clientComment:comment.trim(),updatedAt:now};
-  write(K.quotes,list);
-  const notes=read(K.notes,{});notes[q.leadId]=notes[q.leadId]||[];
-  notes[q.leadId].push({at:now,text:decision==='agreed'?`Клиент согласовал расчёт ${q.id}.`:`Клиент запросил изменения по расчёту ${q.id}: ${comment.trim()||'без комментария'}.`});
-  write(K.notes,notes);
-  window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision}}));
-  queueMicrotask(enhance);
-  if(window.__AUTO_SALE_FLUSH__){
-    saving=true;
-    try{
-      const result=await window.__AUTO_SALE_FLUSH__();
-      if(!result?.ok){
-        const current=read(K.quotes,[]),row=current.findIndex(x=>x.id===id);
-        if(row>=0&&current[row].clientDecisionAt===now){current[row]=before;write(K.quotes,current)}
-        const currentNotes=read(K.notes,{});
-        currentNotes[q.leadId]=(currentNotes[q.leadId]||[]).filter(x=>x.at!==now);
-        write(K.notes,currentNotes);
-        window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision:'failed'}}));
-        saving=false;enhance();decisionError('Решение не сохранено на сервере. Проверьте соединение и повторите действие.');return false;
-      }
-    }finally{saving=false;enhance()}
+  const nextQuote=decision==='agreed'
+    ?{...q,status:'Согласован',clientDecision:'agreed',clientDecisionAt:now,agreedAt:q.agreedAt||now,updatedAt:now}
+    :{...q,status:q.status==='Отправлен'?'На согласовании':q.status,clientDecision:'changes_requested',clientDecisionAt:now,clientComment:comment.trim(),updatedAt:now};
+  const note={id:'NOTE-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),at:now,text:decision==='agreed'?'Клиент согласовал расчёт '+q.id+'.':'Клиент запросил изменения по расчёту '+q.id+': '+(comment.trim()||'без комментария')+'.'};
+  saving=true;enhance();
+  try{
+    if(window.__AUTO_SALE_ENTITY_BATCH__){
+      await window.__AUTO_SALE_ENTITY_BATCH__([
+        {resource:'quote',operation:'patch',id:q.id,input:nextQuote},
+        {resource:'note',operation:'create',leadId:q.leadId,input:note}
+      ]);
+    }else{
+      list[index]=nextQuote;write(K.quotes,list);
+      const localNotes=read(K.notes,{});localNotes[q.leadId]=localNotes[q.leadId]||[];localNotes[q.leadId].push(note);write(K.notes,localNotes);
+      window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision}}));
+      queueMicrotask(enhance);
+      return true;
+    }
+    list[index]=nextQuote;write(K.quotes,list);
+    const notes=read(K.notes,{});notes[q.leadId]=notes[q.leadId]||[];notes[q.leadId].push(note);write(K.notes,notes);
+    window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision}}));
+    queueMicrotask(enhance);
+    return true;
+  }catch(error){
+    console.warn('AUTO SALE client decision entity save failed',error);
+    window.dispatchEvent(new CustomEvent('auto-sale-client-decision',{detail:{leadId:q.leadId,quoteId:q.id,decision:'failed'}}));
+    decisionError(error?.code==='entity_conflict'?'Расчёт был изменён менеджером. Откройте его заново и повторите решение.':'Решение не сохранено на сервере. Проверьте соединение и повторите действие.');
+    return false;
+  }finally{
+    saving=false;enhance();
   }
-  return true;
 }
 
 const style=document.createElement('style');style.id='auto-client-quote-style';style.textContent=`
