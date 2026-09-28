@@ -18,12 +18,17 @@ const mediaBucket=String(process.env.AUTO_SALE_MEDIA_BUCKET||'').trim();
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
 if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
 let store=null;
+let storePromise=null;
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
 async function getStore(){
   if(store)return store;
-  store=await createYdbStateStore({connectionString});
-  return store;
+  if(!storePromise){
+    storePromise=createYdbStateStore({connectionString})
+      .then(created=>{store=created;return created})
+      .catch(error=>{storePromise=null;throw error});
+  }
+  return storePromise;
 }
 const notificationPumpIntervalMs=Math.max(15_000,Number(process.env.AUTO_SALE_NOTIFICATION_PUMP_MS||60_000));
 let notificationPumpBusy=false;
