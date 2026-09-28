@@ -159,7 +159,7 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
-      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
       json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),revision:Number(read.state?.revision)||0});
       return;
@@ -187,7 +187,7 @@ const server=http.createServer(async(req,res)=>{
 
     const entityMatch=url.pathname.match(/^\/api\/auto-sale\/(leads|quotes|orders|catalog|team)(?:\/([^/]+))?(?:\/(notes|payments))?$/);
     if(entityMatch){
-      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const [,plural,rawId,child]=entityMatch;
       const resource=({leads:'lead',quotes:'quote',orders:'order',catalog:'catalog',team:'team'})[plural];
       const id=rawId?decodeURIComponent(rawId):'';
@@ -282,7 +282,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
-      json(res,read.state);
+      json(res,{...read.state,_rowVersions:read.rowVersions||{}});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
