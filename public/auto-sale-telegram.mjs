@@ -252,7 +252,7 @@ async function sendBotMessage(leadId,target,message){
       telegram_sender_forbidden:'Этот Telegram-пользователь не привязан к данной сделке.',
       telegram_init_data_expired:'Сессия Telegram устарела. Закройте и заново откройте Mini App.'
     };
-    throw new Error(map[data.error]||'Не удалось отправить сообщение через Telegram.');
+    const detail=[map[data.error]||data.error||'Не удалось отправить сообщение через Telegram.',data.telegramDescription,data.detail].filter(Boolean).join(' · ');throw new Error(detail);
   }
   return data;
 }
