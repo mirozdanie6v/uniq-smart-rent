@@ -92,6 +92,12 @@ jobs:
           echo "::add-mask::$IAM_TOKEN"
           echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
 
+      - name: Prepare YDB schema before runtime deploy
+        run: |
+          set -euo pipefail
+          export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
+          npm run prepare:ydb-runtime
+
       - name: Install Yandex Cloud CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
