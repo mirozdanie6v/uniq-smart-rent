@@ -38,6 +38,22 @@ export function buildDomainDiff(previousState={},nextState={}){
   for(const [name,spec] of Object.entries(specs)){
     changes[name]=diffRows(previous[name],next[name],spec.key);
   }
+  const forceOwnerUpsert=(name,id)=>{
+    const row=(next[name]||[]).find(item=>text(item.id)===text(id));
+    if(!row)return;
+    if(changes[name].deletes.some(item=>text(item.id)===text(id)))return;
+    if(!changes[name].upserts.some(item=>text(item.id)===text(id)))changes[name].upserts.push(row);
+  };
+  const paymentOwners=new Set([
+    ...changes.payments.upserts.map(row=>text(row.orderId)),
+    ...changes.payments.deletes.map(row=>text(row.orderId))
+  ]);
+  for(const orderId of paymentOwners)forceOwnerUpsert('orders',orderId);
+  const noteOwners=new Set([
+    ...changes.notes.upserts.map(row=>text(row.leadId)),
+    ...changes.notes.deletes.map(row=>text(row.leadId))
+  ]);
+  for(const leadId of noteOwners)forceOwnerUpsert('leads',leadId);
   return{previous,next,changes};
 }
 
