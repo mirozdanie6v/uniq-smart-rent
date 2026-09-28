@@ -133,8 +133,9 @@ const server=http.createServer(async(req,res)=>{
       res.writeHead(204,apiHeaders);res.end();return;
     }
     if(url.pathname==='/api/health'){
-      await (await getStore()).ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
+      const liveStore=await getStore();
+      await liveStore.ping();
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
