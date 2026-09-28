@@ -280,7 +280,7 @@ document.addEventListener('click',event=>{
   const composeClose=event.target.closest('[data-tg-compose-close]');if(composeClose){event.preventDefault();closeMessageComposer();return}
   if(event.target.matches('[data-tg-compose-bg]')){closeMessageComposer();return}
   const clientButton=event.target.closest('[data-tg-client]');if(clientButton){event.preventDefault();event.stopPropagation();const lead=leads().find(item=>item.id===clientButton.dataset.tgClient);if(lead)openTelegram(clientTelegram(lead));return}
-  const managerButton=event.target.closest('[data-tg-manager]');if(managerButton){event.preventDefault();const lead=leads().find(item=>item.id===managerButton.dataset.tgManager);if(lead)openTelegram(managerTelegram(lead));return}
+  const managerButton=event.target.closest('[data-tg-manager]');if(managerButton){event.preventDefault();event.stopPropagation();const lead=leads().find(item=>item.id===managerButton.dataset.tgManager);if(lead){const contact=managerTelegram(lead);if(!openTelegram(contact)&&contact.username){const url='https://t.me/'+encodeURIComponent(contact.username);try{window.location.href=url}catch{}}}return}
   const close=event.target.closest('[data-client-detail-close]');if(close){event.preventDefault();closeClientDetail();return}
   if(event.target.matches('[data-client-detail-bg]')){closeClientDetail();return}
   const card=event.target.closest('.auto-order-card[data-client-lead]');if(card&&!event.target.closest('button,a,input,select,textarea')){showClientDetail(card.dataset.clientLead)}
