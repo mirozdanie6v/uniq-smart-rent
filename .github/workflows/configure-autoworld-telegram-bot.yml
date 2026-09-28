@@ -13,7 +13,7 @@ permissions:
 
 env:
   AUTO_SALE_TELEGRAM_APP_URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/
-  AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://integration-telegram.viiversion.com/telegram/webhook
+  AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/webhook
 
 jobs:
   configure:
