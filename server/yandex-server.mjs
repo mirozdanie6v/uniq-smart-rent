@@ -324,7 +324,7 @@ const server=http.createServer(async(req,res)=>{
         json(res,result,201);
       }catch(error){
         const status=Number(error?.statusCode)||500;
-        json(res,{error:String(error?.message||'telegram_send_failed')},status);
+        json(res,{error:String(error?.message||'telegram_send_failed'),telegramDescription:String(error?.telegramDescription||''),detail:String(error?.cause?.message||error?.cause||'')},status);
       }
       return;
     }
