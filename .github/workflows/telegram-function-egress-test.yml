@@ -93,6 +93,22 @@ jobs:
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
 
+      - name: Inspect Yandex folder IAM for Cloud Functions access
+        run: |
+          set +e
+          echo "=== Existing functions ==="
+          YC_TOKEN="$YC_IAM_TOKEN" yc serverless function list --folder-id "$YC_FOLDER_ID" --format json | jq '[.[] | {id,name,status}]' || true
+          echo "=== Relevant folder access bindings ==="
+          YC_TOKEN="$YC_IAM_TOKEN" yc resource-manager folder list-access-bindings "$YC_FOLDER_ID" --format json | jq '
+            .access_bindings
+            | map(select(
+                (.role_id | test("functions|serverless|admin|editor|viewer"; "i"))
+                or (.subject.id == env.YC_DEPLOY_SA_ID)
+                or (.subject.id == env.YC_RUNTIME_SA_ID)
+              ))
+            | map({role_id, subject})
+          ' || true
+
       - name: Prepare function source
         run: |
           set -euo pipefail
