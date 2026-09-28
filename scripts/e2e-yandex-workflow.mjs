@@ -68,19 +68,27 @@ const total=39000;
 try{
   // Verify the real state-change path used by a newly created application.
   {
-    const state=await getState();
     const notificationLeadId=`L-NOTIFY-${suffix}`;
-    state.leads.push({
-      id:notificationLeadId,name:'Notification E2E Client',contact:`notify-${suffix}@example.invalid`,model:'Telegram notification E2E',
-      budget:35000,source:'Mini App',manager:'',status:'Новый',priority:'Средний',
-      createdAt:new Date().toISOString(),nextAction:today,note:'Real lead-created notification E2E',clientCreated:true
-    });
-    state.notes[notificationLeadId]=[{at:new Date().toISOString(),text:'Notification E2E: заявка создана.'}];
-    const payload={...state,baseRevision:Number(state.revision)||0};delete payload.revision;
-    const response=await fetch(base+'/api/auto-sale/state',{method:'PUT',headers:notifyHeaders,body:JSON.stringify(payload)});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(`notification lead PUT failed: ${response.status} ${JSON.stringify(data)}`);
-    console.log('AUTO_SALE_REAL_LEAD_NOTIFICATION_TRIGGERED',JSON.stringify({leadId:notificationLeadId,revision:data.revision}));
+    let delivered=null;
+    for(let attempt=0;attempt<8;attempt++){
+      const state=await getState();
+      if(!state.leads.some(x=>x.id===notificationLeadId)){
+        state.leads.push({
+          id:notificationLeadId,name:'Notification E2E Client',contact:`notify-${suffix}@example.invalid`,model:'Telegram notification E2E',
+          budget:35000,source:'Mini App',manager:'',status:'Новый',priority:'Средний',
+          createdAt:new Date().toISOString(),nextAction:today,note:'Real lead-created notification E2E',clientCreated:true
+        });
+        state.notes[notificationLeadId]=[{at:new Date().toISOString(),text:'Notification E2E: заявка создана.'}];
+      }
+      const payload={...state,baseRevision:Number(state.revision)||0};delete payload.revision;
+      const response=await fetch(base+'/api/auto-sale/state',{method:'PUT',headers:notifyHeaders,body:JSON.stringify(payload)});
+      const data=await response.json().catch(()=>({}));
+      if(response.ok){delivered=data;break;}
+      if(response.status!==409)throw new Error(`notification lead PUT failed: ${response.status} ${JSON.stringify(data)}`);
+      await new Promise(resolve=>setTimeout(resolve,150*(attempt+1)));
+    }
+    if(!delivered)throw new Error('notification lead PUT failed after revision-conflict retries');
+    console.log('AUTO_SALE_REAL_LEAD_NOTIFICATION_TRIGGERED',JSON.stringify({leadId:notificationLeadId,revision:delivered.revision}));
   }
 
   await mutate(state=>{
