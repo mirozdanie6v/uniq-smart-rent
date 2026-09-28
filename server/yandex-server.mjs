@@ -4,6 +4,8 @@ import {timingSafeEqual} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 import {readFile,stat} from 'node:fs/promises';
 import {createYdbStateStore} from './ydb-state.mjs';
+import {createYdbDomainStore} from './ydb-domain-store.mjs';
+import {readAutoSaleState} from './ydb-read-mode.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
@@ -15,10 +17,25 @@ const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
 const apiKey=String(process.env.AUTO_SALE_API_KEY||'').trim();
 const publicDemoWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_PUBLIC_DEMO_WRITE||''));
 const mediaBucket=String(process.env.AUTO_SALE_MEDIA_BUCKET||'').trim();
+const ydbReadMode=['legacy','shadow','normalized'].includes(String(process.env.AUTO_SALE_YDB_READ_MODE||''))?String(process.env.AUTO_SALE_YDB_READ_MODE):'legacy';
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
 if(!publicDemoWrite&&!apiKey)throw new Error('AUTO_SALE_API_KEY is required when public demo write is disabled');
 let store=null;
 let storePromise=null;
+let domainStore=null;
+let domainStorePromise=null;
+async function getDomainStore(){
+  if(domainStore)return domainStore;
+  if(!domainStorePromise){
+    domainStorePromise=createYdbDomainStore({connectionString})
+      .then(created=>{domainStore=created;return created})
+      .catch(error=>{domainStorePromise=null;throw error});
+  }
+  return domainStorePromise;
+}
+async function getApiState(){
+  return readAutoSaleState({legacyStore:await getStore(),domainStore:await getDomainStore(),mode:ydbReadMode});
+}
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
 async function getStore(){
@@ -135,12 +152,14 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/health'){
       const liveStore=await getStore();
       await liveStore.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
       if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
-      json(res,await (await getStore()).loadState());
+      const read=await getApiState();
+      json(res,read.state);
+      return;
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
