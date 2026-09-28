@@ -65,6 +65,29 @@ jobs:
           echo "::add-mask::$TOKEN"
           echo "YC_IAM_TOKEN=$TOKEN" >> "$GITHUB_ENV"
 
+      - name: Try runtime service-account token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_RUNTIME_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          if [ "$CODE" = "200" ]; then
+            TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+            echo "::add-mask::$TOKEN"
+            echo "YC_RUNTIME_IAM_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+            echo "Runtime service-account token exchange succeeded"
+          else
+            echo "Runtime service-account token exchange unavailable: HTTP $CODE"
+          fi
+
       - name: Install yc
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
@@ -154,9 +177,22 @@ jobs:
       - name: Create, invoke, delete function
         run: |
           set -euo pipefail
-          yc serverless function create --name "$FUNC_NAME" --folder-id "$YC_FOLDER_ID"
-          trap 'yc serverless function delete "$FUNC_NAME" --folder-id "$YC_FOLDER_ID" || true' EXIT
-          yc serverless function version create \
+          create_with_token() {
+            local token="$1"
+            YC_TOKEN="$token" yc serverless function create --name "$FUNC_NAME" --folder-id "$YC_FOLDER_ID"
+          }
+          if create_with_token "$YC_IAM_TOKEN"; then
+            ACTIVE_TOKEN="$YC_IAM_TOKEN"
+            echo "Function create authorized by deploy service account"
+          elif [ -n "${YC_RUNTIME_IAM_TOKEN:-}" ] && create_with_token "$YC_RUNTIME_IAM_TOKEN"; then
+            ACTIVE_TOKEN="$YC_RUNTIME_IAM_TOKEN"
+            echo "Function create authorized by runtime service account"
+          else
+            echo "Neither available service account can create Cloud Functions"
+            exit 1
+          fi
+          trap 'YC_TOKEN="$ACTIVE_TOKEN" yc serverless function delete "$FUNC_NAME" --folder-id "$YC_FOLDER_ID" || true' EXIT
+          YC_TOKEN="$ACTIVE_TOKEN" yc serverless function version create \
             --function-name "$FUNC_NAME" \
             --folder-id "$YC_FOLDER_ID" \
             --runtime python312 \
@@ -167,7 +203,7 @@ jobs:
             --environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN" \
             --environment "TEST_CHAT_ID=$TEST_CHAT_ID" \
             --source-path /tmp/tg-fn/function.zip
-          yc serverless function invoke "$FUNC_NAME" -d '{}' --folder-id "$YC_FOLDER_ID" --format json | tee telegram-function-egress-report.json
+          YC_TOKEN="$ACTIVE_TOKEN" yc serverless function invoke "$FUNC_NAME" -d '{}' --folder-id "$YC_FOLDER_ID" --format json | tee telegram-function-egress-report.json
           jq -e '.environment.platform=="Yandex Cloud Functions" and (.rounds|length)==3' telegram-function-egress-report.json >/dev/null
 
       - name: Upload report
