@@ -51,6 +51,15 @@ async function registerCurrentManager(member=null){
   if(!botMessagingAvailable)return null;
   const candidate=member||registrationCandidate();
   if(!candidate){showTelegramManagerStatus(null);return null}
+  // Automatic enhancement must be read-only once this Telegram account is already linked.
+  // Re-registering on every server sync changed telegramLinkedAt, which triggered another
+  // state sync and created an endless save/re-render/conflict loop in the client card.
+  if(!member&&String(candidate.telegramUserId||'')===String(currentTelegram?.id||'')){
+    const data={ok:true,telegramUserId:String(candidate.telegramUserId),username:String(candidate.telegramUsername||currentTelegram?.username||''),member:{id:candidate.id,name:candidate.name,role:candidate.role}};
+    window.__AUTO_SALE_TELEGRAM_MANAGER__=data;
+    showTelegramManagerStatus(data);
+    return data;
+  }
   if(managerRegistrationPromise)return managerRegistrationPromise;
   managerRegistrationPromise=fetch('/api/auto-sale/telegram/register-manager',{
     method:'POST',
