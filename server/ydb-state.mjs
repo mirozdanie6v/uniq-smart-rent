@@ -133,6 +133,51 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     });
   }
 
+  async function commitDomainState(previous,state,{expectedRevision=null,notifications=[]}={}){
+    return sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
+      const [metaRows]=await tx`
+        SELECT source_revision
+        FROM auto_sale_state_meta
+        WHERE id = ${STATE_ID}
+      `;
+      if(!metaRows.length)return{status:503,data:{error:'normalized_state_meta_missing'}};
+      const current=Number(metaRows[0].source_revision||0n);
+      if(expectedRevision!==null&&Number(expectedRevision)!==current){
+        return{status:409,data:{error:'revision_conflict',currentRevision:current}};
+      }
+      const next=current+1;
+      const payload={
+        initialized:true,
+        leads:Array.isArray(state.leads)?state.leads:[],
+        quotes:Array.isArray(state.quotes)?state.quotes:[],
+        orders:Array.isArray(state.orders)?state.orders:[],
+        notes:state.notes&&typeof state.notes==='object'?state.notes:{},
+        team:Array.isArray(state.team)?state.team:[],
+        catalog:Array.isArray(state.catalog)?state.catalog:[]
+      };
+      const domainDiff=buildDomainDiff(
+        {...previous,revision:current},
+        {...payload,revision:next}
+      );
+      await applyDomainDiff(tx,domainDiff,{compatRevision:next,status:'normalized-authoritative'});
+      const now=new Date().toISOString();
+      for(const item of notifications){
+        await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
+          VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
+      }
+      return{
+        status:200,
+        data:{
+          ok:true,
+          revision:next,
+          normalizedAuthoritative:true,
+          domainDiff:summarizeDomainDiff(domainDiff),
+          notifications:{queued:notifications.length,ids:notifications.map(item=>item.id)}
+        }
+      };
+    });
+  }
+
   async function enqueueNotifications(items=[]){
     const now=new Date().toISOString(),created=[];
     for(const item of items){
@@ -200,5 +245,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close,domainDualWriteEnabled:domainDualWrite};
+  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close,domainDualWriteEnabled:domainDualWrite};
 }
