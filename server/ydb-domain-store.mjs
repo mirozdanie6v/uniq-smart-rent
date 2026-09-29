@@ -2,6 +2,7 @@ import {Driver} from '@ydbjs/core';
 import {query} from '@ydbjs/query';
 import {MetadataCredentialsProvider} from '@ydbjs/auth/metadata';
 import {Uint64} from '@ydbjs/value/primitive';
+import {domainRowsToLegacyState} from './ydb-domain-migration.mjs';
 
 export const AUTO_SALE_DOMAIN_SCHEMA_VERSION=1;
 
@@ -306,6 +307,45 @@ export async function createYdbDomainStore({
     return{legacy,meta,rows:mapDomainSets(sets.slice(2))};
   }
 
+  async function loadAuthoritativeSnapshot(){
+    const stateId=u64(1);
+    const sets=await sql`
+      SELECT compat_revision,schema_version,migration_status,source_revision,updated_at FROM auto_sale_state_meta WHERE id=${stateId};
+      SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads;
+      SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes;
+      SELECT id,row_version,sort_order,lead_id,stage,manager,risk_type,payload,updated_at FROM auto_sale_orders;
+      SELECT order_id,id,sort_order,amount,payment_date,method,payload,created_at FROM auto_sale_payments;
+      SELECT lead_id,id,sort_order,text,payload,created_at FROM auto_sale_notes;
+      SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team;
+      SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog;
+      SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings;
+    `;
+    const metaRow=sets?.[0]?.[0];
+    const meta=metaRow?{
+      compatRevision:Number(metaRow.compat_revision||0n),
+      schemaVersion:Number(metaRow.schema_version||0n),
+      migrationStatus:String(metaRow.migration_status||''),
+      sourceRevision:Number(metaRow.source_revision||0n),
+      updatedAt:String(metaRow.updated_at||'')
+    }:null;
+    return{meta,rows:mapDomainSets(sets.slice(1))};
+  }
+
+  async function loadState(){
+    const snapshot=await loadAuthoritativeSnapshot();
+    const revision=Number(snapshot.meta?.sourceRevision??snapshot.meta?.compatRevision)||0;
+    return domainRowsToLegacyState(snapshot.rows,{
+      revision,
+      initialized:Boolean(
+        (snapshot.rows.leads||[]).length||
+        (snapshot.rows.quotes||[]).length||
+        (snapshot.rows.orders||[]).length||
+        (snapshot.rows.team||[]).length||
+        (snapshot.rows.catalog||[]).length
+      )
+    });
+  }
+
   async function migrationMeta(){
     const id=u64(1);
     const [rows]=await sql`SELECT compat_revision,schema_version,migration_status,source_revision,updated_at FROM auto_sale_state_meta WHERE id=${id}`;
@@ -353,5 +393,5 @@ export async function createYdbDomainStore({
 
   async function close(){driver.close()}
 
-  return{sql,schemaVersion,replaceSnapshot,loadRows,loadReadSnapshot,migrationMeta,entityRowVersion,counts,close};
+  return{sql,schemaVersion,replaceSnapshot,loadRows,loadReadSnapshot,loadAuthoritativeSnapshot,loadState,migrationMeta,entityRowVersion,counts,close};
 }
