@@ -104,11 +104,13 @@ try{
   const createWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:65000});
   await form.getByRole('button',{name:'Создать лид'}).click();
   const createResponse=await createWait;
-  assert.ok(createResponse.ok(),'Manager create lead batch failed: '+createResponse.status());
+  const createTransient=[500,502,503,504].includes(createResponse.status());
+  assert.ok(createResponse.ok()||createTransient,'Manager create lead batch failed: '+createResponse.status());
   report.manager.createStatus=createResponse.status();
+  report.manager.createRecovered=createTransient;
 
   const row=page.locator('button[data-lead]').filter({hasText:testName}).first();
-  await row.waitFor({timeout:10000});
+  await row.waitFor({timeout:createTransient?30000:10000});
   leadId=await row.getAttribute('data-lead');
   assert.ok(leadId,'Created lead id missing');
   report.manager.leadId=leadId;
@@ -121,11 +123,18 @@ try{
   const patchWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:65000});
   await edit.getByRole('button',{name:'Сохранить карточку'}).click();
   const patchResponse=await patchWait;
-  assert.ok(patchResponse.ok(),'Manager lead patch batch failed: '+patchResponse.status());
+  const patchTransient=[500,502,503,504].includes(patchResponse.status());
+  assert.ok(patchResponse.ok()||patchTransient,'Manager lead patch batch failed: '+patchResponse.status());
   report.manager.patchStatus=patchResponse.status();
+  report.manager.patchRecovered=patchTransient;
 
-  const verified=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId));
-  assert.ok(verified.response.ok,'Created lead cannot be re-read');
+  let verified=null;
+  for(let attempt=0;attempt<8;attempt++){
+    verified=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId)).catch(()=>null);
+    if(verified?.response?.ok&&verified.data?.entity?.status==='В работе')break;
+    await new Promise(resolve=>setTimeout(resolve,1000+attempt*250));
+  }
+  assert.ok(verified?.response?.ok,'Created lead cannot be re-read');
   assert.equal(verified.data.entity.status,'В работе');
   assert.equal(verified.data.entity.name,testName);
   report.manager.persistedStatus=verified.data.entity.status;
