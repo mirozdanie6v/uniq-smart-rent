@@ -56,15 +56,18 @@ async function delivered(notifications,expected,label){
   assert.equal(ids.length,expected,label+' notification ids');
   let rows=notifications.deliveries||[];
   for(let attempt=0;rows.length!==expected||!rows.every(x=>x.status==='sent'&&x.messageId);attempt++){
-    if(attempt>=12)throw new Error(label+' deliveries not confirmed: '+JSON.stringify(rows));
-    await sleep(5500);
-    const processQuery=new URLSearchParams();for(const id of ids)processQuery.append('id',id);
-    const processed=await req('/api/auto-sale/notifications/process?'+processQuery,{method:'POST'});
-    if(!processed.response.ok)throw new Error(label+' outbox processor HTTP '+processed.response.status+': '+JSON.stringify(processed.data));
+    if(attempt>=30)throw new Error(label+' deliveries not confirmed: '+JSON.stringify(rows));
     const query=new URLSearchParams();for(const id of ids)query.append('id',id);
     const checked=await req('/api/auto-sale/notifications/status?'+query);
     assert.ok(checked.response.ok,'delivery receipts');
-    rows=checked.data.deliveries;
+    rows=checked.data.deliveries||[];
+    if(rows.length===expected&&rows.every(x=>x.status==='sent'&&x.messageId))break;
+    if(rows.some(x=>x.status==='pending'||x.status==='retry')){
+      const processQuery=new URLSearchParams();for(const id of ids)processQuery.append('id',id);
+      const processed=await req('/api/auto-sale/notifications/process?'+processQuery,{method:'POST'});
+      if(!processed.response.ok)throw new Error(label+' outbox processor HTTP '+processed.response.status+': '+JSON.stringify(processed.data));
+    }
+    await sleep(1800);
   }
   assert.equal(rows.filter(x=>x.target==='client').length,expected/2,label+' client');
   assert.equal(rows.filter(x=>x.target==='manager').length,expected/2,label+' manager');
