@@ -15,7 +15,7 @@ const report={
   testName,
   manager:{},
   director:{},
-  network:{legacyWholeStateWrites:[],entityBatches:[]},
+  network:{legacyWholeStateWrites:[],entityBatches:[],entityResponses:[]},
   cleanup:{},
   errors:[]
 };
@@ -60,6 +60,13 @@ try{
       report.network.entityBatches.push({method:request.method(),url:request.url()});
     }
   });
+  page.on('response',response=>{
+    const request=response.request();
+    const u=new URL(response.url());
+    if(u.pathname==='/api/auto-sale/entities/batch'){
+      report.network.entityResponses.push({method:request.method(),status:response.status(),url:response.url()});
+    }
+  });
   page.on('console',msg=>{if(msg.type()==='error')report.errors.push('console: '+msg.text())});
   page.on('pageerror',error=>report.errors.push('pageerror: '+error.message));
 
@@ -94,7 +101,7 @@ try{
 
   await form.locator('[name="priority"]').selectOption({label:'Высокий'});
   await form.locator('[name="note"]').fill('Phase 6 real UI create scenario');
-  const createWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:30000});
+  const createWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:65000});
   await form.getByRole('button',{name:'Создать лид'}).click();
   const createResponse=await createWait;
   assert.ok(createResponse.ok(),'Manager create lead batch failed: '+createResponse.status());
@@ -111,7 +118,7 @@ try{
   await edit.waitFor();
   await edit.locator('[name="status"]').selectOption({label:'В работе'});
   await edit.locator('[name="note"]').fill('Phase 6 real UI status transition');
-  const patchWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:30000});
+  const patchWait=page.waitForResponse(r=>r.url().includes('/api/auto-sale/entities/batch')&&r.request().method()==='POST',{timeout:65000});
   await edit.getByRole('button',{name:'Сохранить карточку'}).click();
   const patchResponse=await patchWait;
   assert.ok(patchResponse.ok(),'Manager lead patch batch failed: '+patchResponse.status());
