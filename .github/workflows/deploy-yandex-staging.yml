@@ -33,7 +33,8 @@ env:
   AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
   AUTO_SALE_TELEGRAM_APP_URL: https://bba01u6g86lg2q49p34d.containers.yandexcloud.net/
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
-  AUTO_SALE_YDB_DUAL_WRITE: "true"
+  AUTO_SALE_YDB_DUAL_WRITE: "false"
+  AUTO_SALE_LEGACY_STATE_WRITE: "false"
   AUTO_SALE_YDB_READ_MODE: normalized
 
 jobs:
@@ -150,6 +151,7 @@ jobs:
             --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
             --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=true" \
+            --environment "AUTO_SALE_LEGACY_STATE_WRITE=$AUTO_SALE_LEGACY_STATE_WRITE" \
             --environment "AUTO_SALE_YDB_DUAL_WRITE=$AUTO_SALE_YDB_DUAL_WRITE" \
             --environment "AUTO_SALE_YDB_READ_MODE=$AUTO_SALE_YDB_READ_MODE" \
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
@@ -175,7 +177,7 @@ jobs:
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .ydbDomainDualWrite == "enabled" and .ydbStateReadMode == "normalized" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "public-demo" and .stateReadMode == "public-demo" and .legacyStateWrite == "retired" and .normalizedAuthoritative == true and .ydbDomainDualWrite == "disabled" and .ydbStateReadMode == "normalized" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
               break
             fi
             test "$attempt" -lt 20 || exit 1
@@ -189,7 +191,7 @@ jobs:
           set -euo pipefail
           curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "${STAGING_URL%/}/api/auto-sale/admin/read-parity" \
             | tee /tmp/read-parity.json \
-            | jq -e '.ok == true and .configuredMode == "normalized" and .source == "normalized" and .fallback == false and .shadowVerified == true and (.revision|tonumber) >= 1' >/dev/null
+            | jq -e '.ok == true and .configuredMode == "normalized" and .source == "normalized" and .fallback == false and .authoritative == true and .shadowVerified == false and (.revision|tonumber) >= 1' >/dev/null
 
       - name: Verify optimistic entity API live
         run: |
@@ -217,19 +219,37 @@ jobs:
           path: ydb-frontend-batch-live-report.json
           if-no-files-found: ignore
 
-      - name: Verify normalized YDB dual-write live parity
+      - name: Verify legacy whole-state write is retired
         run: |
           set -euo pipefail
-          export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
-          node scripts/test-ydb-dual-write-live.mjs
+          URL=${STAGING_URL%/}
+          for mode in public authenticated; do
+            headers=(-H 'content-type: application/json')
+            if [ "$mode" = authenticated ]; then
+              headers+=(-H "x-auto-sale-key: $AUTO_SALE_API_KEY")
+            fi
+            code=$(curl -sS -o /tmp/legacy-write-${mode}.json -w '%{http_code}' -X PUT "${headers[@]}" \
+              --data '{"baseRevision":0,"leads":[],"quotes":[],"orders":[],"notes":{},"team":[],"catalog":[]}' \
+              "$URL/api/auto-sale/state")
+            test "$code" = "410"
+            jq -e '.error == "legacy_state_write_retired"' /tmp/legacy-write-${mode}.json >/dev/null
+          done
 
-      - name: Upload YDB dual-write live report
+      - name: Archive frozen legacy compatibility snapshot
+        run: |
+          set -euo pipefail
+          curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
+            "${STAGING_URL%/}/api/auto-sale/admin/legacy-snapshot" \
+            | tee legacy-retirement-snapshot.json \
+            | jq -e '.ok == true and .retired == true and (.revision|tonumber) >= 1 and (.state|type) == "object"' >/dev/null
+
+      - name: Upload legacy retirement snapshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ydb-dual-write-live-report
-          path: ydb-dual-write-live-report.json
-          if-no-files-found: ignore
+          name: legacy-retirement-snapshot
+          path: legacy-retirement-snapshot.json
+          if-no-files-found: error
 
       - name: Diagnose Yandex and Cloudflare Telegram relay
         run: |
