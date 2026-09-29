@@ -29,6 +29,21 @@ async function batch(operations){
 }
 const rowVersion=(snapshot,resource,id)=>Number(snapshot?._rowVersions?.[resource]?.[id]||0);
 
+async function cleanupLead(version){
+  let currentVersion=Number(version)||0;
+  for(let attempt=0;attempt<3;attempt++){
+    const result=await batch([{resource:'lead',operation:'delete',id:leadId,baseRowVersion:currentVersion}]);
+    if(result.status===200)return result;
+    if(result.status!==504)return result;
+    await new Promise(resolve=>setTimeout(resolve,1200*(attempt+1)));
+    const snapshot=await state();
+    const stillThere=(snapshot.leads||[]).some(item=>String(item.id)===leadId);
+    if(!stillThere)return{status:200,data:{ok:true,timeoutRecovered:true,rowVersions:{['lead:'+leadId]:null},revision:Number(snapshot.revision)||0}};
+    currentVersion=rowVersion(snapshot,'lead',leadId);
+  }
+  return{status:504,data:{error:'cleanup_timeout_after_retries'}};
+}
+
 try{
   const before=await state();
   report.baseline={revision:Number(before.revision)||0,leadCount:(before.leads||[]).length};
@@ -78,9 +93,7 @@ try{
     throw new Error('frontend_batch_stale_not_rejected:'+JSON.stringify(stale));
   }
 
-  const cleanup=await batch([
-    {resource:'lead',operation:'delete',id:leadId,baseRowVersion:v2}
-  ]);
+  const cleanup=await cleanupLead(v2);
   report.cleanup=cleanup;
   if(cleanup.status!==200||cleanup.data?.rowVersions?.['lead:'+leadId]!==null){
     throw new Error('frontend_batch_cleanup_failed:'+JSON.stringify(cleanup));
@@ -112,7 +125,7 @@ try{
     const current=await state();
     const version=rowVersion(current,'lead',leadId);
     if(version){
-      await batch([{resource:'lead',operation:'delete',id:leadId,baseRowVersion:version}]);
+      await cleanupLead(version);
     }
   }catch{}
 }
