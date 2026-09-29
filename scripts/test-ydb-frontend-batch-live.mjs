@@ -25,7 +25,7 @@ async function state(){
     const result=await request('/api/auto-sale/state');
     last=result;
     if(result.status===200)return result.data;
-    if(result.status!==504||attempt===4)break;
+    if(![500,502,503,504].includes(result.status)||attempt===4)break;
     await new Promise(resolve=>setTimeout(resolve,750*attempt));
   }
   throw new Error('state_read_failed:'+JSON.stringify(last));
