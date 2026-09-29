@@ -220,6 +220,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Verify legacy whole-state write is retired
+        if: always()
         run: |
           set -euo pipefail
           URL=${STAGING_URL%/}
@@ -236,6 +237,7 @@ jobs:
           done
 
       - name: Archive frozen legacy compatibility snapshot
+        if: always()
         run: |
           set -euo pipefail
           curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
@@ -252,6 +254,7 @@ jobs:
           if-no-files-found: error
 
       - name: Verify manager and director scenarios through real UI
+        if: always()
         run: |
           set -euo pipefail
           npm install --no-save --ignore-scripts playwright@1.55.0
