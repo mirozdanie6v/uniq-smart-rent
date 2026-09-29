@@ -211,7 +211,7 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
           WHERE id=${id} AND (status = ${'pending'} OR status = ${'retry'} OR status = ${'processing'}) AND next_attempt_at <= ${now}`;
         if(found[0])rows.push(found[0]);
       }
-      const lease=new Date(Date.now()+120_000).toISOString();
+      const lease=new Date(Date.now()+60_000).toISOString();
       for(const row of rows)await tx`UPDATE auto_sale_notification_outbox SET status=${'processing'},next_attempt_at=${lease} WHERE id=${String(row.id)}`;
       return rows.map(row=>{let payload={};try{payload=JSON.parse(String(row.payload||'{}'))}catch{}return{...payload,id:String(row.id),status:String(row.status),attempts:Number(row.attempts||0n)}});
     });
