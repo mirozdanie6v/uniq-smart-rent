@@ -20,9 +20,15 @@ async function request(path,{method='GET',body=null,admin=false}={}){
   return{status:response.status,data};
 }
 async function state(){
-  const result=await request('/api/auto-sale/state');
-  if(result.status!==200)throw new Error('state_read_failed:'+JSON.stringify(result));
-  return result.data;
+  let last=null;
+  for(let attempt=1;attempt<=4;attempt++){
+    const result=await request('/api/auto-sale/state');
+    last=result;
+    if(result.status===200)return result.data;
+    if(result.status!==504||attempt===4)break;
+    await new Promise(resolve=>setTimeout(resolve,750*attempt));
+  }
+  throw new Error('state_read_failed:'+JSON.stringify(last));
 }
 async function batch(operations){
   return request('/api/auto-sale/entities/batch',{method:'POST',body:{operations}});
