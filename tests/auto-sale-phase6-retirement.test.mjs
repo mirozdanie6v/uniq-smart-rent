@@ -101,3 +101,17 @@ test('Phase 6 Telegram lifecycle retries only transient receipt and outbox failu
   assert.ok(telegram.includes('wanted.has(item.id)'));
 });
 
+
+test('Phase 6 transient recovery is complete in browser and live acceptance probes',async()=>{
+  const bootstrap=await root('public/auto-sale-bootstrap.mjs');
+  const frontend=await root('scripts/test-ydb-frontend-batch-live.mjs');
+  const telegram=await root('scripts/test-telegram-lifecycle.mjs');
+  const state=await root('server/ydb-state.mjs');
+  assert.ok(bootstrap.includes('function operationAppliedToState'));
+  assert.ok(bootstrap.includes('function transientEntityStatus'));
+  assert.ok(bootstrap.includes('return state;'));
+  assert.ok(frontend.includes('[500,502,503,504].includes(result.status)'));
+  assert.ok(telegram.includes("x.status==='pending'||x.status==='retry'||x.status==='processing'"));
+  assert.ok(state.includes('Date.now()+60_000'));
+});
+
