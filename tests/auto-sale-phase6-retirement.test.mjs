@@ -75,6 +75,18 @@ test('Phase 6 targeted Telegram delivery cannot be starved by an in-process outb
   assert.ok(!server.includes("skipped:'busy-timeout'"));
 });
 
+test('Phase 6 committed Telegram notifications do not require a second YDB claim before first delivery',async()=>{
+  const state=await root('server/ydb-state.mjs');
+  const sync=await root('server/ydb-sync.mjs');
+  const server=await root('server/yandex-server.mjs');
+  assert.ok(state.includes("VALUES (${item.id}, ${'processing'}"));
+  assert.ok(state.includes('notificationLease'));
+  assert.ok(sync.includes('result.data._notificationItems=notifications'));
+  assert.ok(server.includes('takeCommittedNotificationItems'));
+  assert.ok(server.includes('deferCommittedNotifications'));
+  assert.ok(server.includes('queueMicrotask(()=>deliverNotificationBatch(items)'));
+});
+
 test('Phase 6 browser reconciles ambiguous transient entity responses against authoritative state',async()=>{
   const bootstrap=await root('public/auto-sale-bootstrap.mjs');
   const ui=await root('scripts/test-ui-manager-director-live.mjs');
