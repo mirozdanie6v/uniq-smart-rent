@@ -46,3 +46,14 @@ test('Phase 6 deployment disables dual-write and gates legacy retirement',async(
   assert.ok(workflow.includes('Verify legacy whole-state write is retired'));
   assert.ok(workflow.includes('legacy-retirement-snapshot'));
 });
+
+
+test('Phase 6 live scenarios cannot use the retired whole-state writer',async()=>{
+  const telegram=await root('scripts/test-telegram-lifecycle.mjs');
+  const ui=await root('scripts/test-ui-manager-director-live.mjs');
+  assert.ok(telegram.includes('/api/auto-sale/entities/batch'));
+  assert.ok(!telegram.includes("method:'PUT'"));
+  assert.ok(telegram.includes('/api/auto-sale/admin/cleanup-test-scenario'));
+  assert.ok(ui.includes('/api/auto-sale/entities/batch'));
+  assert.ok(ui.includes('legacyWholeStateWrites'));
+});
