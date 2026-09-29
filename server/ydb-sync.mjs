@@ -117,6 +117,9 @@ export async function syncYdbState(store,input,{includePrevious=false,prepareNot
   const nextState={initialized:true,leads,quotes,orders,notes,team,catalog};
   const notifications=prepareNotifications?await prepareNotifications(previous,nextState):[];
   const result=await store.replaceState(nextState,{expectedRevision:current,notifications});
-  if(result.status===200&&prepareNotifications)result.data.notifications={queued:notifications.length,ids:notifications.map(x=>x.id)};
+  if(result.status===200&&prepareNotifications){
+    result.data.notifications={queued:notifications.length,ids:notifications.map(x=>x.id)};
+    result.data._notificationItems=notifications;
+  }
   return includePrevious?{...result,previous}:result;
 }
