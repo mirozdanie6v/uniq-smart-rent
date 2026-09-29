@@ -58,6 +58,14 @@ test('Phase 6 live scenarios cannot use the retired whole-state writer',async()=
   assert.ok(ui.includes('legacyWholeStateWrites'));
 });
 
+test('Phase 6 targeted Telegram delivery cannot be starved by the background outbox pump',async()=>{
+  const server=await root('server/yandex-server.mjs');
+  assert.ok(server.includes('notificationPriorityWaiters'));
+  assert.ok(server.includes("skipped:'priority-waiter'"));
+  assert.ok(server.includes("skipped:'busy-timeout'"));
+  assert.ok(server.includes('while(notificationPumpBusy&&Date.now()<deadline)'));
+});
+
 test('Phase 6 browser reconciles ambiguous transient entity responses against authoritative state',async()=>{
   const bootstrap=await root('public/auto-sale-bootstrap.mjs');
   const ui=await root('scripts/test-ui-manager-director-live.mjs');
