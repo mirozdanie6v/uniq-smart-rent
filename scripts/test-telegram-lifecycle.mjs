@@ -50,7 +50,7 @@ async function state(){
   throw lastError||new Error('state read failed');
 }
 
-async function delivered(notifications,expected,label){
+async function delivered(notifications,expected,label,revision=0){
   assert.equal(notifications?.queued,expected,label+' queued count');
   const ids=notifications?.ids||[];
   assert.equal(ids.length,expected,label+' notification ids');
@@ -70,6 +70,16 @@ async function delivered(notifications,expected,label){
     }
     if(!checked.response.ok){
       if([500,502,503,504].includes(checked.response.status)){
+        if(revision){
+          try{
+            const fallback=await req('/api/auto-sale/notifications/revision?revision='+revision);
+            if(fallback.response.ok){
+              const wanted=new Set(ids);
+              rows=(fallback.data.deliveries||[]).filter(item=>wanted.has(item.id));
+              if(rows.length===expected&&rows.every(x=>x.status==='sent'&&x.messageId))break;
+            }
+          }catch{}
+        }
         await sleep(900+attempt*250);
         continue;
       }
@@ -155,7 +165,7 @@ async function recoverCommittedBatch(label,expected,prepared,beforeRevision){
     if(!recovered.response.ok)continue;
     const rows=recovered.data?.deliveries||[];
     if(rows.length!==expected)continue;
-    await delivered({queued:rows.length,ids:rows.map(item=>item.id),deliveries:rows},expected,label);
+    await delivered({queued:rows.length,ids:rows.map(item=>item.id),deliveries:rows},expected,label,revision);
     console.log('TELEGRAM_BATCH_RECOVERED',JSON.stringify({step:label,revision,attempt}));
     return{ok:true,revision,recovered:true,rowVersions:{}};
   }
@@ -192,7 +202,7 @@ async function batch(label,expected,operations){
       });
       if(response.ok){
         applyVersions(data.rowVersions);
-        await delivered(data.notifications,expected,label);
+        await delivered(data.notifications,expected,label,Number(data.revision)||0);
         await sleep(1200);
         return data;
       }
