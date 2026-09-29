@@ -11,6 +11,7 @@ test('frontend uses entity persistence with the legacy whole-state writer fully 
   assert.doesNotMatch(bootstrap,/method:'PUT'/);
   assert.doesNotMatch(bootstrap,/__AUTO_SALE_FLUSH__/);
   assert.match(bootstrap,/window\.__AUTO_SALE_ENTITY_BATCH__=entityBatch/);
+  assert.match(bootstrap,/!\['note','payment'\]\.includes\(String\(item\?\.resource\|\|''\)\)/);
   assert.match(bootstrap,/window\.__AUTO_SALE_CACHE_WRITE__=writeCache/);
   assert.match(bootstrap,/setRowVersions\(state\._rowVersions\|\|\{\}\)/);
 });
