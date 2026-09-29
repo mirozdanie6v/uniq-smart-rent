@@ -128,7 +128,7 @@ try{
   if(await openModal.count())await openModal.click();
 
   await page.locator('[data-role="owner"]').click();
-  await page.getByText('Панель директора',{exact:false}).waitFor({timeout:10000});
+  await page.getByText('Панель директора',{exact:true}).first().waitFor({timeout:10000});
   report.director.roleSwitch=true;
 
   const routes=[
