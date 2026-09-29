@@ -75,7 +75,9 @@ async function entityBatch(operations){
   const created=new Set(raw.filter(item=>item?.operation==='create'&&!['note','payment'].includes(String(item?.resource||''))).map(item=>{const ref=aggregateRef(item);return ref.resource+':'+ref.id}));
   for(const operation of raw){
     const ref=aggregateRef(operation);
-    if(!ref.resource||!ref.id||operation.operation==='create'||created.has(ref.resource+':'+ref.id))continue;
+    const childCreate=operation.operation==='create'&&['note','payment'].includes(String(operation.resource||''));
+    const topLevelCreate=operation.operation==='create'&&!childCreate;
+    if(!ref.resource||!ref.id||topLevelCreate||created.has(ref.resource+':'+ref.id))continue;
     if(operation.baseRowVersion===undefined||operation.baseRowVersion===null){
       const value=await ensureEntityVersion(ref.resource,ref.id);
       if(value===null){
@@ -97,9 +99,18 @@ async function entityBatch(operations){
       window.dispatchEvent(new CustomEvent('auto-sale-entity-conflict',{detail:data}));
       const error=new Error('entity_conflict');error.code='entity_conflict';error.data=data;throw error;
     }
+    if(!response.ok&&transientEntityStatus(response.status)){
+      const state=await pullInitialState();
+      if(state&&raw.every(operation=>operationAppliedToState(state,operation))){
+        const recovered={ok:true,revision,rowVersions:{},notifications:null,recovered:true,recoveredStatus:response.status};
+        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true,recovered:true,recoveredStatus:response.status};
+        window.dispatchEvent(new CustomEvent('auto-sale-entity-synced',{detail:recovered}));
+        return recovered;
+      }
+    }
     if(!response.ok){
-      window.dispatchEvent(new CustomEvent('auto-sale-entity-rejected',{detail:data}));
-      const error=new Error(data.error||('http_'+response.status));error.code=data.error||('http_'+response.status);error.data=data;throw error;
+      window.dispatchEvent(new CustomEvent('auto-sale-entity-rejected',{detail:{...data,status:response.status}}));
+      const error=new Error(data.error||('http_'+response.status));error.code=data.error||('http_'+response.status);error.data={...data,status:response.status};throw error;
     }
     revision=Number(data.revision||revision);
     sessionStorage.setItem(REVISION_KEY,String(revision));
