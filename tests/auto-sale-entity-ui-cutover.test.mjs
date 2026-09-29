@@ -4,10 +4,12 @@ import {readFile} from 'node:fs/promises';
 
 const source=name=>readFile(new URL('../public/'+name,import.meta.url),'utf8');
 
-test('frontend defaults to entity persistence and keeps whole-state autosync opt-in only',async()=>{
+test('frontend uses entity persistence with the legacy whole-state writer fully retired',async()=>{
   const bootstrap=await source('auto-sale-bootstrap.mjs');
-  assert.match(bootstrap,/const LEGACY_AUTOSYNC=QUERY_PARAMS\.has\('legacyAutosync'\)/);
-  assert.match(bootstrap,/tracked&&!suppress&&!QUOTE_AUDIT_MODE&&LEGACY_AUTOSYNC/);
+  assert.match(bootstrap,/window\.__AUTO_SALE_LEGACY_AUTOSYNC__=false/);
+  assert.doesNotMatch(bootstrap,/legacyAutosync/);
+  assert.doesNotMatch(bootstrap,/method:'PUT'/);
+  assert.doesNotMatch(bootstrap,/__AUTO_SALE_FLUSH__/);
   assert.match(bootstrap,/window\.__AUTO_SALE_ENTITY_BATCH__=entityBatch/);
   assert.match(bootstrap,/window\.__AUTO_SALE_CACHE_WRITE__=writeCache/);
   assert.match(bootstrap,/setRowVersions\(state\._rowVersions\|\|\{\}\)/);
