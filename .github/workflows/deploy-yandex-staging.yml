@@ -251,6 +251,25 @@ jobs:
           path: legacy-retirement-snapshot.json
           if-no-files-found: error
 
+      - name: Verify manager and director scenarios through real UI
+        run: |
+          set -euo pipefail
+          npm install --no-save --ignore-scripts playwright@1.55.0
+          CHROME=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          test -n "$CHROME"
+          PLAYWRIGHT_CHROME_PATH="$CHROME" node scripts/test-ui-manager-director-live.mjs
+
+      - name: Upload Phase 6 UI scenario evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase6-manager-director-ui
+          path: |
+            phase6-ui-manager-director-report.json
+            phase6-manager.png
+            phase6-director.png
+          if-no-files-found: ignore
+
       - name: Diagnose Yandex and Cloudflare Telegram relay
         run: |
           set -euo pipefail
