@@ -162,7 +162,13 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
-      json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),revision:Number(read.state?.revision)||0});
+      json(res,{ok:true,configuredMode:ydbReadMode,source:read.source,fallback:Boolean(read.fallback),reason:read.reason||null,shadowVerified:Boolean(read.shadowVerified),authoritative:Boolean(read.authoritative),revision:Number(read.state?.revision)||0});
+      return;
+    }
+    if(url.pathname==='/api/auto-sale/admin/legacy-snapshot'&&req.method==='GET'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const legacy=await (await getStore()).loadState();
+      json(res,{ok:true,retired:!legacyStateWriteEnabled,revision:Number(legacy.revision)||0,state:legacy});
       return;
     }
     if(url.pathname==='/api/auto-sale/entities/batch'&&req.method==='POST'){
