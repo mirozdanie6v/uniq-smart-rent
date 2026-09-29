@@ -50,13 +50,27 @@ function nextChildId(prefix){
   return `${prefix}-${randomUUID()}`;
 }
 
+function authoritativeSyncStore(legacyStore,domainStore,initialState){
+  let loaded=clone(initialState);
+  return{
+    async loadState(){
+      if(!loaded)loaded=await domainStore.loadState();
+      return clone(loaded);
+    },
+    async replaceState(next,options={}){
+      if(!loaded)loaded=await domainStore.loadState();
+      return legacyStore.commitDomainState(loaded,next,options);
+    }
+  };
+}
+
 function recalcPaid(order){
   const payments=arr(order?.payments);
   return payments.reduce((sum,payment)=>sum+Math.max(0,num(payment.amount)),0);
 }
 
 export async function readAutoSaleEntity({legacyStore,domainStore,resource,id}){
-  const state=await legacyStore.loadState();
+  const state=await domainStore.loadState();
   const entity=findEntity(state,resource,id);
   if(!entity)return bad(404,`${resource}_not_found`,{id});
   const rowVersion=await domainStore.entityRowVersion(resource,id);
@@ -75,13 +89,13 @@ export async function mutateAutoSaleEntity({
   prepareNotifications=null,
   maxAttempts=6
 }){
-  if(!legacyStore?.domainDualWriteEnabled)return bad(503,'entity_api_requires_dual_write');
+  if(typeof legacyStore?.commitDomainState!=='function'||typeof domainStore?.loadState!=='function')return bad(503,'entity_api_requires_normalized_writer');
   if(!RESOURCE_CONFIG[resource])return bad(404,'unsupported_entity_resource',{resource});
   const entityId=text(id||input?.id);
   if(!entityId)return bad(400,'entity_id_required',{resource});
 
   for(let attempt=1;attempt<=maxAttempts;attempt++){
-    const state=await legacyStore.loadState();
+    const state=await domainStore.loadState();
     const {collection}=config(resource);
     const list=arr(state[collection]).map(item=>clone(item));
     const index=entityIndex(state,resource,entityId);
@@ -123,7 +137,7 @@ export async function mutateAutoSaleEntity({
     const next={...clone(state),[collection]:list};
     if(resource==='lead'&&operation==='delete'&&next.notes&&typeof next.notes==='object')delete next.notes[entityId];
     const result=await syncYdbState(
-      legacyStore,
+      authoritativeSyncStore(legacyStore,domainStore,state),
       {...next,baseRevision:Number(state.revision)||0},
       {prepareNotifications}
     );
@@ -153,7 +167,7 @@ export async function addAutoSaleNote({
   const id=text(leadId);
   if(!id)return bad(400,'lead_id_required');
   for(let attempt=1;attempt<=maxAttempts;attempt++){
-    const state=await legacyStore.loadState();
+    const state=await domainStore.loadState();
     const lead=findEntity(state,'lead',id);
     if(!lead)return bad(404,'lead_not_found',{id});
     const currentRowVersion=await domainStore.entityRowVersion('lead',id);
@@ -173,7 +187,7 @@ export async function addAutoSaleNote({
     notes[id]=arr(notes[id]).map(item=>clone(item));
     if(notes[id].some(item=>text(item.id)===note.id))return bad(409,'note_exists',{leadId:id,id:note.id});
     notes[id].push(note);
-    const result=await syncYdbState(legacyStore,{...clone(state),notes,baseRevision:Number(state.revision)||0},{prepareNotifications});
+    const result=await syncYdbState(authoritativeSyncStore(legacyStore,domainStore,state),{...clone(state),notes,baseRevision:Number(state.revision)||0},{prepareNotifications});
     if(result.status===409&&result.data?.error==='revision_conflict')continue;
     if(result.status!==200)return result;
     return{status:201,data:{...result.data,resource:'lead',id,rowVersion:Number(result.data.revision)||0,note,retries:attempt-1}};
@@ -187,7 +201,7 @@ export async function addAutoSalePayment({
   const id=text(orderId);
   if(!id)return bad(400,'order_id_required');
   for(let attempt=1;attempt<=maxAttempts;attempt++){
-    const state=await legacyStore.loadState();
+    const state=await domainStore.loadState();
     const orders=arr(state.orders).map(item=>clone(item));
     const index=orders.findIndex(item=>text(item.id)===id);
     if(index<0)return bad(404,'order_not_found',{id});
@@ -211,7 +225,7 @@ export async function addAutoSalePayment({
     orders[index]={...orders[index],payments};
     orders[index].paid=recalcPaid(orders[index]);
 
-    const result=await syncYdbState(legacyStore,{...clone(state),orders,baseRevision:Number(state.revision)||0},{prepareNotifications});
+    const result=await syncYdbState(authoritativeSyncStore(legacyStore,domainStore,state),{...clone(state),orders,baseRevision:Number(state.revision)||0},{prepareNotifications});
     if(result.status===409&&result.data?.error==='revision_conflict')continue;
     if(result.status!==200)return result;
     return{
@@ -252,12 +266,12 @@ export async function mutateAutoSaleEntityBatch({
   prepareNotifications=null,
   maxAttempts=6
 }){
-  if(!legacyStore?.domainDualWriteEnabled)return bad(503,'entity_api_requires_dual_write');
+  if(typeof legacyStore?.commitDomainState!=='function'||typeof domainStore?.loadState!=='function')return bad(503,'entity_api_requires_normalized_writer');
   const ops=arr(operations);
   if(!ops.length)return bad(400,'operations_required');
 
   for(let attempt=1;attempt<=maxAttempts;attempt++){
-    const state=await legacyStore.loadState();
+    const state=await domainStore.loadState();
     const next=clone(state);
     const checksByKey=new Map();
     const touched=new Map();
@@ -346,7 +360,7 @@ export async function mutateAutoSaleEntityBatch({
     if(versionError)return versionError;
 
     const result=await syncYdbState(
-      legacyStore,
+      authoritativeSyncStore(legacyStore,domainStore,state),
       {...next,baseRevision:Number(state.revision)||0},
       {prepareNotifications}
     );
