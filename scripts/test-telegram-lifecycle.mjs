@@ -8,6 +8,23 @@ if(!apiKey)throw new Error('AUTO_SALE_API_KEY required');
 const headers={'content-type':'application/json','x-auto-sale-key':apiKey};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const receipts=[];
+const rowVersions={lead:{},quote:{},order:{},team:{},catalog:{}};
+const aggregateRef=operation=>{
+  const resource=String(operation?.resource||'');
+  if(resource==='note')return{resource:'lead',id:String(operation.leadId||operation.id||'')};
+  if(resource==='payment')return{resource:'order',id:String(operation.orderId||operation.id||'')};
+  return{resource,id:String(operation?.id||operation?.input?.id||'')};
+};
+const knownVersion=(resource,id)=>Number(rowVersions?.[resource]?.[id]||0);
+const applyVersions=map=>{
+  for(const [key,value] of Object.entries(map||{})){
+    const split=key.indexOf(':');if(split<1)continue;
+    const resource=key.slice(0,split),id=key.slice(split+1);
+    if(!rowVersions[resource])rowVersions[resource]={};
+    if(value===null)delete rowVersions[resource][id];
+    else rowVersions[resource][id]=Number(value)||0;
+  }
+};
 
 async function req(path,options={}){
   const body=options.body&&typeof options.body!=='string'?JSON.stringify(options.body):options.body;
@@ -56,11 +73,25 @@ async function delivered(notifications,expected,label){
 }
 
 async function batch(label,expected,operations){
+  const prepared=operations.map(operation=>structuredClone(operation));
+  const created=new Set(prepared.filter(operation=>operation.operation==='create').map(operation=>{
+    const ref=aggregateRef(operation);return ref.resource+':'+ref.id;
+  }));
+  for(const operation of prepared){
+    const ref=aggregateRef(operation);
+    if(!ref.resource||!ref.id||operation.operation==='create'||created.has(ref.resource+':'+ref.id))continue;
+    if(operation.baseRowVersion===undefined||operation.baseRowVersion===null){
+      const version=knownVersion(ref.resource,ref.id);
+      assert.ok(version,label+': missing tracked rowVersion for '+ref.resource+':'+ref.id);
+      operation.baseRowVersion=version;
+    }
+  }
   const {response,data}=await req('/api/auto-sale/entities/batch',{
     method:'POST',
-    body:{operations}
+    body:{operations:prepared}
   });
   assert.ok(response.ok,label+': HTTP '+response.status+' '+JSON.stringify(data));
+  applyVersions(data.rowVersions);
   await delivered(data.notifications,expected,label);
   await sleep(1200);
   return data;
