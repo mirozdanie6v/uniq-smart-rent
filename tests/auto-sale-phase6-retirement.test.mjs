@@ -58,6 +58,14 @@ test('Phase 6 live scenarios cannot use the retired whole-state writer',async()=
   assert.ok(ui.includes('legacyWholeStateWrites'));
 });
 
+test('Phase 6 frontend live gate reconciles transient batch responses against normalized state',async()=>{
+  const live=await root('scripts/test-ydb-frontend-batch-live.mjs');
+  assert.ok(live.includes('batchWithRecovery'));
+  assert.ok(live.includes('timeoutRecovered:true'));
+  assert.ok(live.includes("lead?.priority==='Высокий'"));
+  assert.ok(live.includes('batchRetryTransient'));
+});
+
 test('Phase 6 targeted Telegram delivery cannot be starved by the background outbox pump',async()=>{
   const server=await root('server/yandex-server.mjs');
   assert.ok(server.includes('notificationPriorityWaiters'));
