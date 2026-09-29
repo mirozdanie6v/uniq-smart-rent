@@ -173,11 +173,12 @@ test('car detail module exports a defined runtime API',()=>{
   assert.match(details,/__AUTO_SALE_CAR_DETAILS__=\{open:openDetail,close:closeDetail,currentCar,currentGallery,setSliderIndex\}/);
 });
 
-test('bootstrap does not write state on load and rebases revision conflicts',()=>{
-  assert.match(bootstrap,/before=tracked\?this\.getItem\(key\):null/);
-  assert.match(bootstrap,/before!==String\(value\)/);
-  assert.match(bootstrap,/rebaseAutoSaleState\(serverState,base,localBefore\)/);
-  assert.doesNotMatch(bootstrap,/scheduleSync\(250\);\s*$/);
+test('bootstrap has no whole-state writer and refreshes on entity conflicts',()=>{
+  assert.doesNotMatch(bootstrap,/legacyAutosync|__AUTO_SALE_FLUSH__|rebaseAutoSaleState/);
+  assert.doesNotMatch(bootstrap,/method:'PUT'/);
+  assert.match(bootstrap,/response\.status===409&&data\.error==='entity_conflict'/);
+  assert.match(bootstrap,/await pullInitialState\(\)/);
+  assert.match(bootstrap,/auto-sale-entity-conflict/);
 });
 
 test('approved brand logo and favicon are wired',()=>{
