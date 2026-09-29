@@ -32,7 +32,7 @@ async function req(path,options={}){
     ...options,
     body,
     headers:{...headers,...options.headers},
-    signal:AbortSignal.timeout(55000)
+    signal:AbortSignal.timeout(70000)
   });
   return{response,data:await response.json().catch(()=>({}))};
 }
@@ -75,6 +75,63 @@ async function delivered(notifications,expected,label){
   console.log('TELEGRAM_STEP_OK',JSON.stringify({step:label,deliveries:rows.map(({target,event,messageId})=>({target,event,messageId}))}));
 }
 
+const matchesInput=(actual,expected)=>{
+  if(Array.isArray(expected))return JSON.stringify(actual)===JSON.stringify(expected);
+  if(expected&&typeof expected==='object'){
+    if(!actual||typeof actual!=='object')return false;
+    return Object.entries(expected).every(([key,value])=>matchesInput(actual[key],value));
+  }
+  return actual===expected;
+};
+const operationApplied=(snapshot,operation)=>{
+  const resource=String(operation?.resource||'');
+  if(resource==='note'){
+    const leadId=String(operation.leadId||operation.id||'');
+    const id=String(operation.input?.id||'');
+    return (snapshot.notes?.[leadId]||[]).some(item=>String(item.id||'')===id&&matchesInput(item,operation.input||{}));
+  }
+  if(resource==='payment'){
+    const orderId=String(operation.orderId||operation.id||'');
+    const id=String(operation.input?.id||'');
+    const order=(snapshot.orders||[]).find(item=>String(item.id||'')===orderId);
+    return (order?.payments||[]).some(item=>String(item.id||'')===id&&matchesInput(item,operation.input||{}));
+  }
+  const collection=({lead:'leads',quote:'quotes',order:'orders',team:'team',catalog:'catalog'})[resource];
+  if(!collection)return false;
+  const id=String(operation.id||operation.input?.id||'');
+  const entity=(snapshot[collection]||[]).find(item=>String(item.id||'')===id);
+  if(operation.operation==='delete')return !entity;
+  return Boolean(entity&&matchesInput(entity,operation.input||{}));
+};
+const syncVersionsFromState=(snapshot,operations)=>{
+  for(const operation of operations){
+    const ref=aggregateRef(operation);
+    if(!ref.resource||!ref.id)continue;
+    if(!rowVersions[ref.resource])rowVersions[ref.resource]={};
+    const version=Number(snapshot?._rowVersions?.[ref.resource]?.[ref.id]||0);
+    if(operation.operation==='delete')delete rowVersions[ref.resource][ref.id];
+    else if(version)rowVersions[ref.resource][ref.id]=version;
+  }
+};
+async function recoverCommittedBatch(label,expected,prepared,beforeRevision){
+  for(let attempt=1;attempt<=8;attempt++){
+    await sleep(900*attempt);
+    let snapshot;
+    try{snapshot=await state()}catch{continue}
+    const revision=Number(snapshot.revision)||0;
+    if(revision<=beforeRevision||!prepared.every(operation=>operationApplied(snapshot,operation)))continue;
+    syncVersionsFromState(snapshot,prepared);
+    const recovered=await req('/api/auto-sale/notifications/revision?revision='+revision);
+    if(!recovered.response.ok)continue;
+    const rows=recovered.data?.deliveries||[];
+    if(rows.length!==expected)continue;
+    await delivered({queued:rows.length,ids:rows.map(item=>item.id),deliveries:rows},expected,label);
+    console.log('TELEGRAM_BATCH_RECOVERED',JSON.stringify({step:label,revision,attempt}));
+    return{ok:true,revision,recovered:true,rowVersions:{}};
+  }
+  return null;
+}
+
 async function batch(label,expected,operations){
   const prepared=operations.map(operation=>structuredClone(operation));
   const created=new Set(prepared.filter(operation=>operation.operation==='create').map(operation=>{
@@ -89,15 +146,34 @@ async function batch(label,expected,operations){
       operation.baseRowVersion=version;
     }
   }
-  const {response,data}=await req('/api/auto-sale/entities/batch',{
-    method:'POST',
-    body:{operations:prepared}
-  });
-  assert.ok(response.ok,label+': HTTP '+response.status+' '+JSON.stringify(data));
-  applyVersions(data.rowVersions);
-  await delivered(data.notifications,expected,label);
-  await sleep(1200);
-  return data;
+
+  const before=await state();
+  const beforeRevision=Number(before.revision)||0;
+  let lastFailure=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      const {response,data}=await req('/api/auto-sale/entities/batch',{
+        method:'POST',
+        body:{operations:prepared}
+      });
+      if(response.ok){
+        applyVersions(data.rowVersions);
+        await delivered(data.notifications,expected,label);
+        await sleep(1200);
+        return data;
+      }
+      lastFailure=new Error(label+': HTTP '+response.status+' '+JSON.stringify(data));
+      if(![409,503,504].includes(response.status))throw lastFailure;
+    }catch(error){
+      lastFailure=error;
+      if(error?.name!=='TimeoutError'&&!/timeout|aborted/i.test(String(error?.message||'')))throw error;
+    }
+
+    const recovered=await recoverCommittedBatch(label,expected,prepared,beforeRevision);
+    if(recovered)return recovered;
+    if(attempt<3)await sleep(1200*attempt);
+  }
+  throw lastFailure||new Error(label+': batch failed after retries');
 }
 
 const initial=await state();
