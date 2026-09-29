@@ -168,12 +168,27 @@ try{
     try{
       const current=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId));
       if(current.response.ok){
-        const removed=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId),{
+        let removed=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId),{
           method:'DELETE',
           body:JSON.stringify({baseRowVersion:current.data.rowVersion})
         });
-        report.cleanup={leadId,status:removed.response.status,ok:removed.response.ok,data:removed.data};
-        if(!removed.response.ok)cleanupFailure=new Error('UI scenario cleanup failed: '+JSON.stringify(removed.data));
+        if(removed.response.status===504){
+          await new Promise(resolve=>setTimeout(resolve,1500));
+          const verify=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId));
+          if(verify.response.status===404){
+            report.cleanup={leadId,status:200,ok:true,timeoutRecovered:true};
+            removed=null;
+          }else if(verify.response.ok){
+            removed=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId),{
+              method:'DELETE',
+              body:JSON.stringify({baseRowVersion:verify.data.rowVersion})
+            });
+          }
+        }
+        if(removed){
+          report.cleanup={leadId,status:removed.response.status,ok:removed.response.ok,data:removed.data};
+          if(!removed.response.ok)cleanupFailure=new Error('UI scenario cleanup failed: '+JSON.stringify(removed.data));
+        }
       }
     }catch(error){
       report.cleanup={leadId,ok:false,error:String(error)};
