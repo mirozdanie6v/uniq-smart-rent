@@ -271,6 +271,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Diagnose Yandex and Cloudflare Telegram relay
+        if: always()
         run: |
           set -euo pipefail
           URL=${STAGING_URL%/}
@@ -284,7 +285,7 @@ jobs:
           yc serverless container revision list --container-name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq '.[0] | {id,status,network_id,subnet_id,created_at}' || true
 
       - name: Verify full lifecycle delivery to Flyer_Flyer
-        if: inputs.telegram_lifecycle == true || contains(github.event.head_commit.message, '[telegram-e2e]')
+        if: ${{ always() && (inputs.telegram_lifecycle == true || contains(github.event.head_commit.message, '[telegram-e2e]')) }}
         run: node scripts/test-telegram-lifecycle.mjs
 
       - name: Upload Telegram delivery receipts
