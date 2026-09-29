@@ -87,7 +87,7 @@ async function delivered(notifications,expected,label,revision=0){
     }
     rows=checked.data.deliveries||[];
     if(rows.length===expected&&rows.every(x=>x.status==='sent'&&x.messageId))break;
-    if(rows.some(x=>x.status==='pending'||x.status==='retry')){
+    if(rows.some(x=>x.status==='pending'||x.status==='retry'||x.status==='processing')){
       const processQuery=new URLSearchParams();for(const id of ids)processQuery.append('id',id);
       let processed;
       try{
