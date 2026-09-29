@@ -66,12 +66,13 @@ test('Phase 6 frontend live gate reconciles transient batch responses against no
   assert.ok(live.includes('batchRetryTransient'));
 });
 
-test('Phase 6 targeted Telegram delivery cannot be starved by the background outbox pump',async()=>{
+test('Phase 6 targeted Telegram delivery cannot be starved by an in-process outbox mutex',async()=>{
   const server=await root('server/yandex-server.mjs');
   assert.ok(server.includes('notificationPriorityWaiters'));
   assert.ok(server.includes("skipped:'priority-waiter'"));
-  assert.ok(server.includes("skipped:'busy-timeout'"));
-  assert.ok(server.includes('while(notificationPumpBusy&&Date.now()<deadline)'));
+  assert.ok(server.includes('pendingNotificationsByIds(wanted)'));
+  assert.ok(!server.includes('notificationPumpBusy'));
+  assert.ok(!server.includes("skipped:'busy-timeout'"));
 });
 
 test('Phase 6 browser reconciles ambiguous transient entity responses against authoritative state',async()=>{
