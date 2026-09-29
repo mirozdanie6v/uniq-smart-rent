@@ -54,6 +54,10 @@ async function getStore(){
   }
   return storePromise;
 }
+async function getEntityStores(){
+  const [legacyStore,domainStore]=await Promise.all([getStore(),getDomainStore()]);
+  return{legacyStore,domainStore};
+}
 const notificationPumpIntervalMs=Math.max(15_000,Number(process.env.AUTO_SALE_NOTIFICATION_PUMP_MS||60_000));
 let notificationPumpBusy=false;
 async function safeNotificationStats(){
@@ -179,9 +183,9 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req);
       const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
       const notifyTelegram=telegram.enabled&&!skipTelegram;
+      const entityStores=await getEntityStores();
       const result=await mutateAutoSaleEntityBatch({
-        legacyStore:await getStore(),
-        domainStore:await getDomainStore(),
+        ...entityStores,
         operations:Array.isArray(input?.operations)?input.operations:[],
         prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
       });
@@ -202,15 +206,17 @@ const server=http.createServer(async(req,res)=>{
       const resource=({leads:'lead',quotes:'quote',orders:'order',catalog:'catalog',team:'team'})[plural];
       const id=rawId?decodeURIComponent(rawId):'';
       if(req.method==='GET'&&id&&!child){
-        const result=await readAutoSaleEntity({legacyStore:await getStore(),domainStore:await getDomainStore(),resource,id});
+        const entityStores=await getEntityStores();
+        const result=await readAutoSaleEntity({...entityStores,resource,id});
         json(res,result.data,result.status);return;
       }
       if(req.method==='POST'&&child==='notes'&&resource==='lead'&&id){
         const input=await parseJson(req);
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
         const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const entityStores=await getEntityStores();
         const result=await addAutoSaleNote({
-          legacyStore:await getStore(),domainStore:await getDomainStore(),leadId:id,input,
+          ...entityStores,leadId:id,input,
           expectedRowVersion:input?.baseRowVersion,
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
@@ -227,8 +233,9 @@ const server=http.createServer(async(req,res)=>{
         const input=await parseJson(req);
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
         const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const entityStores=await getEntityStores();
         const result=await addAutoSalePayment({
-          legacyStore:await getStore(),domainStore:await getDomainStore(),orderId:id,input,
+          ...entityStores,orderId:id,input,
           expectedRowVersion:input?.baseRowVersion,
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
@@ -247,8 +254,9 @@ const server=http.createServer(async(req,res)=>{
         const entityId=String(input?.id||'').trim();
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
         const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const entityStores=await getEntityStores();
         const result=await mutateAutoSaleEntity({
-          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'create',
+          ...entityStores,resource,operation:'create',
           id:entityId,input,prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
         if(result.status>=200&&result.status<300&&notifyTelegram){
@@ -264,8 +272,9 @@ const server=http.createServer(async(req,res)=>{
         const input=await parseJson(req);
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
         const notifyTelegram=telegram.enabled&&!skipTelegram;
+        const entityStores=await getEntityStores();
         const result=await mutateAutoSaleEntity({
-          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'patch',
+          ...entityStores,resource,operation:'patch',
           id,input,expectedRowVersion:input?.baseRowVersion,
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
@@ -280,8 +289,9 @@ const server=http.createServer(async(req,res)=>{
       }
       if(req.method==='DELETE'&&id){
         const input=await parseJson(req);
+        const entityStores=await getEntityStores();
         const result=await mutateAutoSaleEntity({
-          legacyStore:await getStore(),domainStore:await getDomainStore(),resource,operation:'delete',
+          ...entityStores,resource,operation:'delete',
           id,expectedRowVersion:input?.baseRowVersion,prepareNotifications:null
         });
         json(res,result.data,result.status);return;
