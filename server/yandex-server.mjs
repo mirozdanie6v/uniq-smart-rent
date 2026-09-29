@@ -363,6 +363,12 @@ const server=http.createServer(async(req,res)=>{
       json(res,ids.length?await processNotificationIds(ids):await processNotificationOutbox(50));
       return;
     }
+    if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/revision'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const revision=Number(url.searchParams.get('revision')||0);
+      if(!Number.isInteger(revision)||revision<1){json(res,{error:'revision_required'},400);return}
+      json(res,{ok:true,revision,deliveries:await (await getStore()).notificationStatusByRevision(revision)});return;
+    }
     if(req.method==='GET'&&url.pathname==='/api/auto-sale/notifications/status'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const ids=url.searchParams.getAll('id').slice(0,100);
