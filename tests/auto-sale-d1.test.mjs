@@ -49,15 +49,16 @@ test('server requires full payment before handoff',()=>{
   assert.match(rules,/stage==='Выдача'/);assert.match(rules,/full_payment_required_for_handoff/);assert.match(rules,/paid<num\(order\.total\)/);
 });
 
-test('browser hydrates team from D1 and keeps later saves reload-free',()=>{
+test('browser hydrates team from server state and persists later saves through entity API',()=>{
   assert.match(bootstrap,/fetch\('\/api\/auto-sale\/state'/);
   assert.match(bootstrap,/team:'auto-sale-team-v1'/);
-  assert.match(bootstrap,/team:readCache\(DATA_KEYS\.team,\[\]\)/);
-  assert.match(bootstrap,/baseRevision:revision/);
-  assert.match(bootstrap,/response\.status===409/);
-  assert.match(bootstrap,/auto-sale-server-rejected/);
+  assert.match(bootstrap,/writeCache\(DATA_KEYS\.team,state\.team\|\|\[\]\)/);
+  assert.match(bootstrap,/\/api\/auto-sale\/entities\/batch/);
+  assert.match(bootstrap,/response\.status===409&&data\.error==='entity_conflict'/);
+  assert.match(bootstrap,/auto-sale-entity-rejected/);
   assert.match(bootstrap,/await pullInitialState\(\)/);
   assert.match(bootstrap,/auto-sale-director-team\.mjs/);
+  assert.doesNotMatch(bootstrap,/method:'PUT'/);
   assert.doesNotMatch(bootstrap,/location\.reload\s*\(/);
   assert.doesNotMatch(bootstrap,/reloadPending|refreshUiWhenSafe|mergeDemoRows/);
 });
