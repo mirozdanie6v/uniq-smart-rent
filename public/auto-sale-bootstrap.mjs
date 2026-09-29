@@ -72,7 +72,7 @@ async function pullInitialState(){
 async function entityBatch(operations){
   const raw=Array.isArray(operations)?operations.map(item=>structuredClone(item)):[];
   if(!raw.length)return{ok:true,revision,rowVersions:{}};
-  const created=new Set(raw.filter(item=>item?.operation==='create').map(item=>{const ref=aggregateRef(item);return ref.resource+':'+ref.id}));
+  const created=new Set(raw.filter(item=>item?.operation==='create'&&!['note','payment'].includes(String(item?.resource||''))).map(item=>{const ref=aggregateRef(item);return ref.resource+':'+ref.id}));
   for(const operation of raw){
     const ref=aggregateRef(operation);
     if(!ref.resource||!ref.id||operation.operation==='create'||created.has(ref.resource+':'+ref.id))continue;
