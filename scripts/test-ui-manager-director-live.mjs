@@ -146,7 +146,7 @@ try{
   ];
   report.director.routes={};
   for(const [route,heading] of routes){
-    await page.locator('[data-go="'+route+'"]').click();
+    await page.locator('button[data-go="'+route+'"]').last().click();
     await page.getByRole('heading',{name:heading}).waitFor();
     report.director.routes[route]=true;
   }
