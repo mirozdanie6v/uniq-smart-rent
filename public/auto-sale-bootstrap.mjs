@@ -53,20 +53,63 @@ async function ensureEntityVersion(resource,id){
 function readCache(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function applyServerState(state){if(!state||!state.initialized)return;writeCache(DATA_KEYS.leads,state.leads||[]);writeCache(DATA_KEYS.quotes,state.quotes||[]);writeCache(DATA_KEYS.orders,state.orders||[]);writeCache(DATA_KEYS.notes,state.notes||{});writeCache(DATA_KEYS.team,state.team||[]);if(Array.isArray(state.catalog))writeCache(DATA_KEYS.catalog,state.catalog)}
 async function pullInitialState(){
-  try{
-    const response=await fetch('/api/auto-sale/state',{headers:{accept:'application/json'},cache:'no-store'});
-    if(!response.ok)return;
-    const state=await response.json();
-    revision=Number(state.revision||0);
-    setRowVersions(state._rowVersions||{});
-    sessionStorage.setItem(REVISION_KEY,String(revision));
-    applyServerState(state);
-    window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};
-  }catch(error){
-    console.warn('AUTO SALE using offline cache',error);
-    window.__AUTO_SALE_SERVER__={online:false,revision};
+  let lastError=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    try{
+      const response=await fetch('/api/auto-sale/state',{
+        headers:{accept:'application/json'},
+        cache:'no-store',
+        signal:AbortSignal.timeout(18000)
+      });
+      if(response.ok){
+        const state=await response.json();
+        revision=Number(state.revision||0);
+        setRowVersions(state._rowVersions||{});
+        sessionStorage.setItem(REVISION_KEY,String(revision));
+        applyServerState(state);
+        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};
+        return state;
+      }
+      if(![500,502,503,504].includes(response.status))return null;
+      lastError=new Error('state_http_'+response.status);
+    }catch(error){
+      lastError=error;
+      if(error?.name!=='TimeoutError'&&!/timeout|aborted/i.test(String(error?.message||'')))break;
+    }
+    if(attempt<3)await new Promise(resolve=>setTimeout(resolve,350*attempt));
   }
+  console.warn('AUTO SALE using offline cache',lastError);
+  window.__AUTO_SALE_SERVER__={online:false,revision,error:String(lastError?.message||'state_read_failed')};
+  return null;
 }
+
+function matchesEntityInput(actual,expected){
+  if(Array.isArray(expected))return Array.isArray(actual)&&expected.length===actual.length&&expected.every((value,index)=>matchesEntityInput(actual[index],value));
+  if(expected&&typeof expected==='object'){
+    if(!actual||typeof actual!=='object')return false;
+    return Object.entries(expected).every(([key,value])=>matchesEntityInput(actual[key],value));
+  }
+  return actual===expected;
+}
+function operationAppliedToState(state,operation){
+  const resource=String(operation?.resource||'');
+  if(resource==='note'){
+    const leadId=String(operation.leadId||operation.id||''),input=operation.input||{},id=String(input.id||'');
+    return (state?.notes?.[leadId]||[]).some(item=>(!id||String(item.id||'')===id)&&matchesEntityInput(item,input));
+  }
+  if(resource==='payment'){
+    const orderId=String(operation.orderId||operation.id||''),input=operation.input||{},id=String(input.id||'');
+    const order=(state?.orders||[]).find(item=>String(item.id||'')===orderId);
+    return (order?.payments||[]).some(item=>(!id||String(item.id||'')===id)&&matchesEntityInput(item,input));
+  }
+  const collection=({lead:'leads',quote:'quotes',order:'orders',team:'team',catalog:'catalog'})[resource];
+  if(!collection)return false;
+  const id=String(operation.id||operation.input?.id||'');
+  const entity=(state?.[collection]||[]).find(item=>String(item.id||'')===id);
+  if(operation.operation==='delete')return !entity;
+  return Boolean(entity&&matchesEntityInput(entity,operation.input||{}));
+}
+function transientEntityStatus(status){return[500,502,503,504].includes(Number(status))}
 
 
 async function entityBatch(operations){
