@@ -312,6 +312,28 @@ const server=http.createServer(async(req,res)=>{
       json(res,result.data,result.status);
       return;
     }
+    if(req.method==='POST'&&url.pathname==='/api/auto-sale/admin/cleanup-test-scenario'){
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
+      const input=await parseJson(req);
+      const leadId=String(input?.leadId||''),quoteId=String(input?.quoteId||''),orderId=String(input?.orderId||'');
+      if(!/^L-QA-[A-Z0-9]+$/.test(leadId)||!/^Q-QA-[A-Z0-9]+$/.test(quoteId)||!/^O-QA-[A-Z0-9]+$/.test(orderId)){
+        json(res,{error:'invalid_test_scenario_ids'},400);return;
+      }
+      const state=await (await getDomainStore()).loadState();
+      const next={
+        ...state,
+        leads:(state.leads||[]).filter(item=>String(item.id)!==leadId),
+        quotes:(state.quotes||[]).filter(item=>String(item.id)!==quoteId&&String(item.leadId)!==leadId),
+        orders:(state.orders||[]).filter(item=>String(item.id)!==orderId&&String(item.leadId)!==leadId),
+        notes:{...(state.notes||{})}
+      };
+      delete next.notes[leadId];
+      const result=await (await getStore()).commitDomainState(state,next,{expectedRevision:state.revision});
+      if(result.status!==200){json(res,result.data,result.status);return}
+      json(res,{ok:true,revision:result.data.revision,removed:{leadId,quoteId,orderId}});
+      return;
+    }
+
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/admin/clear-applications'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const state=await (await getDomainStore()).loadState();
