@@ -124,10 +124,12 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         domainDiff=buildDomainDiff(previous,{...payload,revision:next});
         await applyDomainDiff(tx,domainDiff,{compatRevision:next,status:'dual-write'});
       }
-      const now=new Date().toISOString();
+      const nowDate=new Date();
+      const now=nowDate.toISOString();
+      const notificationLease=new Date(nowDate.getTime()+60_000).toISOString();
       for(const item of notifications){
         await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
-          VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
+          VALUES (${item.id}, ${'processing'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${notificationLease}, ${now}, ${now}, ${''}, ${''})`;
       }
       return{status:200,data:{ok:true,revision:next,...(domainDualWrite?{domainDualWrite:{enabled:true,catchup:domainCatchup,diff:summarizeDomainDiff(domainDiff)}}:{})}};
     });
@@ -160,10 +162,12 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         {...payload,revision:next}
       );
       await applyDomainDiff(tx,domainDiff,{compatRevision:next,status:'normalized-authoritative'});
-      const now=new Date().toISOString();
+      const nowDate=new Date();
+      const now=nowDate.toISOString();
+      const notificationLease=new Date(nowDate.getTime()+60_000).toISOString();
       for(const item of notifications){
         await tx`UPSERT INTO auto_sale_notification_outbox (id,status,payload,attempts,next_attempt_at,created_at,updated_at,last_error,message_id)
-          VALUES (${item.id}, ${'pending'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${now}, ${now}, ${now}, ${''}, ${''})`;
+          VALUES (${item.id}, ${'processing'}, ${JSON.stringify(item)}, ${new Uint64(0n)}, ${notificationLease}, ${now}, ${now}, ${''}, ${''})`;
       }
       return{
         status:200,
