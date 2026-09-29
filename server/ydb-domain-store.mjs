@@ -159,6 +159,26 @@ export async function createYdbDomainStore({
   const driver=new Driver(connectionString,{credentialsProvider});
   await driver.ready();
   const sql=query(driver);
+  const READ_ATTEMPTS=3;
+  const READ_TIMEOUT_MS=7000;
+  const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  async function readQuery(makeQuery,label='domain-read'){
+    let lastError=null;
+    for(let attempt=1;attempt<=READ_ATTEMPTS;attempt++){
+      try{
+        return await makeQuery()
+          .isolation('onlineReadOnly',{allowInconsistentReads:false})
+          .idempotent(true)
+          .timeout(READ_TIMEOUT_MS);
+      }catch(error){
+        lastError=error;
+        if(attempt>=READ_ATTEMPTS)throw error;
+        console.warn(`AUTO SALE YDB ${label} retry ${attempt}/${READ_ATTEMPTS}`,String(error?.message||error));
+        await sleep(150*(2**(attempt-1)));
+      }
+    }
+    throw lastError;
+  }
   if(ensureSchema)await ensureAutoSaleDomainSchema(sql);
 
   async function schemaVersion(){
@@ -309,7 +329,7 @@ export async function createYdbDomainStore({
 
   async function loadAuthoritativeSnapshot(){
     const stateId=u64(1);
-    const sets=await sql`
+    const sets=await readQuery(()=>sql`
       SELECT compat_revision,schema_version,migration_status,source_revision,updated_at FROM auto_sale_state_meta WHERE id=${stateId};
       SELECT id,row_version,sort_order,status,manager,source,client_created,payload,updated_at FROM auto_sale_leads;
       SELECT id,row_version,sort_order,lead_id,status,quote_version,payload,updated_at FROM auto_sale_quotes;
@@ -319,7 +339,7 @@ export async function createYdbDomainStore({
       SELECT id,row_version,sort_order,name,role,active,payload,updated_at FROM auto_sale_team;
       SELECT id,row_version,sort_order,origin,active,auction_date,payload,updated_at FROM auto_sale_catalog;
       SELECT subject_type,subject_id,telegram_user_id,username,first_name,last_name,linked_at,updated_at FROM auto_sale_telegram_bindings;
-    `;
+    `,'authoritative-snapshot');
     const metaRow=sets?.[0]?.[0];
     const meta=metaRow?{
       compatRevision:Number(metaRow.compat_revision||0n),
