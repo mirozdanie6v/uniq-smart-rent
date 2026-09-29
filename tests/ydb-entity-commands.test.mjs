@@ -18,12 +18,11 @@ function makeStores(initial){
     for(const item of state[key]||[])versions.set(resource+':'+item.id,state.revision);
   }
   const domainStore={
+    async loadState(){return clone(state)},
     async entityRowVersion(resource,id){return versions.has(resource+':'+id)?versions.get(resource+':'+id):null}
   };
   const legacyStore={
-    domainDualWriteEnabled:true,
-    async loadState(){return clone(state)},
-    async replaceState(next,{expectedRevision=null,notifications=[]}={}){
+    async commitDomainState(previous,next,{expectedRevision=null,notifications=[]}={}){
       if(expectedRevision!==null&&Number(expectedRevision)!==Number(state.revision)){
         return{status:409,data:{error:'revision_conflict',currentRevision:state.revision,state:clone(state)}};
       }
