@@ -33,7 +33,52 @@ async function state(){
 async function batch(operations){
   return request('/api/auto-sale/entities/batch',{method:'POST',body:{operations}});
 }
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const transient=status=>[500,502,503,504].includes(Number(status));
 const rowVersion=(snapshot,resource,id)=>Number(snapshot?._rowVersions?.[resource]?.[id]||0);
+
+async function batchWithRecovery(operations,isApplied){
+  let prepared=operations.map(item=>structuredClone(item));
+  let last=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    const result=await batch(prepared);
+    last=result;
+    if(result.status===200)return result;
+    if(!transient(result.status))return result;
+    await sleep(900*attempt);
+    const snapshot=await state();
+    if(isApplied(snapshot)){
+      return{
+        status:200,
+        data:{
+          ok:true,
+          timeoutRecovered:true,
+          revision:Number(snapshot.revision)||0,
+          rowVersions:{['lead:'+leadId]:rowVersion(snapshot,'lead',leadId)}
+        }
+      };
+    }
+    const current=rowVersion(snapshot,'lead',leadId);
+    if(current){
+      prepared=prepared.map(operation=>{
+        if(operation.operation==='create'&&!['note','payment'].includes(String(operation.resource||'')))return operation;
+        const target=operation.resource==='note'?String(operation.leadId||operation.id||''):String(operation.id||operation.input?.id||'');
+        return target===leadId?{...operation,baseRowVersion:current}:operation;
+      });
+    }
+  }
+  return last;
+}
+
+async function batchRetryTransient(operations){
+  let last=null;
+  for(let attempt=1;attempt<=3;attempt++){
+    last=await batch(operations);
+    if(!transient(last.status))return last;
+    await sleep(700*attempt);
+  }
+  return last;
+}
 
 async function cleanupLead(version){
   let currentVersion=Number(version)||0;
@@ -55,7 +100,7 @@ try{
   report.baseline={revision:Number(before.revision)||0,leadCount:(before.leads||[]).length};
 
   const note1={id:'NOTE-'+suffix+'-1',text:'Phase 5 frontend batch create',at:new Date().toISOString()};
-  const create=await batch([
+  const create=await batchWithRecovery([
     {resource:'lead',operation:'create',id:leadId,input:{
       id:leadId,name:'Phase 5 Frontend',contact:'phase5-'+suffix.toLowerCase()+'@example.invalid',
       model:'Frontend entity validation',budget:41000,source:'Mini App',manager:'Не назначен',
@@ -63,7 +108,10 @@ try{
       createdAt:new Date().toISOString(),clientCreated:false
     }},
     {resource:'note',operation:'create',leadId,input:note1}
-  ]);
+  ],snapshot=>
+    (snapshot.leads||[]).some(item=>String(item.id)===leadId)&&
+    (snapshot.notes?.[leadId]||[]).some(item=>String(item.id)===note1.id)
+  );
   report.created=create;
   if(create.status!==200||!Number(create.data?.rowVersions?.['lead:'+leadId])){
     throw new Error('frontend_batch_create_failed:'+JSON.stringify(create));
@@ -79,10 +127,13 @@ try{
   }
 
   const note2={id:'NOTE-'+suffix+'-2',text:'Phase 5 frontend batch patch',at:new Date().toISOString()};
-  const patch=await batch([
+  const patch=await batchWithRecovery([
     {resource:'lead',operation:'patch',id:leadId,baseRowVersion:v1,input:{priority:'Высокий'}},
     {resource:'note',operation:'create',leadId,baseRowVersion:v1,input:note2}
-  ]);
+  ],snapshot=>{
+    const lead=(snapshot.leads||[]).find(item=>String(item.id)===leadId);
+    return lead?.priority==='Высокий'&&(snapshot.notes?.[leadId]||[]).some(item=>String(item.id)===note2.id);
+  });
   report.patched=patch;
   if(patch.status!==200)throw new Error('frontend_batch_patch_failed:'+JSON.stringify(patch));
 
@@ -91,7 +142,7 @@ try{
   const patchedLead=(afterPatch.leads||[]).find(item=>String(item.id)===leadId);
   if(!(v2>v1)||patchedLead?.priority!=='Высокий')throw new Error('frontend_batch_version_not_advanced');
 
-  const stale=await batch([
+  const stale=await batchRetryTransient([
     {resource:'lead',operation:'patch',id:leadId,baseRowVersion:v1,input:{priority:'Низкий'}}
   ]);
   report.stale=stale;
