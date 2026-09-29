@@ -36,9 +36,12 @@ async function getDomainStore(){
   return domainStorePromise;
 }
 async function getApiState(){
+  if(ydbReadMode==='normalized'&&!legacyStateWriteEnabled){
+    return readAutoSaleState({legacyStore:null,domainStore:await getDomainStore(),mode:'normalized',authoritativeNormalized:true});
+  }
   const legacyStore=await getStore();
   if(ydbReadMode==='legacy')return readAutoSaleState({legacyStore,domainStore:null,mode:'legacy'});
-  return readAutoSaleState({legacyStore,domainStore:await getDomainStore(),mode:ydbReadMode,authoritativeNormalized:ydbReadMode==='normalized'&&!legacyStateWriteEnabled});
+  return readAutoSaleState({legacyStore,domainStore:await getDomainStore(),mode:ydbReadMode,authoritativeNormalized:false});
 }
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
