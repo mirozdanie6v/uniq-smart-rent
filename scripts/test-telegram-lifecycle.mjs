@@ -134,12 +134,16 @@ async function recoverCommittedBatch(label,expected,prepared,beforeRevision){
 
 async function batch(label,expected,operations){
   const prepared=operations.map(operation=>structuredClone(operation));
-  const created=new Set(prepared.filter(operation=>operation.operation==='create').map(operation=>{
+  const created=new Set(prepared.filter(operation=>
+    operation.operation==='create'&&!['note','payment'].includes(String(operation.resource||''))
+  ).map(operation=>{
     const ref=aggregateRef(operation);return ref.resource+':'+ref.id;
   }));
   for(const operation of prepared){
     const ref=aggregateRef(operation);
-    if(!ref.resource||!ref.id||operation.operation==='create'||created.has(ref.resource+':'+ref.id))continue;
+    const childCreate=operation.operation==='create'&&['note','payment'].includes(String(operation.resource||''));
+    const topLevelCreate=operation.operation==='create'&&!childCreate;
+    if(!ref.resource||!ref.id||topLevelCreate||created.has(ref.resource+':'+ref.id))continue;
     if(operation.baseRowVersion===undefined||operation.baseRowVersion===null){
       const version=knownVersion(ref.resource,ref.id);
       assert.ok(version,label+': missing tracked rowVersion for '+ref.resource+':'+ref.id);
