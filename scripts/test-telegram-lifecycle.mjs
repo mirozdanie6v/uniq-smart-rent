@@ -100,6 +100,7 @@ const payment=i=>({
 });
 const report={leadId,quoteId,orderId,telegram:'@Flyer_Flyer',writePath:'entity-batch',receipts,cleanup:null};
 let scenarioStarted=false;
+let cleanupFailure=null;
 
 try{
   const lead={
@@ -205,8 +206,9 @@ try{
       assert.ok(!(after.orders||[]).some(x=>x.id===orderId),'Test order cleanup failed');
     }catch(error){
       report.cleanup={...(report.cleanup||{}),error:String(error?.stack||error)};
-      if(report.ok)throw error;
+      cleanupFailure=error;
     }
   }
   await writeFile('telegram-lifecycle-report.json',JSON.stringify(report,null,2));
+  if(report.ok&&cleanupFailure)throw cleanupFailure;
 }
