@@ -57,3 +57,10 @@ test('Phase 6 live scenarios cannot use the retired whole-state writer',async()=
   assert.ok(ui.includes('/api/auto-sale/entities/batch'));
   assert.ok(ui.includes('legacyWholeStateWrites'));
 });
+
+test('Phase 6 Telegram lifecycle versions child creates against their parent aggregate',async()=>{
+  const telegram=await root('scripts/test-telegram-lifecycle.mjs');
+  assert.ok(telegram.includes("['note','payment'].includes(String(operation.resource||''))"));
+  assert.ok(telegram.includes('operation.baseRowVersion=version'));
+  assert.ok(telegram.includes("resource:'payment',operation:'create',orderId"));
+});
