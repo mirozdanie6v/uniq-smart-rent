@@ -1,16 +1,16 @@
 # AUTO SALE — YDB/state/outbox audit and zero-downtime normalization plan
 
-## Implementation status — 2026-09-28
+## Implementation status — 2026-09-30
 
-### Phase 6 — IN PROGRESS
+### Phase 6 — COMPLETE
 
-Compatibility retirement is implemented and live on Yandex staging.
+Compatibility retirement is implemented and verified on Yandex staging.
 
 Completed:
 - browser whole-state persistence has been physically removed from the active bootstrap path;
 - `?legacyAutosync`, `__AUTO_SALE_FLUSH__` and browser `PUT /api/auto-sale/state` are gone;
 - server `PUT /api/auto-sale/state` is retired by default and returns `410 legacy_state_write_retired`;
-- `AUTO_SALE_LEGACY_STATE_WRITE=false` and `AUTO_SALE_YDB_DUAL_WRITE=false` are staging deploy defaults;
+- `AUTO_SALE_LEGACY_STATE_WRITE=false`, `AUTO_SALE_YDB_DUAL_WRITE=false`, `AUTO_SALE_YDB_READ_MODE=normalized`;
 - normalized domain rows are authoritative for runtime reads and entity commands;
 - entity mutations write normalized rows + notification outbox transactionally without updating the compatibility blob;
 - the final compatibility blob remains read-only and is archived as a deploy artifact for rollback/audit;
@@ -19,10 +19,12 @@ Completed:
 - optimistic entity API and frontend-style entity batches pass live staging gates;
 - real manager UI scenario passes: lead creation, edit and status transition persist through entity batches;
 - real director UI scenario passes: role switch, overview/pipeline/finance/orders routes and read-only order controls verified;
-- the UI acceptance run emitted zero legacy whole-state writes;
-- Cloudflare Telegram relay reachability and Yandex runtime Telegram configuration pass diagnostics.
+- UI acceptance emits zero legacy whole-state writes;
+- Cloudflare Telegram relay reachability and Yandex runtime Telegram configuration pass diagnostics;
+- targeted Telegram delivery uses YDB transactional claim/lease as the concurrency authority and is no longer starved by an in-process notification mutex.
 
-Current acceptance status:
+Final acceptance:
+- GitHub Actions run `36616444236`: `success`;
 - application quality gate: passing;
 - Yandex staging deployment: passing;
 - normalized authoritative read gate: passing;
@@ -31,14 +33,19 @@ Current acceptance status:
 - legacy whole-state retirement gate: passing;
 - frozen legacy snapshot archive: passing;
 - manager/director real UI gate: passing;
-- Telegram lifecycle: partially verified with real deliveries to `@Flyer_Flyer`; repeated Yandex/YDB serverless timeouts were observed at different lifecycle steps even though preceding messages were delivered successfully.
+- full Telegram lifecycle to `@Flyer_Flyer`: passing;
+- Telegram lifecycle produced 40 unique delivered messages: 20 client + 20 manager;
+- lifecycle completed through `Выдача` with `AUTOWORLD_FULL_LIFECYCLE_OK`;
+- temporary QA lead, quote and order cleanup is enforced by the acceptance script and the successful run confirms cleanup completed without assertion failure.
 
-Timeout hardening now in verification:
-- lifecycle requests distinguish transient `503/504/TimeoutError` from business failures;
-- after an ambiguous timeout, the test reconciles against authoritative normalized state before retrying;
-- a protected outbox-by-revision endpoint allows the test to recover notification IDs and verify delivery without creating duplicate business mutations or duplicate Telegram events.
+Transient-failure hardening verified:
+- lifecycle requests distinguish transient `500/502/503/504/TimeoutError` from business failures;
+- ambiguous mutation timeouts reconcile against authoritative normalized state before retrying;
+- delivery receipts can be recovered by notification IDs and revision without duplicating business mutations;
+- expired `processing` outbox rows are reclaimable through YDB leases;
+- targeted notification processing claims IDs directly through YDB instead of waiting on a process-local mutex.
 
-Phase 6 is not marked COMPLETE until one full end-to-end Telegram lifecycle passes on the retired legacy architecture and the temporary QA entities are cleaned up successfully.
+Phase 6 completion criterion is satisfied: one full end-to-end Telegram lifecycle passed on the retired legacy architecture, manager/director UI gates passed, and temporary QA entities were cleaned successfully.
 
 ### Phase 5 — COMPLETE
 
