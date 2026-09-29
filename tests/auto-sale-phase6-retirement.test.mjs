@@ -64,3 +64,11 @@ test('Phase 6 Telegram lifecycle versions child creates against their parent agg
   assert.ok(telegram.includes('operation.baseRowVersion=version'));
   assert.ok(telegram.includes("resource:'payment',operation:'create',orderId"));
 });
+
+test('Phase 6 Telegram lifecycle retries only transient receipt and outbox failures',async()=>{
+  const telegram=await root('scripts/test-telegram-lifecycle.mjs');
+  assert.ok(telegram.includes('[500,502,503,504].includes(checked.response.status)'));
+  assert.ok(telegram.includes('[500,502,503,504].includes(processed.response.status)'));
+  assert.ok(telegram.includes("delivery receipts HTTP '+checked.response.status"));
+});
+
