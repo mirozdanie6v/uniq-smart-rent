@@ -17,6 +17,7 @@ const port=Number(process.env.PORT||8080);
 const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
 const apiKey=String(process.env.AUTO_SALE_API_KEY||'').trim();
 const publicDemoWrite=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_PUBLIC_DEMO_WRITE||''));
+const legacyStateWriteEnabled=/^(1|true|yes)$/i.test(String(process.env.AUTO_SALE_LEGACY_STATE_WRITE||''));
 const mediaBucket=String(process.env.AUTO_SALE_MEDIA_BUCKET||'').trim();
 const ydbReadMode=['legacy','shadow','normalized'].includes(String(process.env.AUTO_SALE_YDB_READ_MODE||''))?String(process.env.AUTO_SALE_YDB_READ_MODE):'legacy';
 if(!connectionString)throw new Error('YDB_CONNECTION_STRING is required');
@@ -37,7 +38,7 @@ async function getDomainStore(){
 async function getApiState(){
   const legacyStore=await getStore();
   if(ydbReadMode==='legacy')return readAutoSaleState({legacyStore,domainStore:null,mode:'legacy'});
-  return readAutoSaleState({legacyStore,domainStore:await getDomainStore(),mode:ydbReadMode});
+  return readAutoSaleState({legacyStore,domainStore:await getDomainStore(),mode:ydbReadMode,authoritativeNormalized:ydbReadMode==='normalized'&&!legacyStateWriteEnabled});
 }
 const media=createObjectStorage({bucket:mediaBucket});
 const telegram=createTelegramService();
@@ -155,7 +156,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/health'){
       const liveStore=await getStore();
       await liveStore.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',legacyStateWrite:legacyStateWriteEnabled?'rollback-only':'retired',normalizedAuthoritative:ydbReadMode==='normalized'&&!legacyStateWriteEnabled,ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
@@ -286,7 +287,8 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
-      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      if(!legacyStateWriteEnabled){json(res,{error:'legacy_state_write_retired'},410);return}
+      if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const input=await parseJson(req);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
@@ -306,9 +308,9 @@ const server=http.createServer(async(req,res)=>{
     }
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/admin/clear-applications'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
-      const state=await (await getStore()).loadState();
+      const state=await (await getDomainStore()).loadState();
       const cleared={...state,leads:[],quotes:[],orders:[],notes:{}};
-      const result=await (await getStore()).replaceState(cleared,{expectedRevision:state.revision});
+      const result=await (await getStore()).commitDomainState(state,cleared,{expectedRevision:state.revision});
       if(result.status!==200){json(res,result.data,result.status);return}
       json(res,{ok:true,cleared:{leads:Array.isArray(state.leads)?state.leads.length:0,quotes:Array.isArray(state.quotes)?state.quotes.length:0,orders:Array.isArray(state.orders)?state.orders.length:0},revision:result.data.revision});
       return;
@@ -371,7 +373,7 @@ const server=http.createServer(async(req,res)=>{
     if(req.method==='POST'&&url.pathname==='/api/auto-sale/telegram/test-conversation-delivery'){
       if(!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       if(!telegram.enabled){json(res,{error:'telegram_not_configured'},503);return}
-      const state=await (await getStore()).loadState();
+      const state=await (await getDomainStore()).loadState();
       const team=Array.isArray(state.team)?state.team:[];
       const leads=Array.isArray(state.leads)?state.leads:[];
       let lead=leads.find(item=>/^\d+$/.test(String(item?.telegramUserId||''))&&team.some(member=>member?.active!==false&&String(member?.name||'').trim()===String(item?.manager||'').trim()&&/^\d+$/.test(String(member?.telegramUserId||''))));
@@ -497,7 +499,7 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,50_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
       try{
-        const state=await (await getStore()).loadState();
+        const state=await (await getDomainStore()).loadState();
         const result=await telegram.sendManual(state,{
           leadId:input.leadId,
           target:input.target,
