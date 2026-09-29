@@ -227,6 +227,34 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     const [rows]=await readQuery(()=>sql`SELECT status, COUNT(*) AS count FROM auto_sale_notification_outbox GROUP BY status`,'notification-stats');
     return Object.fromEntries(rows.map(row=>[String(row.status),Number(row.count||0n)]));
   }
+  async function notificationStatusByRevision(revision){
+    const prefix=String(Math.max(0,Number(revision)||0))+':';
+    const [rows]=await readQuery(()=>sql`
+      SELECT id,status,payload,message_id,last_error,attempts
+      FROM auto_sale_notification_outbox
+    `,'notification-revision-status');
+    const results=[];
+    for(const row of rows){
+      const id=String(row.id||'');
+      if(!id.startsWith(prefix))continue;
+      let item={};try{item=JSON.parse(String(row.payload||'{}'))}catch{}
+      results.push({
+        id,
+        status:String(row.status||''),
+        event:item.event,
+        target:item.target,
+        leadId:item.leadId,
+        quoteId:item.quoteId,
+        orderId:item.orderId,
+        paymentId:item.paymentId,
+        messageId:String(row.message_id||''),
+        error:String(row.last_error||''),
+        attempts:Number(row.attempts||0n)
+      });
+    }
+    return results;
+  }
+
   async function notificationStatus(ids=[]){
     const results=[];
     for(const id of ids){
@@ -245,5 +273,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,ping,close,domainDualWriteEnabled:domainDualWrite};
+  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,notificationStatusByRevision,ping,close,domainDualWriteEnabled:domainDualWrite};
 }
