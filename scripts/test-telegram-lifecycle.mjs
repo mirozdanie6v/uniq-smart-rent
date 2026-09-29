@@ -194,10 +194,17 @@ try{
 }finally{
   if(scenarioStarted){
     try{
-      const cleaned=await req('/api/auto-sale/admin/cleanup-test-scenario',{
+      let cleaned=await req('/api/auto-sale/admin/cleanup-test-scenario',{
         method:'POST',
         body:{leadId,quoteId,orderId}
       });
+      if(cleaned.response.status===504){
+        await sleep(1800);
+        const check=await state();
+        const remains=(check.leads||[]).some(x=>x.id===leadId)||(check.quotes||[]).some(x=>x.id===quoteId)||(check.orders||[]).some(x=>x.id===orderId);
+        if(!remains)cleaned={response:{ok:true,status:200},data:{ok:true,timeoutRecovered:true}};
+        else cleaned=await req('/api/auto-sale/admin/cleanup-test-scenario',{method:'POST',body:{leadId,quoteId,orderId}});
+      }
       report.cleanup={status:cleaned.response.status,data:cleaned.data};
       assert.ok(cleaned.response.ok,'Telegram lifecycle cleanup failed: '+JSON.stringify(cleaned.data));
       const after=await state();
