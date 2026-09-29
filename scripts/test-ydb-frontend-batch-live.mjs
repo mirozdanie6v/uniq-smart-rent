@@ -94,7 +94,7 @@ try{
 
   const parity=await request('/api/auto-sale/admin/read-parity');
   report.parity=parity;
-  if(parity.status!==200||parity.data?.source!=='normalized'||parity.data?.fallback!==false||parity.data?.shadowVerified!==true){
+  if(parity.status!==200||parity.data?.source!=='normalized'||parity.data?.fallback!==false||parity.data?.authoritative!==true||parity.data?.shadowVerified!==false){
     throw new Error('frontend_batch_parity_failed:'+JSON.stringify(parity));
   }
 
