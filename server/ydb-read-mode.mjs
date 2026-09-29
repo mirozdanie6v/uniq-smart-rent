@@ -21,8 +21,30 @@ function preserveLegacyEmptyNotes(normalized,legacy){
   return normalized;
 }
 
-export async function readAutoSaleState({legacyStore,domainStore,mode='legacy',attempts=3,logger=console}){
+export async function readAutoSaleState({legacyStore,domainStore,mode='legacy',attempts=3,logger=console,authoritativeNormalized=false}){
   if(mode==='legacy')return{state:await legacyStore.loadState(),source:'legacy',fallback:false};
+
+  if(mode==='normalized'&&authoritativeNormalized){
+    if(typeof domainStore?.loadAuthoritativeSnapshot!=='function')throw new Error('normalized_authoritative_store_unavailable');
+    const snapshot=await domainStore.loadAuthoritativeSnapshot();
+    const revision=Number(snapshot.meta?.sourceRevision??snapshot.meta?.compatRevision)||0;
+    const rows=snapshot.rows||{};
+    const initialized=Boolean(
+      (rows.leads||[]).length||
+      (rows.quotes||[]).length||
+      (rows.orders||[]).length||
+      (rows.team||[]).length||
+      (rows.catalog||[]).length
+    );
+    return{
+      state:domainRowsToLegacyState(rows,{revision,initialized}),
+      source:'normalized',
+      fallback:false,
+      authoritative:true,
+      shadowVerified:false,
+      rowVersions:entityRowVersions(rows)
+    };
+  }
 
   if(typeof domainStore?.loadReadSnapshot==='function'){
     try{
