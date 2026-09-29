@@ -58,6 +58,17 @@ test('Phase 6 live scenarios cannot use the retired whole-state writer',async()=
   assert.ok(ui.includes('legacyWholeStateWrites'));
 });
 
+test('Phase 6 browser reconciles ambiguous transient entity responses against authoritative state',async()=>{
+  const bootstrap=await root('public/auto-sale-bootstrap.mjs');
+  const ui=await root('scripts/test-ui-manager-director-live.mjs');
+  assert.ok(bootstrap.includes('operationAppliedToState'));
+  assert.ok(bootstrap.includes('transientEntityStatus'));
+  assert.ok(bootstrap.includes('recoveredStatus:response.status'));
+  assert.ok(bootstrap.includes("['note','payment'].includes(String(operation.resource||''))"));
+  assert.ok(ui.includes('createRecovered=createTransient'));
+  assert.ok(ui.includes('patchRecovered=patchTransient'));
+});
+
 test('Phase 6 Telegram lifecycle versions child creates against their parent aggregate',async()=>{
   const telegram=await root('scripts/test-telegram-lifecycle.mjs');
   assert.ok(telegram.includes("['note','payment'].includes(String(operation.resource||''))"));
