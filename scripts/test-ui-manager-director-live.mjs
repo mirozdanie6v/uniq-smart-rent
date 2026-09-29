@@ -124,6 +124,8 @@ try{
   report.manager.persistedStatus=verified.data.entity.status;
   report.manager.rowVersion=verified.data.rowVersion;
   await page.screenshot({path:'phase6-manager.png',fullPage:true});
+  const openModal=page.locator('.auto-modal [data-close]').first();
+  if(await openModal.count())await openModal.click();
 
   await page.locator('[data-role="owner"]').click();
   await page.getByText('Панель директора',{exact:false}).waitFor({timeout:10000});
