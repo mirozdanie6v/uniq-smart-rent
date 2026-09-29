@@ -59,9 +59,7 @@ async function getEntityStores(){
   return{legacyStore,domainStore};
 }
 const notificationPumpIntervalMs=Math.max(15_000,Number(process.env.AUTO_SALE_NOTIFICATION_PUMP_MS||60_000));
-let notificationPumpBusy=false;
 let notificationPriorityWaiters=0;
-const notificationSleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function safeNotificationStats(){
   try{return await (await getStore()).notificationStats()}
   catch(error){console.error('AUTO SALE notification stats unavailable',error);return{unavailable:true}}
@@ -83,13 +81,9 @@ async function deliverNotificationBatch(pending){
   return results;
 }
 async function processNotificationClaim(claim){
-  if(notificationPumpBusy)return{ok:true,skipped:'busy',processed:0,stats:await safeNotificationStats()};
-  notificationPumpBusy=true;
-  try{
-    const pending=await claim();
-    const results=await deliverNotificationBatch(pending);
-    return{ok:true,processed:results.length,results,stats:await safeNotificationStats()};
-  }finally{notificationPumpBusy=false}
+  const pending=await claim();
+  const results=await deliverNotificationBatch(pending);
+  return{ok:true,processed:results.length,results,stats:await safeNotificationStats()};
 }
 async function processNotificationOutbox(limit=50){
   if(notificationPriorityWaiters>0)return{ok:true,skipped:'priority-waiter',processed:0,stats:await safeNotificationStats()};
@@ -100,9 +94,6 @@ async function processNotificationIds(ids=[]){
   if(!wanted.length)return{ok:true,processed:0,results:[],stats:await safeNotificationStats()};
   notificationPriorityWaiters++;
   try{
-    const deadline=Date.now()+20_000;
-    while(notificationPumpBusy&&Date.now()<deadline)await notificationSleep(200);
-    if(notificationPumpBusy)return{ok:true,skipped:'busy-timeout',processed:0,stats:await safeNotificationStats()};
     return processNotificationClaim(async()=>await (await getStore()).pendingNotificationsByIds(wanted));
   }finally{
     notificationPriorityWaiters=Math.max(0,notificationPriorityWaiters-1);
