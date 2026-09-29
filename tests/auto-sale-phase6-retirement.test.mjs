@@ -70,5 +70,7 @@ test('Phase 6 Telegram lifecycle retries only transient receipt and outbox failu
   assert.ok(telegram.includes('[500,502,503,504].includes(checked.response.status)'));
   assert.ok(telegram.includes('[500,502,503,504].includes(processed.response.status)'));
   assert.ok(telegram.includes("delivery receipts HTTP '+checked.response.status"));
+  assert.ok(telegram.includes('/api/auto-sale/notifications/revision?revision='));
+  assert.ok(telegram.includes('wanted.has(item.id)'));
 });
 
