@@ -99,6 +99,15 @@ async function processNotificationIds(ids=[]){
     notificationPriorityWaiters=Math.max(0,notificationPriorityWaiters-1);
   }
 }
+function takeCommittedNotificationItems(data){
+  const items=Array.isArray(data?._notificationItems)?data._notificationItems:[];
+  if(data&&Object.prototype.hasOwnProperty.call(data,'_notificationItems'))delete data._notificationItems;
+  return items;
+}
+function deferCommittedNotifications(items,label='AUTO SALE committed Telegram delivery deferred'){
+  if(!items.length)return;
+  queueMicrotask(()=>deliverNotificationBatch(items).catch(error=>console.error(label,error)));
+}
 
 const apiHeaders={
   'content-type':'application/json; charset=utf-8',
@@ -192,10 +201,10 @@ const server=http.createServer(async(req,res)=>{
         prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
       });
       if(result.status>=200&&result.status<300&&notifyTelegram){
+        const notificationItems=takeCommittedNotificationItems(result.data);
         result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
         json(res,result.data,result.status);
-        const queuedIds=[...(result.data.notifications?.ids||[])];
-        setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity batch Telegram delivery deferred',error)));
+        deferCommittedNotifications(notificationItems,'AUTO SALE entity batch Telegram delivery deferred');
         return;
       }
       json(res,result.data,result.status);return;
@@ -223,10 +232,10 @@ const server=http.createServer(async(req,res)=>{
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
         if(result.status>=200&&result.status<300&&notifyTelegram){
+          const notificationItems=takeCommittedNotificationItems(result.data);
           result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
           json(res,result.data,result.status);
-          const queuedIds=[...(result.data.notifications?.ids||[])];
-          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          deferCommittedNotifications(notificationItems,'AUTO SALE entity Telegram delivery deferred');
           return;
         }
         json(res,result.data,result.status);return;
@@ -242,10 +251,10 @@ const server=http.createServer(async(req,res)=>{
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
         if(result.status>=200&&result.status<300&&notifyTelegram){
+          const notificationItems=takeCommittedNotificationItems(result.data);
           result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
           json(res,result.data,result.status);
-          const queuedIds=[...(result.data.notifications?.ids||[])];
-          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          deferCommittedNotifications(notificationItems,'AUTO SALE entity Telegram delivery deferred');
           return;
         }
         json(res,result.data,result.status);return;
@@ -262,10 +271,10 @@ const server=http.createServer(async(req,res)=>{
           id:entityId,input,prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
         if(result.status>=200&&result.status<300&&notifyTelegram){
+          const notificationItems=takeCommittedNotificationItems(result.data);
           result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
           json(res,result.data,201);
-          const queuedIds=[...(result.data.notifications?.ids||[])];
-          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          deferCommittedNotifications(notificationItems,'AUTO SALE entity Telegram delivery deferred');
           return;
         }
         json(res,result.data,result.status===200?201:result.status);return;
@@ -281,10 +290,10 @@ const server=http.createServer(async(req,res)=>{
           prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
         });
         if(result.status>=200&&result.status<300&&notifyTelegram){
+          const notificationItems=takeCommittedNotificationItems(result.data);
           result.data.notifications={...(result.data.notifications||{}),deliveries:[]};
           json(res,result.data,result.status);
-          const queuedIds=[...(result.data.notifications?.ids||[])];
-          setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE entity Telegram delivery deferred',error)));
+          deferCommittedNotifications(notificationItems,'AUTO SALE entity Telegram delivery deferred');
           return;
         }
         json(res,result.data,result.status);return;
@@ -318,10 +327,10 @@ const server=http.createServer(async(req,res)=>{
       if(result.status>=200&&result.status<300&&notifyTelegram){
         // State persistence is the request's critical path. Telegram delivery is durable
         // through the outbox and must not hold the state response open for tens of seconds.
+        const notificationItems=takeCommittedNotificationItems(result.data);
         result.data.notifications.deliveries=[];
         json(res,result.data,result.status);
-        const queuedIds=[...(result.data.notifications?.ids||[])];
-        setImmediate(()=>processNotificationIds(queuedIds).catch(error=>console.error('AUTO SALE Telegram delivery deferred',error)));
+        deferCommittedNotifications(notificationItems,'AUTO SALE Telegram delivery deferred');
         return;
       }
       json(res,result.data,result.status);
