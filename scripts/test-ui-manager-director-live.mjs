@@ -42,12 +42,12 @@ try{
   const context=await browser.newContext({viewport:{width:1280,height:900}});
   const page=await context.newPage();
 
-  await page.route('**/api/auto-sale/entities/batch',async route=>{
-    const request=route.request();
+  await page.route('**/api/auto-sale/**',async route=>{
+    const request=route.request(),url=new URL(request.url());
     await route.continue({headers:{
       ...request.headers(),
       'x-auto-sale-key':apiKey,
-      'x-auto-sale-skip-telegram':'1'
+      ...(url.pathname==='/api/auto-sale/entities/batch'?{'x-auto-sale-skip-telegram':'1'}:{})
     }});
   });
 
@@ -72,7 +72,7 @@ try{
 
   await page.goto(base+'/',{waitUntil:'networkidle',timeout:60000});
   await page.locator('[data-role="manager"]').click();
-  await page.getByText('Рабочая панель менеджера',{exact:false}).waitFor({timeout:10000});
+  await page.getByText('Админ-доступ · операционная работа',{exact:false}).waitFor({timeout:10000});
   report.manager.roleSwitch=true;
 
   await page.locator('[data-go="leads"]').click();
@@ -144,7 +144,7 @@ try{
   if(await openModal.count())await openModal.click();
 
   await page.locator('[data-role="owner"]').click();
-  await page.getByText('Панель директора',{exact:true}).first().waitFor({timeout:10000});
+  await page.getByText('Админ-доступ · аналитика',{exact:false}).first().waitFor({timeout:10000});
   report.director.roleSwitch=true;
 
   const routes=[
