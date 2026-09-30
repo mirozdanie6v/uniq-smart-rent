@@ -1,0 +1,58 @@
+name: Diagnose AWG gateway
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .diagnose-autoworld-awg-gateway
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+      - name: Get Yandex IAM
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          BODY=$(curl -fsS -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+      - name: Install YC
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+      - name: Diagnose gateway
+        run: |
+          set -euo pipefail
+          yc serverless api-gateway get --name autoworld-awg-gw --folder-id "$YC_FOLDER_ID" --format json | tee /tmp/gateway.json
+          DOMAIN=$(jq -r '.domain' /tmp/gateway.json)
+          echo "DOMAIN=$DOMAIN"
+          code=$(curl -sS --connect-timeout 5 --max-time 30 -D /tmp/headers -o /tmp/body -w '%{http_code}' "https://${DOMAIN}/api/health" || true)
+          echo "HTTP_CODE=$code"
+          echo "=== HEADERS ==="
+          cat /tmp/headers || true
+          echo "=== BODY ==="
+          cat /tmp/body || true
