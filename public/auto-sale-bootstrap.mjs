@@ -213,8 +213,44 @@ async function entityBatch(operations){
     throw error;
   }
 }
+async function deleteLeadCascade(id){
+  const leadId=String(id||'').trim();
+  if(!leadId)throw new Error('lead_id_required');
+  let lastError=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    let baseRowVersion=versionFor('lead',leadId);
+    if(baseRowVersion===null)baseRowVersion=await ensureEntityVersion('lead',leadId);
+    if(baseRowVersion===null)throw Object.assign(new Error('lead_not_found'),{code:'lead_not_found'});
+    const response=await fetch('/api/auto-sale/leads/'+encodeURIComponent(leadId)+'?cascade=1',{
+      method:'DELETE',
+      headers:authHeaders({'content-type':'application/json'}),
+      body:JSON.stringify({baseRowVersion})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(response.ok){
+      revision=Number(data.revision||revision);
+      sessionStorage.setItem(REVISION_KEY,String(revision));
+      delete rowVersions.lead?.[leadId];
+      for(const quoteId of data.deleted?.quotes||[])delete rowVersions.quote?.[quoteId];
+      for(const orderId of data.deleted?.orders||[])delete rowVersions.order?.[orderId];
+      window.__AUTO_SALE_ROW_VERSIONS__=rowVersions;
+      window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true};
+      window.dispatchEvent(new CustomEvent('auto-sale-lead-deleted',{detail:{leadId,revision,deleted:data.deleted||{}}}));
+      return{ok:true,...data};
+    }
+    lastError=Object.assign(new Error(data.error||('http_'+response.status)),{code:data.error||('http_'+response.status),data:{...data,status:response.status}});
+    if(response.status===409&&data.error==='entity_conflict'&&attempt<2){
+      delete rowVersions.lead?.[leadId];
+      continue;
+    }
+    throw lastError;
+  }
+  throw lastError||new Error('lead_delete_failed');
+}
+
 window.__AUTO_SALE_ENTITY_BATCH__=entityBatch;
 window.__AUTO_SALE_ENTITY_VERSION__=versionFor;
+window.__AUTO_SALE_DELETE_LEAD__=deleteLeadCascade;
 window.__AUTO_SALE_REFRESH_STATE__=pullInitialState;
 
 function normalizeSettledPaymentField(){
