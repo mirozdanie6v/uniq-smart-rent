@@ -1,0 +1,99 @@
+name: Refresh AWG API Gateway
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .refresh-awg-gateway
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  AWG_GATEWAY_NAME: autoworld-awg-prod
+
+jobs:
+  refresh:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout canonical AutoWorld cutover branch
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/autoworld
+          ref: awg/production-cutover
+          path: autoworld
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY"; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          set -euo pipefail
+          ok=false
+          for attempt in 1 2 3 4; do
+            rm -rf "$HOME/yandex-cloud" || true
+            if curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n; then
+              ok=true
+              break
+            fi
+            sleep $((attempt * 3))
+          done
+          test "$ok" = true
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Update AWG gateway
+        working-directory: autoworld
+        run: |
+          set -euo pipefail
+          yc serverless api-gateway update \
+            --name "$AWG_GATEWAY_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --spec infra/yandex/awg-production-gateway.yaml
+          GW_JSON=$(yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          GW_DOMAIN=$(printf '%s' "$GW_JSON" | jq -r '.domain')
+          test -n "$GW_DOMAIN" && test "$GW_DOMAIN" != "null"
+          echo "AWG_GATEWAY_URL=https://$GW_DOMAIN" >> "$GITHUB_ENV"
+
+      - name: Verify AWG gateway health
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' "$AWG_GATEWAY_URL/api/health" || true)
+            if [ "$code" = "200" ] && jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == "viiversion-autoworld-awg-media"' /tmp/health.json >/dev/null; then
+              cat /tmp/health.json | jq .
+              exit 0
+            fi
+            echo "Gateway health attempt $attempt HTTP $code"
+            cat /tmp/health.json || true
+            sleep 4
+          done
+          exit 1
