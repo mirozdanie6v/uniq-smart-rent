@@ -92,7 +92,10 @@ test('Phase 6 browser reconciles ambiguous transient entity responses against au
   const ui=await root('scripts/test-ui-manager-director-live.mjs');
   assert.ok(bootstrap.includes('operationAppliedToState'));
   assert.ok(bootstrap.includes('transientEntityStatus'));
-  assert.ok(bootstrap.includes('recoveredStatus:response.status'));
+  assert.ok(bootstrap.includes('reconcileAmbiguousBatch'));
+  assert.ok(bootstrap.includes('recoveredStatus:status'));
+  assert.ok(bootstrap.includes('refreshOperationVersions'));
+  assert.ok(bootstrap.includes('for(let attempt=1;attempt<=3;attempt++)'));
   assert.ok(bootstrap.includes("['note','payment'].includes(String(operation.resource||''))"));
   assert.ok(ui.includes('createRecovered=createTransient'));
   assert.ok(ui.includes('patchRecovered=patchTransient'));
