@@ -10,7 +10,10 @@ export function managerDirectoryEntry(name){
   const exact=AUTO_SALE_MANAGERS[clean(name)];
   if(exact)return exact;
   const normalized=clean(name).toLowerCase();
-  return Object.values(AUTO_SALE_MANAGERS).find(item=>item.name.toLowerCase()===normalized)||null;
+  return Object.values(AUTO_SALE_MANAGERS).find(item=>{
+    const canonical=item.name.toLowerCase();
+    return canonical===normalized||normalized.startsWith(canonical+' ')||canonical.startsWith(normalized+' ');
+  })||null;
 }
 
 export function managerTelegramUsername(name){
