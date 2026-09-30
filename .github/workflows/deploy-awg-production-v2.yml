@@ -33,7 +33,7 @@ jobs:
     if: github.ref == 'refs/heads/prototype/auto-sale-usa'
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout canonical AutoWorld cutover branch
+      - name: Checkout canonical AutoWorld main
         uses: actions/checkout@v5
         with:
           repository: mirozdanie6v/autoworld
