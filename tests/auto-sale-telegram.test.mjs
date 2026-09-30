@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {managerTelegramContact,managerTelegramIdentity} from '../public/auto-sale-manager-directory.mjs';
 
 const source=await readFile(new URL('../public/auto-sale-telegram.mjs',import.meta.url),'utf8');
 const catalog=await readFile(new URL('../public/auto-sale-catalog-extra.mjs',import.meta.url),'utf8');
@@ -46,4 +47,26 @@ test('manual bot messages use verified Telegram initData instead of exposing bot
 test('manager order screen can send a bot message to the linked client',()=>{
   assert.ok(source.includes('enhanceManagerOrder'));
   assert.ok(source.includes('Сообщение клиенту через бота'));
+});
+
+
+test('selected manager maps to canonical Telegram contact',()=>{
+  assert.equal(managerTelegramContact('Дмитрий'),'@Flyer_Flyer');
+  assert.equal(managerTelegramContact('Алексей'),'@smit44744');
+  assert.equal(managerTelegramContact('Иван'),'@Ivan_AWG');
+  assert.equal(managerTelegramContact('Дмитрий Владимиров'),'@Flyer_Flyer');
+});
+
+test('manager Telegram identity reuses confirmed team user id when available',()=>{
+  const identity=managerTelegramIdentity('Алексей',[
+    {name:'Алексей',telegram:'@smit44744',telegramUserId:'777001'}
+  ]);
+  assert.deepEqual(identity,{username:'smit44744',id:'777001',name:'Алексей'});
+});
+
+test('manager Telegram field is readonly and follows selected assignee',()=>{
+  assert.ok(source.includes('syncSelectedManagerTelegram'));
+  assert.ok(source.includes('readonly aria-readonly="true"'));
+  assert.ok(source.includes("select[name=\"manager\"]"));
+  assert.ok(source.includes('Подставляется автоматически по выбранному ответственному'));
 });
