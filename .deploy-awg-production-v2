@@ -1,3 +1,4 @@
 .deploy-awg-production-v2
 rerun after AWG workflow test fix
 rerun after yc installer retry fix
+rerun after api gateway cli fix
