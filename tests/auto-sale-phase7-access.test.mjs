@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
   MAX_ADMIN_ACCOUNTS,accessForState,stateForAccess,rowVersionsForAccess,
-  sanitizeClientOperations,sanitizeAdminOperations,validateAdminSlotOperations,canBindAdminMember
+  sanitizeClientOperations,sanitizeAdminOperations
 } from '../server/auto-sale-access.mjs';
 
 const state={
@@ -27,29 +27,36 @@ const state={
   catalog:[{id:'C1',active:true},{id:'C2',active:false}]
 };
 
-test('Phase 7 supports three explicit human admin slots and binding within an invited slot',()=>{
+test('Phase 7 fixes admin access to exactly three invited Telegram usernames',async()=>{
   assert.equal(MAX_ADMIN_ACCOUNTS,3);
-  const invited=state.team[2];
-  assert.deepEqual(canBindAdminMember(state,invited,{id:303,username:'three'}),{ok:true,unchanged:false});
+  const server=await readFile(new URL('../server/yandex-server.mjs',import.meta.url),'utf8');
+  const workflow=await readFile(new URL('../.github/workflows/deploy-yandex-staging.yml',import.meta.url),'utf8');
+  for(const username of ['Flyer_Flyer','smit44744','Ivan_AWG']){
+    assert.ok(server.includes(username),username+' server invite');
+    assert.ok(workflow.includes(username),username+' workflow invite');
+  }
+  assert.match(server,/claimAdminAccess\(username,String\(user\.id\)\)/);
+  assert.match(server,/adminAccessByUserId/);
 });
 
-test('Phase 7 generic team changes cannot create a fourth admin slot',()=>{
-  const checked=validateAdminSlotOperations(state,[{resource:'team',operation:'create',id:'T5',input:{id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:true}}]);
-  assert.equal(checked.ok,false);
-  assert.equal(checked.error,'admin_limit_reached');
-  assert.equal(checked.max,3);
+test('Phase 7 pins invited usernames to immutable Telegram user IDs in YDB',async()=>{
+  const stateStore=await readFile(new URL('../server/ydb-state.mjs',import.meta.url),'utf8');
+  assert.match(stateStore,/CREATE TABLE IF NOT EXISTS auto_sale_admin_access/);
+  assert.match(stateStore,/adminAccessByUserId/);
+  assert.match(stateStore,/adminAccessByUsername/);
+  assert.match(stateStore,/adminAccessList/);
+  assert.match(stateStore,/claimAdminAccess/);
+  assert.match(stateStore,/admin_username_already_claimed/);
+  assert.match(stateStore,/admin_user_already_claimed/);
 });
 
-test('Phase 7 Telegram contact alone is not a new admin invitation',()=>{
-  const member={id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:false};
-  assert.equal(canBindAdminMember(state,member,{id:505,username:'five'}).error,'admin_access_not_invited');
-});
-
-test('Phase 7 staff binding requires matching invited Telegram username',()=>{
-  const invited=state.team[2];
-  assert.equal(canBindAdminMember(state,invited,{id:303,username:'wrong'}).error,'manager_telegram_invite_mismatch');
-  assert.equal(canBindAdminMember(state,state.team[0],{id:999,username:'one'}).error,'manager_telegram_already_linked');
-  assert.equal(canBindAdminMember(state,state.team[0],{id:101,username:'one'}).unchanged,true);
+test('Phase 7 CRM team role and admin authorization are independent',async()=>{
+  const teamUi=await readFile(new URL('../public/auto-sale-director-team.mjs',import.meta.url),'utf8');
+  assert.match(teamUi,/Админ-доступ не задаётся ролью сотрудника/);
+  assert.match(teamUi,/@Flyer_Flyer/);
+  assert.match(teamUi,/@smit44744/);
+  assert.match(teamUi,/@Ivan_AWG/);
+  assert.doesNotMatch(teamUi,/name="adminAccess"/);
 });
 
 test('Phase 7 viewer state never exposes other clients or staff directory',()=>{
@@ -119,10 +126,11 @@ test('Phase 7 runtime and browser use Telegram-backed RBAC instead of role-switc
   const workflow=await readFile(new URL('../.github/workflows/deploy-yandex-staging.yml',import.meta.url),'utf8');
   assert.match(server,/writeMode:'telegram-rbac'/);
   assert.match(server,/sanitizeClientOperations/);
-  assert.match(server,/canBindAdminMember/);
+  assert.match(server,/claimAdminAccess/);
   assert.match(bootstrap,/x-telegram-init-data/);
   assert.match(app,/hasAdminAccess/);
   assert.match(app,/if\(!hasAdminAccess&&t\.dataset\.role!=='client'\)return/);
   assert.match(workflow,/AUTO_SALE_PUBLIC_DEMO_WRITE=false/);
+  assert.match(workflow,/AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG/);
   assert.match(workflow,/Verify Telegram RBAC read\/write boundary/);
 });
