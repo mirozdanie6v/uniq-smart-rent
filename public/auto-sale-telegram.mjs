@@ -1,3 +1,4 @@
+import {managerTelegramContact,managerTelegramIdentity} from './auto-sale-manager-directory.mjs';
 const KEYS={leads:'auto-sale-leads-v2',quotes:'auto-sale-quotes-v2',orders:'auto-sale-orders-v2'};
 const tg=window.Telegram?.WebApp;
 try{tg?.ready?.()}catch{}
@@ -83,10 +84,11 @@ function clientTelegram(lead){
 }
 function managerTelegram(lead){
   const managerName=String(lead.manager||'').trim();
+  const canonical=managerTelegramIdentity(managerName,teamRows());
   const member=teamRows().find(item=>item&&item.active!==false&&String(item.name||'').trim()===managerName);
-  const username=String(lead.managerTelegramUsername||member?.telegramUsername||member?.telegram||'').replace(/^@/,'').trim();
-  const id=String(lead.managerTelegramUserId||member?.telegramUserId||'').trim();
-  return{username,id,name:String(lead.managerTelegramName||member?.name||managerName)}
+  const username=String(canonical.username||lead.managerTelegramUsername||member?.telegramUsername||member?.telegram||'').replace(/^@/,'').trim();
+  const id=String(canonical.id||lead.managerTelegramUserId||member?.telegramUserId||'').trim();
+  return{username,id,name:String(canonical.name||lead.managerTelegramName||member?.name||managerName)}
 }
 function hasTelegram(contact){return Boolean(contact.username||contact.id)}
 function openTelegram(contact){
@@ -126,7 +128,8 @@ function enhanceManagerLead(){
   const form=document.querySelector('#leadEditForm');if(!form||form.dataset.telegramReady==='1')return;
   form.dataset.telegramReady='1';const id=form.elements.id?.value;const lead=leads().find(item=>item.id===id);if(!lead)return;
   const managerName=form.elements.manager?.value||lead.manager||'';
-  const label=document.createElement('label');label.className='auto-tg-manager-field';label.innerHTML=`Telegram менеджера<input name="managerTelegram" placeholder="@username" value="${esc(lead.managerTelegramUsername?`@${lead.managerTelegramUsername}`:(currentTelegram?.username?`@${currentTelegram.username}`:''))}"><small>Нужен клиенту для кнопки «Написать менеджеру»</small>`;
+  const managerIdentity=managerTelegramIdentity(managerName,teamRows());
+  const label=document.createElement('label');label.className='auto-tg-manager-field';label.innerHTML=`Telegram менеджера<input name="managerTelegram" readonly aria-readonly="true" value="${esc(managerIdentity.username?`@${managerIdentity.username}`:(lead.managerTelegramUsername?`@${lead.managerTelegramUsername}`:''))}"><small>Подставляется автоматически по выбранному ответственному</small>`;
   const managerLabel=form.elements.manager?.closest('label');managerLabel?.after(label);
 
   const contact=clientTelegram(lead);const side=document.querySelector('.auto-side-panel .auto-side-actions');
@@ -140,7 +143,7 @@ function enhanceManagerLead(){
   if(clientContact&&hasTelegram(contact)&&!clientContact.querySelector('.auto-tg-inline')){
     const info=document.createElement('small');info.className='auto-tg-inline';info.textContent=contact.username?`Telegram: @${contact.username}`:`Telegram ID: ${contact.id}`;clientContact.append(info);
   }
-  if(managerName&&currentTelegram?.username&&!lead.managerTelegramUsername)label.title=`Текущий Telegram будет сохранён как контакт менеджера ${managerName} после сохранения карточки.`;
+  if(managerName)label.title=managerTelegramContact(managerName)?`Контакт ${managerTelegramContact(managerName)} привязан к менеджеру ${managerName}.`:'Для этого сотрудника Telegram-контакт не задан.';
 }
 
 function clientLeadRows(){return leads().filter(item=>item.clientCreated)}
@@ -152,6 +155,33 @@ function enhanceClientOrderCards(){
     const hint=document.createElement('div');hint.className='auto-order-open-hint';hint.innerHTML='<span>Открыть подробности</span><strong>→</strong>';card.append(hint);
   });
 }
+
+function syncSelectedManagerTelegram(form){
+  const select=form?.elements?.manager;if(!select)return;
+  const identity=managerTelegramIdentity(select.value,teamRows());
+  const field=form.elements.managerTelegram;
+  if(field)field.value=identity.username?'@'+identity.username:'';
+  let hint=form.querySelector('[data-manager-telegram-auto]');
+  if(!hint){
+    hint=document.createElement('small');
+    hint.dataset.managerTelegramAuto='1';
+    hint.className='auto-tg-inline';
+    select.closest('label')?.append(hint);
+  }
+  if(hint)hint.textContent=identity.username?'Telegram: @'+identity.username:'Telegram не задан';
+}
+document.addEventListener('change',event=>{
+  const select=event.target?.matches?.('select[name="manager"]')?event.target:null;
+  if(!select)return;
+  const form=select.closest('form');
+  if(form?.id==='requestForm'||form?.id==='leadEditForm')syncSelectedManagerTelegram(form);
+},true);
+document.addEventListener('click',event=>{
+  if(event.target?.matches?.('[data-manager-new],[data-lead]'))setTimeout(()=>{
+    const form=document.querySelector('#requestForm,#leadEditForm');
+    if(form)syncSelectedManagerTelegram(form);
+  },0);
+},true);
 
 function quoteFor(leadId){return quotes().filter(item=>item.leadId===leadId).sort((a,b)=>(Number(b.version)||0)-(Number(a.version)||0))[0]}
 function orderFor(leadId){return orders().find(item=>item.leadId===leadId)}
@@ -197,11 +227,11 @@ document.addEventListener('submit',event=>{
         }catch(error){console.warn('AUTO SALE Telegram client link failed',error)}
       },250);
     }
-    if(managerMode){const managerTelegram=String(form.elements.managerTelegram?.value||'').trim();if(managerTelegram)pendingManager={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),managerTelegram};}
+    if(managerMode){const selectedManager=String(form.elements.manager?.value||'').trim(),managerIdentity=managerTelegramIdentity(selectedManager,teamRows());if(managerIdentity.username)pendingManager={name:form.elements.name.value.trim(),contact:form.elements.contact.value.trim(),model:form.elements.model.value.trim(),managerTelegram:'@'+managerIdentity.username,managerName:selectedManager,managerId:managerIdentity.id};}
   }
   if(form?.id==='leadEditForm'){
-    const id=form.elements.id?.value,raw=String(form.elements.managerTelegram?.value||'').trim();pendingManager={id,managerTelegram:raw,managerName:form.elements.manager?.value||''};
-    setTimeout(()=>{if(!pendingManager?.id)return;const username=usernameFrom(pendingManager.managerTelegram)||String(pendingManager.managerTelegram||'').replace(/^@/,'').trim();const useCurrent=currentTelegram&&username===currentTelegram.username;patchLead(pendingManager.id,{managerTelegramUsername:username,managerTelegramUserId:useCurrent?currentTelegram.id:'',managerTelegramName:pendingManager.managerName});pendingManager=null},0);
+    const id=form.elements.id?.value,managerName=String(form.elements.manager?.value||'').trim(),identity=managerTelegramIdentity(managerName,teamRows());pendingManager={id,managerTelegram:identity.username?'@'+identity.username:'',managerName,managerId:identity.id};
+    setTimeout(()=>{if(!pendingManager?.id)return;const username=usernameFrom(pendingManager.managerTelegram)||String(pendingManager.managerTelegram||'').replace(/^@/,'').trim();patchLead(pendingManager.id,{managerTelegramUsername:username,managerTelegramUserId:String(pendingManager.managerId||''),managerTelegramName:pendingManager.managerName});pendingManager=null},0);
   }
 },true);
 
