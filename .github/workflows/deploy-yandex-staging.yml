@@ -11,6 +11,10 @@ on:
         description: Send the full test lifecycle to the linked Flyer_Flyer account
         type: boolean
         default: false
+      clear_crm:
+        description: Remove all CRM applications/orders/quotes/notes before customer demo
+        type: boolean
+        default: false
   push:
     branches: [prototype/auto-sale-usa]
     paths:
@@ -303,3 +307,26 @@ jobs:
           name: telegram-lifecycle-report
           path: telegram-lifecycle-report.json
           if-no-files-found: ignore
+
+      - name: Finalize clean CRM for customer demo
+        if: ${{ always() && (inputs.clear_crm == true || contains(github.event.head_commit.message, '[clear-crm]')) }}
+        run: |
+          set -euo pipefail
+          export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
+          node scripts/clear-auto-sale-demo-data.mjs
+
+      - name: Upload customer demo cleanup report
+        if: ${{ always() && (inputs.clear_crm == true || contains(github.event.head_commit.message, '[clear-crm]')) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: auto-sale-demo-cleanup-report
+          path: auto-sale-demo-cleanup-report.json
+          if-no-files-found: error
+
+      - name: Verify customer demo CRM is empty
+        if: ${{ always() && (inputs.clear_crm == true || contains(github.event.head_commit.message, '[clear-crm]')) }}
+        run: |
+          set -euo pipefail
+          URL=${STAGING_URL%/}
+          curl -fsS -H "x-auto-sale-key: $AUTO_SALE_API_KEY" "$URL/api/auto-sale/state"             | tee /tmp/auto-sale-demo-state.json             | jq -e '(.leads|length)==0 and (.quotes|length)==0 and (.orders|length)==0 and (.notes|length)==0 and (.team|length)>0 and (.catalog|type)=="array"' >/dev/null
+          echo "AUTO SALE customer demo CRM is empty"
