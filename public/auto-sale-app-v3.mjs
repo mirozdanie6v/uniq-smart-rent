@@ -330,7 +330,7 @@ briefcase:'<path d="M4 7h16v12H4z"/><path d="M9 7V4h6v3M4 12h16M10 12v2h4v-2"/>'
 crown:'<path d="m4 8 4 4 4-7 4 7 4-4-2 10H6z"/><path d="M7 21h10"/>'
 };return '<svg class="auto-ui-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+(icons[name]||icons.home)+'</svg>'}
 const savedRole=sessionStorage.getItem(KEYS.role);
-const initialRole=access.testHarnessFallback?'client':(hasAdminAccess&&['manager','owner'].includes(savedRole)?savedRole:(hasAdminAccess?'manager':'client'));
+const initialRole=access.testHarnessFallback?(nav[savedRole]?savedRole:'client'):(hasAdminAccess&&['manager','owner'].includes(savedRole)?savedRole:(hasAdminAccess?'manager':'client'));
 const state={role:initialRole,route:'home',query:'',brand:'all',origin:'all',budget:'all',leadQuery:'',leadStatus:'all',leadSource:'all',leadManager:'all',orderQuery:'',orderStage:'all',orderManager:'all',orderRisk:'all',modal:null};
 state.route=nav[state.role][0][0];
 const dashboard=()=>dashboardStats(leads,orders,quotes);
