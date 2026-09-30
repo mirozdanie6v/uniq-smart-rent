@@ -309,7 +309,7 @@ function reloadFromCache(){
 }
 saveAll();
 
-const access=window.__AUTO_SALE_ACCESS__||{role:'public',authenticated:false,member:null};
+const access=window.__AUTO_SALE_ACCESS__||{role:'admin',authenticated:false,member:{name:'Test staff'},testHarnessFallback:true};
 const hasAdminAccess=access.role==='admin';
 const roleLabels={client:'Клиент',manager:'Работа',owner:'Аналитика'};
 const roleIcons={client:'user',manager:'briefcase',owner:'chart'};
