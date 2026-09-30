@@ -131,6 +131,7 @@ jobs:
         env:
           AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
           AUTOWORLD_RELAY_SECRET: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+          AUTO_SALE_CATALOG_IMPORT_KEY: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
           AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
         run: |
           set -euo pipefail
@@ -142,6 +143,10 @@ jobs:
           fi
           if [ -n "${AUTOWORLD_RELAY_SECRET:-}" ]; then
             EXTRA_ENV+=(--environment "AUTOWORLD_RELAY_SECRET=$AUTOWORLD_RELAY_SECRET")
+          fi
+          if [ -n "${AUTO_SALE_CATALOG_IMPORT_KEY:-}" ]; then
+            echo "::add-mask::$AUTO_SALE_CATALOG_IMPORT_KEY"
+            EXTRA_ENV+=(--environment "AUTO_SALE_CATALOG_IMPORT_KEY=$AUTO_SALE_CATALOG_IMPORT_KEY")
           fi
           if [ -n "${AUTO_SALE_MANAGER_CHAT_IDS:-}" ]; then
             EXTRA_ENV+=(--environment "AUTO_SALE_MANAGER_CHAT_IDS=$AUTO_SALE_MANAGER_CHAT_IDS")
