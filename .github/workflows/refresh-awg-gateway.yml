@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: mirozdanie6v/autoworld
-          ref: awg/production-cutover
+          ref: main
           path: autoworld
 
       - name: Request GitHub OIDC token
