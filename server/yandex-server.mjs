@@ -10,7 +10,7 @@ import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
 import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,mutateAutoSaleEntityBatch,readAutoSaleEntity} from './ydb-entity-commands.mjs';
-import {MAX_ADMIN_ACCOUNTS,accessForState,stateForAccess,rowVersionsForAccess,sanitizeClientOperations,sanitizeAdminOperations,canBindAdminMember,linkedAdminMembers} from './auto-sale-access.mjs';
+import {MAX_ADMIN_ACCOUNTS,accessForState,stateForAccess,rowVersionsForAccess,sanitizeClientOperations,sanitizeAdminOperations,validateAdminSlotOperations,canBindAdminMember,adminSlotMembers,linkedAdminMembers} from './auto-sale-access.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -192,7 +192,7 @@ const server=http.createServer(async(req,res)=>{
       const liveStore=await getStore();
       await liveStore.ping();
       const accessState=await (await getDomainStore()).loadState();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:5,writeMode:'telegram-rbac',stateReadMode:'viewer-filtered',publicDemoWrite:Boolean(publicDemoWrite),maxAdminAccounts:MAX_ADMIN_ACCOUNTS,linkedAdminAccounts:linkedAdminMembers(accessState).length,legacyStateWrite:legacyStateWriteEnabled?'rollback-only':'retired',normalizedAuthoritative:ydbReadMode==='normalized'&&!legacyStateWriteEnabled,ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:5,writeMode:'telegram-rbac',stateReadMode:'viewer-filtered',publicDemoWrite:Boolean(publicDemoWrite),maxAdminAccounts:MAX_ADMIN_ACCOUNTS,adminSlots:adminSlotMembers(accessState).length,linkedAdminAccounts:linkedAdminMembers(accessState).length,legacyStateWrite:legacyStateWriteEnabled?'rollback-only':'retired',normalizedAuthoritative:ydbReadMode==='normalized'&&!legacyStateWriteEnabled,ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
@@ -217,7 +217,11 @@ const server=http.createServer(async(req,res)=>{
         const sanitized=sanitizeClientOperations(accessState,operations,access.user);
         if(!sanitized.ok){json(res,{error:sanitized.error},sanitized.status);return}
         operations=sanitized.operations;
-      }else operations=sanitizeAdminOperations(operations,{apiKey:hasApiKey(req)});
+      }else{
+        operations=sanitizeAdminOperations(operations,{apiKey:hasApiKey(req)});
+        const slotCheck=validateAdminSlotOperations(accessState,operations);
+        if(!slotCheck.ok){json(res,{error:slotCheck.error,max:slotCheck.max,count:slotCheck.count},slotCheck.status);return}
+      }
       const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
       const notifyTelegram=telegram.enabled&&!skipTelegram;
       const entityStores=await getEntityStores();
@@ -250,6 +254,7 @@ const server=http.createServer(async(req,res)=>{
         json(res,result.data,result.status);return;
       }
       if(access.role!=='admin'){json(res,{error:access.role==='public'?'telegram_auth_required':'admin_required'},access.role==='public'?401:403);return}
+      if(resource==='team'&&!hasApiKey(req)){json(res,{error:'team_mutation_requires_batch'},405);return}
       if(req.method==='POST'&&child==='notes'&&resource==='lead'&&id){
         const input=await parseJson(req);
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
