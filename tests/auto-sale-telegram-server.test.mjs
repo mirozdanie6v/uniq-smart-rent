@@ -93,6 +93,16 @@ test('manual manager message can only target the linked client',async()=>{
   assert.match(sent[0].body.text,/AUTO МИР · сообщение менеджера/);
 });
 
+test('pinned admin can message any client regardless of assigned manager',async()=>{
+  const sent=[];
+  const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'',relayUrl:''});
+  const state={leads:[{id:'L-ADMIN',name:'Client',model:'Audi Q7',telegramUserId:'700',managerTelegramUserId:'800'}]};
+  const result=await service.sendManual(state,{leadId:'L-ADMIN',target:'client',text:'Admin message',senderId:'999',isAdmin:true});
+  assert.equal(result.ok,true);
+  assert.equal(sent.length,1);
+  assert.equal(sent[0].body.chat_id,'700');
+});
+
 test('fallback manager chat ids receive new client request notifications',async()=>{
   const sent=[];
   const service=createTelegramService({token:TOKEN,fetchImpl:fakeFetch(sent),managerChatIds:'900,901',relayUrl:''});
