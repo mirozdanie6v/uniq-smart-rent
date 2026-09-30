@@ -1,0 +1,70 @@
+name: Configure AWG Telegram Mini App
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .configure-awg-miniapp
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AWG_APP_URL: https://awg.viiversion.com/
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Configure AutoWorld Mini App menu only
+        env:
+          AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$AUTO_SALE_TELEGRAM_BOT_TOKEN"
+          cat > /tmp/configure-awg-menu.mjs <<'JS'
+          const token=String(process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'').trim();
+          const appUrl=String(process.env.AWG_APP_URL||'').trim();
+          const call=async(method,payload={})=>{
+            const r=await fetch(`https://api.telegram.org/bot${token}/${method}`,{
+              method:'POST',
+              headers:{'content-type':'application/json'},
+              body:JSON.stringify(payload)
+            });
+            const d=await r.json();
+            if(!r.ok||d.ok===false)throw new Error(`${method}: ${d.description||r.status}`);
+            return d.result;
+          };
+          const me=await call('getMe');
+          if(String(me.username||'').toLowerCase()!=='autoworld_georgia_bot'){
+            throw new Error(`Wrong bot token: @${me.username||'unknown'}`);
+          }
+          const webhookBefore=await call('getWebhookInfo');
+          await call('setChatMenuButton',{menu_button:{
+            type:'web_app',
+            text:'🚗 Открыть каталог',
+            web_app:{url:appUrl}
+          }});
+          const button=await call('getChatMenuButton');
+          const webhookAfter=await call('getWebhookInfo');
+          if(button?.type!=='web_app'||button?.web_app?.url!==appUrl){
+            throw new Error(`Menu URL mismatch: ${JSON.stringify(button)}`);
+          }
+          if((webhookBefore?.url||'')!==(webhookAfter?.url||'')){
+            throw new Error('Webhook changed unexpectedly');
+          }
+          console.log(JSON.stringify({
+            ok:true,
+            bot:'@'+me.username,
+            appUrl,
+            menuButton:button,
+            webhookPreserved:true,
+            webhookConfigured:Boolean(webhookAfter?.url)
+          },null,2));
+          JS
+          node /tmp/configure-awg-menu.mjs
