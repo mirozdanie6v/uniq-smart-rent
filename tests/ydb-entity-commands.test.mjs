@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   addAutoSaleNote,
   addAutoSalePayment,
+  deleteAutoSaleLeadCascade,
   mutateAutoSaleEntity,
   mutateAutoSaleEntityBatch,
   readAutoSaleEntity
@@ -134,6 +135,40 @@ test('lead delete is refused while dependent order exists',async()=>{
   });
   assert.equal(result.status,409);
   assert.equal(result.data.error,'lead_has_dependencies');
+});
+
+test('admin cascade delete removes lead and all related CRM aggregates',async()=>{
+  const initial=base();
+  initial.quotes=[{id:'Q-1',leadId:'L-1',model:'BMW X5',status:'Согласован',version:1}];
+  initial.orders=[{...initial.orders[0],payments:[{id:'P-1',amount:250,date:'2026-09-30',method:'Банк'}],paid:250}];
+  initial.notes={'L-1':[{id:'N-1',text:'Test note',at:'2026-09-30T10:00:00Z'}]};
+  const stores=makeStores(initial);
+  const result=await deleteAutoSaleLeadCascade({
+    ...stores,id:'L-1',expectedRowVersion:10
+  });
+  assert.equal(result.status,200);
+  assert.equal(result.data.operation,'delete-cascade');
+  assert.deepEqual(result.data.deleted.quotes,['Q-1']);
+  assert.deepEqual(result.data.deleted.orders,['O-1']);
+  assert.equal(result.data.deleted.notes,1);
+  assert.equal(result.data.deleted.payments,1);
+  const state=stores.getState();
+  assert.equal(state.leads.length,0);
+  assert.equal(state.quotes.length,0);
+  assert.equal(state.orders.length,0);
+  assert.deepEqual(state.notes,{});
+  assert.equal(state.team.length,1);
+  assert.equal(state.catalog.length,1);
+});
+
+test('cascade lead delete still enforces optimistic row version',async()=>{
+  const stores=makeStores(base());
+  const result=await deleteAutoSaleLeadCascade({
+    ...stores,id:'L-1',expectedRowVersion:9
+  });
+  assert.equal(result.status,409);
+  assert.equal(result.data.error,'entity_conflict');
+  assert.equal(stores.getState().leads.length,1);
 });
 
 test('catalog item can be patched and deleted by row version',async()=>{
