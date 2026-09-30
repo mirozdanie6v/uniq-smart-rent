@@ -159,7 +159,15 @@ function enhanceClientOrderCards(){
 function syncSelectedManagerTelegram(form){
   const select=form?.elements?.manager;if(!select)return;
   const identity=managerTelegramIdentity(select.value,teamRows());
-  const field=form.elements.managerTelegram;
+  let field=form.elements.managerTelegram;
+  if(!field){
+    const label=document.createElement('label');
+    label.className='auto-tg-manager-field';
+    label.dataset.managerTelegramAutoField='1';
+    label.innerHTML='<span>Telegram менеджера</span><input name="managerTelegram" readonly aria-readonly="true"><small>Подставляется автоматически по выбранному ответственному</small>';
+    select.closest('label')?.after(label);
+    field=label.querySelector('input[name="managerTelegram"]');
+  }
   if(field)field.value=identity.username?'@'+identity.username:'';
   let hint=form.querySelector('[data-manager-telegram-auto]');
   if(!hint){
