@@ -6,6 +6,15 @@ let suppress=false;
 let revision=Number(sessionStorage.getItem(REVISION_KEY)||0);
 let rowVersions={lead:{},quote:{},order:{},team:{},catalog:{}};
 
+function telegramInitData(){return String(window.Telegram?.WebApp?.initData||'').trim()}
+function authHeaders(extra={}){
+  const headers={...extra},initData=telegramInitData();
+  if(initData)headers['x-telegram-init-data']=initData;
+  return headers;
+}
+window.__AUTO_SALE_AUTH_HEADERS__=authHeaders;
+window.__AUTO_SALE_ACCESS__={role:'public',authenticated:false,member:null};
+
 function writeCache(key,value){suppress=true;try{originalSet.call(localStorage,key,JSON.stringify(value))}finally{suppress=false}}
 window.__AUTO_SALE_CACHE_WRITE__=writeCache;
 window.__AUTO_SALE_ROW_VERSIONS__=rowVersions;
@@ -36,7 +45,7 @@ async function ensureEntityVersion(resource,id){
   const plural=({lead:'leads',quote:'quotes',order:'orders',team:'team',catalog:'catalog'})[resource];
   if(!plural||!id)return null;
   try{
-    const response=await fetch('/api/auto-sale/'+plural+'/'+encodeURIComponent(id),{headers:{accept:'application/json'},cache:'no-store'});
+    const response=await fetch('/api/auto-sale/'+plural+'/'+encodeURIComponent(id),{headers:authHeaders({accept:'application/json'}),cache:'no-store'});
     const data=await response.json().catch(()=>({}));
     if(!response.ok)return null;
     const value=Number(data.rowVersion);
@@ -57,7 +66,7 @@ async function pullInitialState(){
   for(let attempt=1;attempt<=3;attempt++){
     try{
       const response=await fetch('/api/auto-sale/state',{
-        headers:{accept:'application/json'},
+        headers:authHeaders({accept:'application/json'}),
         cache:'no-store',
         signal:AbortSignal.timeout(18000)
       });
@@ -66,8 +75,9 @@ async function pullInitialState(){
         revision=Number(state.revision||0);
         setRowVersions(state._rowVersions||{});
         sessionStorage.setItem(REVISION_KEY,String(revision));
+        window.__AUTO_SALE_ACCESS__=state._access||{role:'public',authenticated:false,member:null};
         applyServerState(state);
-        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized)};
+        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:Boolean(state.initialized),access:window.__AUTO_SALE_ACCESS__};
         return state;
       }
       if(![500,502,503,504].includes(response.status))return null;
@@ -132,7 +142,7 @@ async function entityBatch(operations){
   try{
     const response=await fetch('/api/auto-sale/entities/batch',{
       method:'POST',
-      headers:{'content-type':'application/json'},
+      headers:authHeaders({'content-type':'application/json'}),
       body:JSON.stringify({operations:raw})
     });
     const data=await response.json().catch(()=>({}));
