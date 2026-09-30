@@ -10,6 +10,7 @@ import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
 import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,mutateAutoSaleEntityBatch,readAutoSaleEntity} from './ydb-entity-commands.mjs';
+import {MAX_ADMIN_ACCOUNTS,accessForState,stateForAccess,rowVersionsForAccess,sanitizeClientOperations,sanitizeAdminOperations,canBindAdminMember,linkedAdminMembers} from './auto-sale-access.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const distDir=path.join(rootDir,'dist');
@@ -127,7 +128,23 @@ const hasApiKey=req=>{
   const actual=Buffer.from(supplied);
   return expected.length===actual.length&&expected.length>0&&timingSafeEqual(expected,actual);
 };
-const authorized=req=>publicDemoWrite||hasApiKey(req);
+const telegramAuth=req=>{
+  const raw=String(req.headers['x-telegram-init-data']||'').trim();
+  return raw?telegram.validateInitData(raw):{ok:false,error:'telegram_init_data_required'};
+};
+async function requestAccess(req,state=null){
+  const current=state||await (await getDomainStore()).loadState();
+  return{state:current,access:accessForState(current,{apiKey:hasApiKey(req),telegramAuth:telegramAuth(req)})};
+}
+const accessSummary=access=>({role:access.role,authenticated:Boolean(access.authenticated),member:access.member?{id:access.member.id,name:access.member.name}:null});
+function visibleEntity(state,access,resource,id){
+  if(access.role==='admin')return true;
+  if(resource==='catalog')return (stateForAccess(state,access).catalog||[]).some(item=>String(item?.id||'')===String(id));
+  if(access.role!=='client')return false;
+  const visible=stateForAccess(state,access);
+  const collection=({lead:'leads',quote:'quotes',order:'orders'})[resource];
+  return Boolean(collection&&(visible[collection]||[]).some(item=>String(item?.id||'')===String(id)));
+}
 async function parseJson(req,maxBytes=2_000_000){
   const chunks=[];let size=0;
   for await(const chunk of req){
@@ -174,7 +191,8 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==='/api/health'){
       const liveStore=await getStore();
       await liveStore.ping();
-      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:4,writeMode:publicDemoWrite?'public-demo':'authenticated',stateReadMode:publicDemoWrite?'public-demo':'authenticated',legacyStateWrite:legacyStateWriteEnabled?'rollback-only':'retired',normalizedAuthoritative:ydbReadMode==='normalized'&&!legacyStateWriteEnabled,ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
+      const accessState=await (await getDomainStore()).loadState();
+      json(res,{ok:true,service:'auto-sale-yandex',persistence:'ydb-serverless',schemaVersion:5,writeMode:'telegram-rbac',stateReadMode:'viewer-filtered',publicDemoWrite:Boolean(publicDemoWrite),maxAdminAccounts:MAX_ADMIN_ACCOUNTS,linkedAdminAccounts:linkedAdminMembers(accessState).length,legacyStateWrite:legacyStateWriteEnabled?'rollback-only':'retired',normalizedAuthoritative:ydbReadMode==='normalized'&&!legacyStateWriteEnabled,ydbDomainDualWrite:liveStore.domainDualWriteEnabled?'enabled':'disabled',ydbStateReadMode:ydbReadMode,mediaStorage:mediaBucket?'object-storage':'disabled',mediaBucket:mediaBucket||null,telegramNotifications:telegram.enabled?'enabled':'disabled',telegramFallbackManagers:telegram.fallbackManagerCount});
       return;
     }
     if(url.pathname==='/api/auto-sale/admin/read-parity'&&req.method==='GET'){
@@ -190,14 +208,22 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/entities/batch'&&req.method==='POST'){
-      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const input=await parseJson(req);
+      const accessState=await (await getDomainStore()).loadState();
+      const access=accessForState(accessState,{apiKey:hasApiKey(req),telegramAuth:telegramAuth(req)});
+      if(access.role==='public'){json(res,{error:'telegram_auth_required'},401);return}
+      let operations=Array.isArray(input?.operations)?input.operations:[];
+      if(access.role==='client'){
+        const sanitized=sanitizeClientOperations(accessState,operations,access.user);
+        if(!sanitized.ok){json(res,{error:sanitized.error},sanitized.status);return}
+        operations=sanitized.operations;
+      }else operations=sanitizeAdminOperations(operations,{apiKey:hasApiKey(req)});
       const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1'&&hasApiKey(req);
       const notifyTelegram=telegram.enabled&&!skipTelegram;
       const entityStores=await getEntityStores();
       const result=await mutateAutoSaleEntityBatch({
         ...entityStores,
-        operations:Array.isArray(input?.operations)?input.operations:[],
+        operations,
         prepareNotifications:notifyTelegram?telegram.collectStateChanges:null
       });
       if(result.status>=200&&result.status<300&&notifyTelegram){
@@ -212,15 +238,18 @@ const server=http.createServer(async(req,res)=>{
 
     const entityMatch=url.pathname.match(/^\/api\/auto-sale\/(leads|quotes|orders|catalog|team)(?:\/([^/]+))?(?:\/(notes|payments))?$/);
     if(entityMatch){
-      if(!publicDemoWrite&&!hasApiKey(req)){json(res,{error:'unauthorized'},401);return}
       const [,plural,rawId,child]=entityMatch;
       const resource=({leads:'lead',quotes:'quote',orders:'order',catalog:'catalog',team:'team'})[plural];
       const id=rawId?decodeURIComponent(rawId):'';
+      const accessState=await (await getDomainStore()).loadState();
+      const access=accessForState(accessState,{apiKey:hasApiKey(req),telegramAuth:telegramAuth(req)});
       if(req.method==='GET'&&id&&!child){
+        if(!visibleEntity(accessState,access,resource,id)){json(res,{error:access.role==='public'?'not_found':'forbidden'},access.role==='public'?404:403);return}
         const entityStores=await getEntityStores();
         const result=await readAutoSaleEntity({...entityStores,resource,id});
         json(res,result.data,result.status);return;
       }
+      if(access.role!=='admin'){json(res,{error:access.role==='public'?'telegram_auth_required':'admin_required'},access.role==='public'?401:403);return}
       if(req.method==='POST'&&child==='notes'&&resource==='lead'&&id){
         const input=await parseJson(req);
         const skipTelegram=req.headers['x-auto-sale-skip-telegram']==='1';
@@ -311,9 +340,10 @@ const server=http.createServer(async(req,res)=>{
     }
 
     if(url.pathname==='/api/auto-sale/state'&&req.method==='GET'){
-      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
       const read=await getApiState();
-      json(res,{...read.state,_rowVersions:read.rowVersions||{}});
+      const access=accessForState(read.state,{apiKey:hasApiKey(req),telegramAuth:telegramAuth(req)});
+      const visible=stateForAccess(read.state,access);
+      json(res,{...visible,_rowVersions:rowVersionsForAccess(read.rowVersions||{},read.state,access),_access:accessSummary(access)});
       return;
     }
     if(url.pathname==='/api/auto-sale/state'&&req.method==='PUT'){
@@ -494,6 +524,10 @@ const server=http.createServer(async(req,res)=>{
       const existing=String(lead.telegramUserId||'').trim();
       if(existing&&existing!==String(auth.user.id)){json(res,{error:'client_telegram_already_linked'},409);return}
       const username=String(auth.user.username||'').replace(/^@/,'');
+      if(!existing){
+        const contact=String(lead.contact||'').trim().replace(/^https?:\/\/t\.me\//i,'@').replace(/\/$/,'');
+        if(!username||contact.toLowerCase()!==('@'+username).toLowerCase()){json(res,{error:'client_telegram_link_forbidden'},403);return}
+      }
       const patched=await mutateAutoSaleEntity({
         legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'lead',operation:'patch',id:leadId,
         expectedRowVersion:current.data.rowVersion,
@@ -512,18 +546,24 @@ const server=http.createServer(async(req,res)=>{
       const input=await parseJson(req,20_000);
       const memberId=String(input?.memberId||'').trim();
       const memberName=String(input?.memberName||'').trim();
-      const state=await (await getStore()).loadState();
+      const state=await (await getDomainStore()).loadState();
       const team=Array.isArray(state.team)?state.team:[];
       let member=memberId?team.find(item=>String(item?.id||'')===memberId):null;
       if(!member&&memberName)member=team.find(item=>String(item?.name||'').trim()===memberName);
-      if(!member){json(res,{error:'manager_team_member_required',team:team.filter(item=>item?.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item?.role||''))).map(item=>({id:item.id,name:item.name,role:item.role}))},409);return}
+      if(!member){
+        const username=String(auth.user.username||'').replace(/^@/,'').toLowerCase();
+        const matches=team.filter(item=>item?.active!==false&&String(item?.telegram||item?.telegramUsername||'').replace(/^@/,'').toLowerCase()===username);
+        if(matches.length===1)member=matches[0];
+      }
+      if(!member){json(res,{error:'admin_invite_required'},403);return}
+      const binding=canBindAdminMember(state,member,auth.user);
+      if(!binding.ok){json(res,{error:binding.error},binding.status);return}
       const current=await readAutoSaleEntity({legacyStore:await getStore(),domainStore:await getDomainStore(),resource:'team',id:String(member.id)});
       if(current.status!==200){json(res,current.data,current.status);return}
       const telegramUserId=String(auth.user.id);
       const username=String(auth.user.username||'').replace(/^@/,'');
-      const alreadyLinked=String(current.data.entity.telegramUserId||'')===telegramUserId&&String(current.data.entity.telegramUsername||'')===username;
-      if(alreadyLinked){
-        json(res,{ok:true,unchanged:true,telegramUserId,username,member:{id:member.id,name:member.name,role:member.role},revision:state.revision,rowVersion:current.data.rowVersion});
+      if(binding.unchanged){
+        json(res,{ok:true,unchanged:true,telegramUserId,username,access:'admin',member:{id:member.id,name:member.name,role:member.role},revision:state.revision,rowVersion:current.data.rowVersion});
         return;
       }
       const patched=await mutateAutoSaleEntity({
@@ -533,7 +573,7 @@ const server=http.createServer(async(req,res)=>{
         prepareNotifications:null
       });
       if(patched.status!==200){json(res,patched.data,patched.status);return}
-      json(res,{ok:true,telegramUserId,username,member:{id:member.id,name:member.name,role:member.role},revision:patched.data.revision,rowVersion:patched.data.rowVersion});
+      json(res,{ok:true,telegramUserId,username,access:'admin',member:{id:member.id,name:member.name,role:member.role},revision:patched.data.revision,rowVersion:patched.data.rowVersion});
       return;
     }
 
@@ -572,7 +612,8 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/media'&&req.method==='POST'){
-      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      const {access}=await requestAccess(req);
+      if(access.role!=='admin'){json(res,{error:'admin_required'},403);return}
       if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
       const input=await parseJson(req,3_000_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
@@ -586,7 +627,8 @@ const server=http.createServer(async(req,res)=>{
       return;
     }
     if(url.pathname==='/api/auto-sale/media'&&req.method==='DELETE'){
-      if(!authorized(req)){json(res,{error:'unauthorized'},401);return}
+      const {access}=await requestAccess(req);
+      if(access.role!=='admin'){json(res,{error:'admin_required'},403);return}
       if(!mediaBucket){json(res,{error:'media_storage_not_configured'},503);return}
       const input=await parseJson(req,50_000);
       if(!input||typeof input!=='object'){json(res,{error:'invalid_json'},400);return}
