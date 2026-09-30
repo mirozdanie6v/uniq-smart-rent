@@ -1,0 +1,157 @@
+name: Deploy AutoWorld AWG bridge
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .deploy-autoworld-awg
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
+  YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
+  YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
+  AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
+  AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+  AUTOWORLD_RELAY_SECRET: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+  YC_CONTAINER_NAME: autoworld-awg
+  AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
+  AUTO_SALE_TELEGRAM_APP_URL: https://awg.viiversion.com/
+  AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
+  AUTO_SALE_YDB_DUAL_WRITE: "false"
+  AUTO_SALE_LEGACY_STATE_WRITE: "false"
+  AUTO_SALE_YDB_READ_MODE: normalized
+  AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical AutoWorld
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/autoworld
+          ref: main
+          path: autoworld
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Validate canonical application
+        working-directory: autoworld
+        run: |
+          set -euo pipefail
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YDB_CONNECTION_STRING; do
+            test -n "${!name:-}" || { echo "Missing variable: $name"; exit 1; }
+          done
+          test -n "${AUTO_SALE_TELEGRAM_BOT_TOKEN:-}" || { echo "Missing Telegram bot secret"; exit 1; }
+          npm ci
+          npm run check
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY" | jq -c . || true; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Prepare YDB schema
+        working-directory: autoworld
+        run: |
+          export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
+          npm run prepare:ydb-runtime
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Build and push canonical image
+        working-directory: autoworld
+        run: |
+          set -euo pipefail
+          SOURCE_SHA=$(git rev-parse HEAD)
+          IMAGE="cr.yandex/${YC_REGISTRY_ID}/autoworld-awg:${SOURCE_SHA}"
+          echo "$YC_IAM_TOKEN" | docker login --username iam --password-stdin cr.yandex
+          docker build -f Dockerfile.yandex -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "AUTOWORLD_IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          echo "AUTOWORLD_SOURCE_SHA=$SOURCE_SHA" >> "$GITHUB_ENV"
+
+      - name: Deploy separate AWG container
+        run: |
+          set -euo pipefail
+          AUTO_SALE_API_KEY=$(openssl rand -hex 32)
+          echo "::add-mask::$AUTO_SALE_API_KEY"
+          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
+            yc serverless container create --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          EXTRA_ENV=()
+          EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN")
+          EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_APP_URL=$AUTO_SALE_TELEGRAM_APP_URL")
+          EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_RELAY_URL=$AUTO_SALE_TELEGRAM_RELAY_URL")
+          if [ -n "${AUTOWORLD_RELAY_SECRET:-}" ]; then
+            EXTRA_ENV+=(--environment "AUTOWORLD_RELAY_SECRET=$AUTOWORLD_RELAY_SECRET")
+          fi
+          if [ -n "${AUTO_SALE_MANAGER_CHAT_IDS:-}" ]; then
+            EXTRA_ENV+=(--environment "AUTO_SALE_MANAGER_CHAT_IDS=$AUTO_SALE_MANAGER_CHAT_IDS")
+          fi
+          yc serverless container revision deploy \
+            --container-name "$YC_CONTAINER_NAME" \
+            --folder-id "$YC_FOLDER_ID" \
+            --image "$AUTOWORLD_IMAGE" \
+            --cores 1 \
+            --memory 512MB \
+            --execution-timeout 60s \
+            --service-account-id "$YC_RUNTIME_SA_ID" \
+            --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
+            --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
+            --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=false" \
+            --environment "AUTO_SALE_LEGACY_STATE_WRITE=$AUTO_SALE_LEGACY_STATE_WRITE" \
+            --environment "AUTO_SALE_YDB_DUAL_WRITE=$AUTO_SALE_YDB_DUAL_WRITE" \
+            --environment "AUTO_SALE_YDB_READ_MODE=$AUTO_SALE_YDB_READ_MODE" \
+            --environment "AUTO_SALE_ADMIN_TELEGRAM_USERNAMES=$AUTO_SALE_ADMIN_TELEGRAM_USERNAMES" \
+            --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
+            "${EXTRA_ENV[@]}"
+
+      - name: Verify AWG origin
+        run: |
+          set -euo pipefail
+          URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
+          test -n "$URL" && test "$URL" != "null"
+          for attempt in $(seq 1 20); do
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized"' >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 20 || exit 1
+            sleep 5
+          done
+          echo "AWG_ORIGIN=$URL"
+          curl -fsS "${URL%/}/api/health" | jq .
