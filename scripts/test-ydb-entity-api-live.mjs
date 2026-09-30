@@ -7,8 +7,11 @@ if(!apiKey)throw new Error('AUTO_SALE_API_KEY is required');
 
 const suffix=Date.now().toString(36).toUpperCase();
 const leadId='L-ENTITY-'+suffix;
+const cascadeLeadId=leadId+'-CASCADE';
+const cascadeQuoteId='Q-ENTITY-'+suffix;
+const cascadeOrderId='O-ENTITY-'+suffix;
 const headers={'content-type':'application/json','x-auto-sale-key':apiKey,'x-auto-sale-skip-telegram':'1'};
-const report={leadId,create:null,read:null,patch:null,staleConflict:null,note:null,cleanup:null,readParity:null};
+const report={leadId,cascadeLeadId,create:null,read:null,patch:null,staleConflict:null,note:null,cleanup:null,cascade:null,readParity:null};
 
 async function request(path,{method='GET',body=null}={}){
   const response=await fetch(base+path,{
@@ -83,6 +86,37 @@ try{
   const gone=await current();
   if(gone.status!==404)throw new Error('entity_still_exists_after_delete:'+JSON.stringify(gone));
 
+  const cascadeCreate=await request('/api/auto-sale/entities/batch',{
+    method:'POST',
+    body:{operations:[
+      {resource:'lead',operation:'create',id:cascadeLeadId,input:{id:cascadeLeadId,name:'Cascade Delete Test',contact:'@cascade_test',model:'BMW X5',budget:50000,source:'Mini App',manager:'Дмитрий',status:'В работе',priority:'Средний',nextAction:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString(),clientCreated:false}},
+      {resource:'quote',operation:'create',id:cascadeQuoteId,input:{id:cascadeQuoteId,leadId:cascadeLeadId,model:'BMW X5',status:'Согласован',version:1,total:50000}},
+      {resource:'order',operation:'create',id:cascadeOrderId,input:{id:cascadeOrderId,leadId:cascadeLeadId,customer:'Cascade Delete Test',model:'BMW X5',manager:'Дмитрий',stage:'Выкуп',total:50000,cost:45000,payments:[],paid:0,riskType:'Нет'}},
+      {resource:'note',operation:'create',leadId:cascadeLeadId,input:{id:'N-'+suffix,text:'Cascade note'}},
+      {resource:'payment',operation:'create',orderId:cascadeOrderId,input:{id:'P-'+suffix,amount:1000,date:new Date().toISOString().slice(0,10),method:'Банк'}}
+    ]}
+  });
+  if(cascadeCreate.status!==200)throw new Error('cascade_fixture_create_failed:'+JSON.stringify(cascadeCreate));
+  const cascadeLeadVersion=Number(cascadeCreate.data?.rowVersions?.['lead:'+cascadeLeadId]);
+  if(!cascadeLeadVersion)throw new Error('cascade_lead_version_missing:'+JSON.stringify(cascadeCreate));
+  const cascadeDelete=await request('/api/auto-sale/leads/'+encodeURIComponent(cascadeLeadId)+'?cascade=1',{
+    method:'DELETE',
+    body:{baseRowVersion:cascadeLeadVersion}
+  });
+  if(cascadeDelete.status!==200||cascadeDelete.data?.operation!=='delete-cascade')throw new Error('cascade_delete_failed:'+JSON.stringify(cascadeDelete));
+  if(!cascadeDelete.data?.deleted?.quotes?.includes(cascadeQuoteId)||!cascadeDelete.data?.deleted?.orders?.includes(cascadeOrderId)||cascadeDelete.data?.deleted?.notes!==1||cascadeDelete.data?.deleted?.payments!==1){
+    throw new Error('cascade_delete_receipt_invalid:'+JSON.stringify(cascadeDelete));
+  }
+  const [cascadeLeadGone,cascadeQuoteGone,cascadeOrderGone]=await Promise.all([
+    request('/api/auto-sale/leads/'+encodeURIComponent(cascadeLeadId)),
+    request('/api/auto-sale/quotes/'+encodeURIComponent(cascadeQuoteId)),
+    request('/api/auto-sale/orders/'+encodeURIComponent(cascadeOrderId))
+  ]);
+  if(cascadeLeadGone.status!==404||cascadeQuoteGone.status!==404||cascadeOrderGone.status!==404){
+    throw new Error('cascade_entities_still_exist:'+JSON.stringify({cascadeLeadGone,cascadeQuoteGone,cascadeOrderGone}));
+  }
+  report.cascade={create:cascadeCreate,remove:cascadeDelete};
+
   const parity=await request('/api/auto-sale/admin/read-parity');
   report.readParity=parity;
   if(parity.status!==200||parity.data?.source!=='normalized'||parity.data?.fallback!==false||parity.data?.authoritative!==true||parity.data?.shadowVerified!==false){
@@ -98,6 +132,8 @@ try{
     noteRowVersion:note.data.rowVersion,
     staleConflict:stale.data.currentRowVersion,
     cleanupRevision:removed.data.revision,
+    cascadeRevision:cascadeDelete.data.revision,
+    cascadeDeleted:cascadeDelete.data.deleted,
     parityRevision:parity.data.revision
   }));
 }finally{
@@ -107,6 +143,15 @@ try{
       await request('/api/auto-sale/leads/'+encodeURIComponent(leadId),{
         method:'DELETE',
         body:{baseRowVersion:existing.data.rowVersion}
+      });
+    }
+  }catch{}
+  try{
+    const existingCascade=await request('/api/auto-sale/leads/'+encodeURIComponent(cascadeLeadId));
+    if(existingCascade.status===200){
+      await request('/api/auto-sale/leads/'+encodeURIComponent(cascadeLeadId)+'?cascade=1',{
+        method:'DELETE',
+        body:{baseRowVersion:existingCascade.data.rowVersion}
       });
     }
   }catch{}
