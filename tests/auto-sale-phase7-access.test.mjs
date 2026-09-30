@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {
   MAX_ADMIN_ACCOUNTS,accessForState,stateForAccess,rowVersionsForAccess,
-  sanitizeClientOperations,sanitizeAdminOperations,canBindAdminMember
+  sanitizeClientOperations,sanitizeAdminOperations,validateAdminSlotOperations,canBindAdminMember
 } from '../server/auto-sale-access.mjs';
 
 const state={
@@ -11,7 +11,7 @@ const state={
   team:[
     {id:'T1',name:'A',role:'Менеджер',active:true,telegram:'@one',telegramUserId:'101'},
     {id:'T2',name:'B',role:'Менеджер',active:true,telegram:'@two',telegramUserId:'202'},
-    {id:'T3',name:'C',role:'Директор',active:true,telegram:'@three'},
+    {id:'T3',name:'C',role:'Директор',active:true,telegram:'@three',adminAccess:true},
     {id:'T4',name:'D',role:'Логист',active:true,telegram:'@four'}
   ],
   leads:[
@@ -32,7 +32,19 @@ test('Phase 7 allows at most three linked human admin accounts',()=>{
   const invited=state.team[2];
   assert.deepEqual(canBindAdminMember(state,invited,{id:303,username:'three'}),{ok:true,unchanged:false});
   const full={...state,team:state.team.map(x=>x.id==='T3'?{...x,telegramUserId:'303'}:x)};
-  assert.equal(canBindAdminMember(full,{id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five'},{id:505,username:'five'}).error,'admin_limit_reached');
+  assert.equal(canBindAdminMember(full,{id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:true},{id:505,username:'five'}).error,'admin_limit_reached');
+});
+
+test('Phase 7 generic team changes cannot create a fourth admin slot',()=>{
+  const checked=validateAdminSlotOperations(state,[{resource:'team',operation:'create',id:'T5',input:{id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:true}}]);
+  assert.equal(checked.ok,false);
+  assert.equal(checked.error,'admin_limit_reached');
+  assert.equal(checked.max,3);
+});
+
+test('Phase 7 Telegram contact alone is not a new admin invitation',()=>{
+  const member={id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:false};
+  assert.equal(canBindAdminMember(state,member,{id:505,username:'five'}).error,'admin_access_not_invited');
 });
 
 test('Phase 7 staff binding requires matching invited Telegram username',()=>{
