@@ -85,7 +85,18 @@ jobs:
 
       - name: Install Yandex Cloud CLI
         run: |
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          set -euo pipefail
+          ok=false
+          for attempt in 1 2 3 4; do
+            rm -rf "$HOME/yandex-cloud" || true
+            if curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n; then
+              ok=true
+              break
+            fi
+            echo "Yandex CLI install attempt $attempt failed"
+            sleep $((attempt * 3))
+          done
+          test "$ok" = true
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
 
       - name: Prepare isolated AWG YDB schema
