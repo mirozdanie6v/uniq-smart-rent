@@ -1,0 +1,155 @@
+name: Bootstrap isolated AWG production infrastructure
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .bootstrap-awg-production
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
+  YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
+  AWG_YDB_NAME: autoworld-awg-prod
+  AWG_CONTAINER_NAME: autoworld-awg-prod
+  AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
+
+jobs:
+  provision:
+    if: github.ref == 'refs/heads/prototype/auto-sale-usa'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate bootstrap configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID; do
+            test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
+          done
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Yandex token exchange failed with HTTP $HTTP_CODE"
+            echo "$BODY" | jq -c . || echo "$BODY"
+            exit 1
+          fi
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token')
+          test -n "$IAM_TOKEN" && test "$IAM_TOKEN" != "null"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Provision isolated AWG YDB
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! yc ydb database get --name "$AWG_YDB_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc ydb database create --name "$AWG_YDB_NAME" --serverless --folder-id "$YC_FOLDER_ID"
+          fi
+
+          for attempt in $(seq 1 40); do
+            DB_JSON=$(yc ydb database get --name "$AWG_YDB_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+            STATUS=$(printf '%s' "$DB_JSON" | jq -r '.status')
+            if [ "$STATUS" = "RUNNING" ]; then
+              break
+            fi
+            test "$attempt" -lt 40 || { echo "AWG YDB did not reach RUNNING"; exit 1; }
+            sleep 5
+          done
+
+          DB_JSON=$(yc ydb database get --name "$AWG_YDB_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          AWG_YDB_ID=$(printf '%s' "$DB_JSON" | jq -r '.id')
+          AWG_YDB_CONNECTION_STRING=$(printf '%s' "$DB_JSON" | jq -r '.endpoint')
+          test -n "$AWG_YDB_ID" && test "$AWG_YDB_ID" != "null"
+          test -n "$AWG_YDB_CONNECTION_STRING" && test "$AWG_YDB_CONNECTION_STRING" != "null"
+          echo "AWG_YDB_ID=$AWG_YDB_ID" >> "$GITHUB_ENV"
+          echo "AWG_YDB_CONNECTION_STRING=$AWG_YDB_CONNECTION_STRING" >> "$GITHUB_ENV"
+
+      - name: Provision isolated AWG media bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! yc storage bucket get --name "$AWG_MEDIA_BUCKET" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc storage bucket create \
+              --name "$AWG_MEDIA_BUCKET" \
+              --folder-id "$YC_FOLDER_ID" \
+              --public-read \
+              --grants "grant-type=grant-type-account,grantee-id=$YC_RUNTIME_SA_ID,permission=permission-full-control"
+          else
+            yc storage bucket update \
+              --name "$AWG_MEDIA_BUCKET" \
+              --folder-id "$YC_FOLDER_ID" \
+              --public-read \
+              --grants "grant-type=grant-type-account,grantee-id=$YC_RUNTIME_SA_ID,permission=permission-full-control"
+          fi
+          yc storage bucket get --name "$AWG_MEDIA_BUCKET" --folder-id "$YC_FOLDER_ID" --format json >/tmp/awg-bucket.json
+
+      - name: Provision isolated AWG container
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! yc serverless container get --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless container create --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          fi
+          yc serverless container allow-unauthenticated-invoke --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+          CONTAINER_JSON=$(yc serverless container get --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          AWG_CONTAINER_ID=$(printf '%s' "$CONTAINER_JSON" | jq -r '.id')
+          AWG_CONTAINER_URL=$(printf '%s' "$CONTAINER_JSON" | jq -r '.url')
+          test -n "$AWG_CONTAINER_ID" && test "$AWG_CONTAINER_ID" != "null"
+          test -n "$AWG_CONTAINER_URL" && test "$AWG_CONTAINER_URL" != "null"
+          echo "AWG_CONTAINER_ID=$AWG_CONTAINER_ID" >> "$GITHUB_ENV"
+          echo "AWG_CONTAINER_URL=$AWG_CONTAINER_URL" >> "$GITHUB_ENV"
+
+      - name: Publish bootstrap result
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "## Isolated AWG production infrastructure"
+            echo
+            echo "- Folder: \`$YC_FOLDER_ID\`"
+            echo "- Registry: \`$YC_REGISTRY_ID\`"
+            echo "- Runtime SA: \`$YC_RUNTIME_SA_ID\`"
+            echo "- Container: \`$AWG_CONTAINER_NAME\` / \`$AWG_CONTAINER_ID\`"
+            echo "- Container URL: \`$AWG_CONTAINER_URL\`"
+            echo "- YDB: \`$AWG_YDB_NAME\` / \`$AWG_YDB_ID\`"
+            echo "- YDB endpoint: \`$AWG_YDB_CONNECTION_STRING\`"
+            echo "- Media bucket: \`$AWG_MEDIA_BUCKET\`"
+            echo
+            echo "Legacy demo resources were not modified."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
