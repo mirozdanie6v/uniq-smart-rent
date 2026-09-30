@@ -170,12 +170,12 @@ jobs:
         run: |
           set -euo pipefail
           SPEC=infra/yandex/awg-production-gateway.yaml
-          if yc api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
-            yc api-gateway update --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
+          if yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless api-gateway update --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
           else
-            yc api-gateway create --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
+            yc serverless api-gateway create --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
           fi
-          GW_JSON=$(yc api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          GW_JSON=$(yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
           GW_ID=$(printf '%s' "$GW_JSON" | jq -r '.id')
           GW_DOMAIN=$(printf '%s' "$GW_JSON" | jq -r '.domain')
           test -n "$GW_ID" && test "$GW_ID" != "null"
