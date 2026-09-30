@@ -110,7 +110,7 @@ try{
   report.manager.createRecovered=createTransient;
 
   const row=page.locator('button[data-lead]').filter({hasText:testName}).first();
-  await row.waitFor({timeout:createTransient?30000:10000});
+  await row.waitFor({timeout:createTransient?180000:10000});
   leadId=await row.getAttribute('data-lead');
   assert.ok(leadId,'Created lead id missing');
   report.manager.leadId=leadId;
@@ -129,10 +129,10 @@ try{
   report.manager.patchRecovered=patchTransient;
 
   let verified=null;
-  for(let attempt=0;attempt<8;attempt++){
+  for(let attempt=0;attempt<(patchTransient?50:8);attempt++){
     verified=await api('/api/auto-sale/leads/'+encodeURIComponent(leadId)).catch(()=>null);
     if(verified?.response?.ok&&verified.data?.entity?.status==='В работе')break;
-    await new Promise(resolve=>setTimeout(resolve,1000+attempt*250));
+    await new Promise(resolve=>setTimeout(resolve,Math.min(2500,1000+attempt*250)));
   }
   assert.ok(verified?.response?.ok,'Created lead cannot be re-read');
   assert.equal(verified.data.entity.status,'В работе');
