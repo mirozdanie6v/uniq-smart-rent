@@ -287,6 +287,10 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     const [rows]=await readQuery(()=>sql`SELECT username,telegram_user_id,linked_at,last_seen_at FROM auto_sale_admin_access WHERE username = ${name}`,'admin-access-by-username');
     const row=rows[0];return row?{username:String(row.username||''),telegramUserId:String(row.telegram_user_id||''),linkedAt:String(row.linked_at||''),lastSeenAt:String(row.last_seen_at||'')}:null;
   }
+  async function adminAccessList(){
+    const [rows]=await readQuery(()=>sql`SELECT username,telegram_user_id,linked_at,last_seen_at FROM auto_sale_admin_access`,'admin-access-list');
+    return rows.map(row=>({username:String(row.username||''),telegramUserId:String(row.telegram_user_id||''),linkedAt:String(row.linked_at||''),lastSeenAt:String(row.last_seen_at||'')}));
+  }
   async function claimAdminAccess(username,userId){
     const name=String(username||'').trim().replace(/^@/,'').toLowerCase(),id=String(userId||'').trim();
     if(!name||!/^\d+$/.test(id))return{ok:false,error:'admin_identity_required'};
@@ -311,5 +315,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,notificationStatusByRevision,adminAccessByUserId,adminAccessByUsername,claimAdminAccess,ping,close,domainDualWriteEnabled:domainDualWrite};
+  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,notificationStatusByRevision,adminAccessByUserId,adminAccessByUsername,adminAccessList,claimAdminAccess,ping,close,domainDualWriteEnabled:domainDualWrite};
 }
