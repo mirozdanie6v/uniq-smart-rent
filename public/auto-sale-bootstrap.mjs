@@ -121,6 +121,31 @@ function operationAppliedToState(state,operation){
 }
 function transientEntityStatus(status){return[500,502,503,504].includes(Number(status))}
 
+function refreshOperationVersions(operations){
+  return operations.map(operation=>{
+    const next=structuredClone(operation),ref=aggregateRef(next);
+    const childCreate=next.operation==='create'&&['note','payment'].includes(String(next.resource||''));
+    const topLevelCreate=next.operation==='create'&&!childCreate;
+    if(!ref.resource||!ref.id||topLevelCreate)return next;
+    const value=versionFor(ref.resource,ref.id);
+    if(value!==null)next.baseRowVersion=value;
+    return next;
+  });
+}
+async function reconcileAmbiguousBatch(expected,status){
+  for(let attempt=1;attempt<=3;attempt++){
+    if(attempt>1)await new Promise(resolve=>setTimeout(resolve,700*attempt));
+    const state=await pullInitialState();
+    if(state&&expected.every(operation=>operationAppliedToState(state,operation))){
+      const recovered={ok:true,revision,rowVersions:{},notifications:null,recovered:true,recoveredStatus:status};
+      window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true,recovered:true,recoveredStatus:status};
+      window.dispatchEvent(new CustomEvent('auto-sale-entity-synced',{detail:recovered}));
+      return recovered;
+    }
+  }
+  return null;
+}
+
 
 async function entityBatch(operations){
   const raw=Array.isArray(operations)?operations.map(item=>structuredClone(item)):[];
@@ -140,37 +165,47 @@ async function entityBatch(operations){
     }
   }
   try{
-    const response=await fetch('/api/auto-sale/entities/batch',{
-      method:'POST',
-      headers:authHeaders({'content-type':'application/json'}),
-      body:JSON.stringify({operations:raw})
-    });
-    const data=await response.json().catch(()=>({}));
-    if(response.status===409&&data.error==='entity_conflict'){
-      await pullInitialState();
-      window.__AUTO_SALE_SERVER__={online:true,revision,entityConflict:true,...data};
-      window.dispatchEvent(new CustomEvent('auto-sale-entity-conflict',{detail:data}));
-      const error=new Error('entity_conflict');error.code='entity_conflict';error.data=data;throw error;
-    }
-    if(!response.ok&&transientEntityStatus(response.status)){
-      const state=await pullInitialState();
-      if(state&&raw.every(operation=>operationAppliedToState(state,operation))){
-        const recovered={ok:true,revision,rowVersions:{},notifications:null,recovered:true,recoveredStatus:response.status};
-        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true,recovered:true,recoveredStatus:response.status};
-        window.dispatchEvent(new CustomEvent('auto-sale-entity-synced',{detail:recovered}));
-        return recovered;
+    let prepared=raw.map(item=>structuredClone(item));
+    let lastError=null;
+    for(let attempt=1;attempt<=3;attempt++){
+      const response=await fetch('/api/auto-sale/entities/batch',{
+        method:'POST',
+        headers:authHeaders({'content-type':'application/json'}),
+        body:JSON.stringify({operations:prepared})
+      });
+      const data=await response.json().catch(()=>({}));
+      if(response.ok){
+        revision=Number(data.revision||revision);
+        sessionStorage.setItem(REVISION_KEY,String(revision));
+        applyReturnedVersions(data.rowVersions||{});
+        window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true};
+        window.dispatchEvent(new CustomEvent('auto-sale-entity-synced',{detail:{revision,rowVersions:data.rowVersions||{},notifications:data.notifications||null}}));
+        return{ok:true,...data};
       }
-    }
-    if(!response.ok){
+
+      if(response.status===409&&data.error==='entity_conflict'){
+        const recovered=await reconcileAmbiguousBatch(raw,response.status);
+        if(recovered)return recovered;
+        window.__AUTO_SALE_SERVER__={online:true,revision,entityConflict:true,...data};
+        window.dispatchEvent(new CustomEvent('auto-sale-entity-conflict',{detail:data}));
+        const error=new Error('entity_conflict');error.code='entity_conflict';error.data=data;throw error;
+      }
+
+      if(transientEntityStatus(response.status)){
+        const recovered=await reconcileAmbiguousBatch(raw,response.status);
+        if(recovered)return recovered;
+        lastError=Object.assign(new Error(data.error||('http_'+response.status)),{code:data.error||('http_'+response.status),data:{...data,status:response.status}});
+        if(attempt<3){
+          prepared=refreshOperationVersions(prepared);
+          continue;
+        }
+        throw lastError;
+      }
+
       window.dispatchEvent(new CustomEvent('auto-sale-entity-rejected',{detail:{...data,status:response.status}}));
       const error=new Error(data.error||('http_'+response.status));error.code=data.error||('http_'+response.status);error.data={...data,status:response.status};throw error;
     }
-    revision=Number(data.revision||revision);
-    sessionStorage.setItem(REVISION_KEY,String(revision));
-    applyReturnedVersions(data.rowVersions||{});
-    window.__AUTO_SALE_SERVER__={online:true,revision,initialized:true,entityMode:true};
-    window.dispatchEvent(new CustomEvent('auto-sale-entity-synced',{detail:{revision,rowVersions:data.rowVersions||{},notifications:data.notifications||null}}));
-    return{ok:true,...data};
+    throw lastError||new Error('entity_command_failed');
   }catch(error){
     if(error?.code==='entity_conflict')throw error;
     console.warn('AUTO SALE entity command failed',error);
