@@ -4,3 +4,4 @@ rerun after yc installer retry fix
 rerun after api gateway cli fix
 final deploy from canonical autoworld/main
 deploy catalog import runtime from autoworld main
+initialize normalized domain and redeploy
