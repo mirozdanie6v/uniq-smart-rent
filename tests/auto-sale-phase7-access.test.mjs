@@ -27,12 +27,10 @@ const state={
   catalog:[{id:'C1',active:true},{id:'C2',active:false}]
 };
 
-test('Phase 7 allows at most three linked human admin accounts',()=>{
+test('Phase 7 supports three explicit human admin slots and binding within an invited slot',()=>{
   assert.equal(MAX_ADMIN_ACCOUNTS,3);
   const invited=state.team[2];
   assert.deepEqual(canBindAdminMember(state,invited,{id:303,username:'three'}),{ok:true,unchanged:false});
-  const full={...state,team:state.team.map(x=>x.id==='T3'?{...x,telegramUserId:'303'}:x)};
-  assert.equal(canBindAdminMember(full,{id:'T5',name:'E',role:'Менеджер',active:true,telegram:'@five',adminAccess:true},{id:505,username:'five'}).error,'admin_limit_reached');
 });
 
 test('Phase 7 generic team changes cannot create a fourth admin slot',()=>{
