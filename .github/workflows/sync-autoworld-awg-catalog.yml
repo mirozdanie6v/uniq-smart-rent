@@ -1,0 +1,119 @@
+name: Sync AWG catalog from AutoWorld Georgia
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .sync-autoworld-awg-catalog
+
+permissions:
+  contents: read
+
+env:
+  AWG_URL: https://awg.viiversion.com
+  AWG_CATALOG_IMPORT_URL: https://awg.viiversion.com/api/auto-sale/admin/catalog-import
+  AWG_MEDIA_API: https://awg.viiversion.com/api/auto-sale/media
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout canonical AutoWorld main
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/autoworld
+          ref: main
+          path: autoworld
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install scraper dependencies
+        run: python -m pip install --disable-pip-version-check requests beautifulsoup4
+
+      - name: Validate restricted catalog credential
+        env:
+          AUTO_SALE_CATALOG_IMPORT_KEY: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+        run: test -n "$AUTO_SALE_CATALOG_IMPORT_KEY"
+
+      - name: Bootstrap recovered AWG catalog
+        if: github.event_name != 'schedule'
+        working-directory: autoworld
+        env:
+          AUTO_SALE_CATALOG_IMPORT_KEY: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+          AUTO_SALE_CATALOG_IMPORT_URL: https://awg.viiversion.com/api/auto-sale/admin/catalog-import
+          SOURCE_PATH: data/autoworld-georgia/catalog-import.json
+          REPLACE_SOURCE_ALL: 'true'
+        run: node scripts/sync-autoworld-catalog.mjs
+
+      - name: Seed current catalog media for idempotent scrape
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/awg-import
+          curl -fsS "$AWG_URL/api/auto-sale/state" \
+            | jq '[.catalog[]? | select(.source == "AutoWorld_Georgia")]' \
+            > /tmp/awg-import/cars.json
+
+      - name: Scrape recent AutoWorld Georgia posts
+        working-directory: autoworld
+        env:
+          OUT_DIR: /tmp/awg-import
+          MAX_PAGES: '12'
+          REQUEST_DELAY: '0.30'
+          UPLOAD_MISSING_PHOTOS: 'true'
+          MERGE_EXISTING: 'false'
+          AUTO_SALE_MEDIA_API: https://awg.viiversion.com/api/auto-sale/media
+          AUTO_SALE_CATALOG_IMPORT_KEY: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+        run: python scripts/scrape-autoworld-georgia.py
+
+      - name: Normalize recent posts
+        working-directory: autoworld
+        env:
+          SOURCE_PATH: /tmp/awg-import/cars.json
+          OUTPUT_PATH: /tmp/awg-catalog-import.json
+          AUDIT_PATH: /tmp/awg-catalog-import-audit.json
+          DRY_RUN: 'true'
+        run: node scripts/import-autoworld-catalog.mjs
+
+      - name: Upsert recent catalog entities
+        working-directory: autoworld
+        env:
+          AUTO_SALE_CATALOG_IMPORT_KEY: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+          AUTO_SALE_CATALOG_IMPORT_URL: https://awg.viiversion.com/api/auto-sale/admin/catalog-import
+          SOURCE_PATH: /tmp/awg-catalog-import.json
+          REPLACE_SOURCE_ALL: 'false'
+        run: node scripts/sync-autoworld-catalog.mjs
+
+      - name: Verify public AWG catalog
+        run: |
+          set -euo pipefail
+          curl -fsS "$AWG_URL/api/auto-sale/state" > /tmp/awg-state.json
+          COUNT=$(jq '[.catalog[]? | select(.source == "AutoWorld_Georgia" and .active != false)] | length' /tmp/awg-state.json)
+          LATEST=$(jq -r '[.catalog[]? | select(.source == "AutoWorld_Georgia") | (.sourcePostId|tonumber? // 0)] | max // 0' /tmp/awg-state.json)
+          echo "AWG catalog count: $COUNT"
+          echo "Latest source post: $LATEST"
+          test "$COUNT" -ge 100
+          {
+            echo "## AWG catalog sync"
+            echo
+            echo "- Active AutoWorld_Georgia cars: $COUNT"
+            echo "- Latest source post: $LATEST"
+            echo "- Source: @AutoWorld_Georgia"
+            echo "- Schedule: hourly at minute 17"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload import audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: awg-catalog-import-audit
+          path: /tmp/awg-catalog-import-audit.json
+          if-no-files-found: ignore
