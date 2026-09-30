@@ -161,6 +161,69 @@ export async function mutateAutoSaleEntity({
   return bad(503,'entity_retry_exhausted',{resource,id:entityId});
 }
 
+export async function deleteAutoSaleLeadCascade({
+  legacyStore,
+  domainStore,
+  id='',
+  expectedRowVersion=null,
+  maxAttempts=6
+}){
+  if(typeof legacyStore?.commitDomainState!=='function'||typeof domainStore?.loadState!=='function')return bad(503,'entity_api_requires_normalized_writer');
+  const leadId=text(id);
+  if(!leadId)return bad(400,'lead_id_required');
+
+  for(let attempt=1;attempt<=maxAttempts;attempt++){
+    const state=await domainStore.loadState();
+    const leadIndex=entityIndex(state,'lead',leadId);
+    const currentRowVersion=await domainStore.entityRowVersion('lead',leadId);
+    if(leadIndex<0||currentRowVersion===null)return bad(404,'lead_not_found',{id:leadId});
+
+    const expected=requireExpectedVersion(expectedRowVersion);
+    if(expected===null)return bad(428,'row_version_required',{resource:'lead',id:leadId,currentRowVersion});
+    if(expected!==currentRowVersion)return bad(409,'entity_conflict',{resource:'lead',id:leadId,expectedRowVersion:expected,currentRowVersion});
+
+    const relatedQuotes=arr(state.quotes).filter(item=>text(item.leadId)===leadId);
+    const relatedOrders=arr(state.orders).filter(item=>text(item.leadId)===leadId);
+    const relatedNotes=arr(state.notes?.[leadId]);
+    const paymentCount=relatedOrders.reduce((sum,order)=>sum+arr(order?.payments).length,0);
+
+    const next=clone(state);
+    next.leads=arr(next.leads).filter(item=>text(item.id)!==leadId);
+    next.quotes=arr(next.quotes).filter(item=>text(item.leadId)!==leadId);
+    next.orders=arr(next.orders).filter(item=>text(item.leadId)!==leadId);
+    next.notes=next.notes&&typeof next.notes==='object'?next.notes:{};
+    delete next.notes[leadId];
+
+    const result=await syncYdbState(
+      authoritativeSyncStore(legacyStore,domainStore,state),
+      {...next,baseRevision:Number(state.revision)||0},
+      {prepareNotifications:null}
+    );
+    if(result.status===409&&result.data?.error==='revision_conflict')continue;
+    if(result.status!==200)return result;
+
+    return{
+      status:200,
+      data:{
+        ...result.data,
+        resource:'lead',
+        id:leadId,
+        operation:'delete-cascade',
+        rowVersion:null,
+        deleted:{
+          lead:leadId,
+          quotes:relatedQuotes.map(item=>text(item.id)),
+          orders:relatedOrders.map(item=>text(item.id)),
+          notes:relatedNotes.length,
+          payments:paymentCount
+        },
+        retries:attempt-1
+      }
+    };
+  }
+  return bad(503,'entity_retry_exhausted',{resource:'lead',id:leadId});
+}
+
 export async function addAutoSaleNote({
   legacyStore,domainStore,leadId,input={},expectedRowVersion,prepareNotifications=null,maxAttempts=6
 }){
