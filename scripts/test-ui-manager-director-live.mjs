@@ -90,13 +90,20 @@ try{
   const managerSelect=form.locator('[name="manager"]');
   const managerTag=await managerSelect.evaluate(el=>el.tagName);
   if(managerTag==='SELECT'){
-    const value=await managerSelect.locator('option').evaluateAll(opts=>opts.map(o=>o.value).find(Boolean)||'');
-    assert.ok(value,'Manager list has no selectable manager');
-    await managerSelect.selectOption(value);
-    report.manager.selectedManager=value;
+    const expectedManagerTelegram={Дмитрий:'@Flyer_Flyer',Алексей:'@smit44744',Иван:'@Ivan_AWG'};
+    const options=await managerSelect.locator('option').evaluateAll(opts=>opts.map(o=>o.value).filter(Boolean));
+    for(const [manager,telegram] of Object.entries(expectedManagerTelegram)){
+      assert.ok(options.includes(manager),'Canonical manager missing: '+manager);
+      await managerSelect.selectOption(manager);
+      const telegramField=form.locator('[name="managerTelegram"]');
+      await telegramField.waitFor({timeout:5000});
+      assert.equal(await telegramField.inputValue(),telegram,'Telegram autofill mismatch for '+manager);
+    }
+    await managerSelect.selectOption('Дмитрий');
+    report.manager.selectedManager='Дмитрий';
+    report.manager.selectedManagerTelegram=await form.locator('[name="managerTelegram"]').inputValue();
   }else{
-    await managerSelect.fill('Phase6 Manager');
-    report.manager.selectedManager='Phase6 Manager';
+    throw new Error('Manager selector must be canonical SELECT');
   }
 
   await form.locator('[name="priority"]').selectOption({label:'Высокий'});
