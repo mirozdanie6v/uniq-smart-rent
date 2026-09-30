@@ -36,6 +36,7 @@ env:
   AUTO_SALE_YDB_DUAL_WRITE: "false"
   AUTO_SALE_LEGACY_STATE_WRITE: "false"
   AUTO_SALE_YDB_READ_MODE: normalized
+  AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
 
 jobs:
   deploy:
@@ -154,6 +155,7 @@ jobs:
             --environment "AUTO_SALE_LEGACY_STATE_WRITE=$AUTO_SALE_LEGACY_STATE_WRITE" \
             --environment "AUTO_SALE_YDB_DUAL_WRITE=$AUTO_SALE_YDB_DUAL_WRITE" \
             --environment "AUTO_SALE_YDB_READ_MODE=$AUTO_SALE_YDB_READ_MODE" \
+            --environment "AUTO_SALE_ADMIN_TELEGRAM_USERNAMES=$AUTO_SALE_ADMIN_TELEGRAM_USERNAMES" \
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
             "${EXTRA_ENV[@]}"
 
@@ -177,7 +179,7 @@ jobs:
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
           for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "telegram-rbac" and .stateReadMode == "viewer-filtered" and .publicDemoWrite == false and .maxAdminAccounts == 3 and (.linkedAdminAccounts|tonumber) <= 3 and .legacyStateWrite == "retired" and .normalizedAuthoritative == true and .ydbDomainDualWrite == "disabled" and .ydbStateReadMode == "normalized" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
+            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .writeMode == "telegram-rbac" and .stateReadMode == "viewer-filtered" and .publicDemoWrite == false and .maxAdminAccounts == 3 and .adminInvites == 3 and (.linkedAdminAccounts|tonumber) <= 3 and .legacyStateWrite == "retired" and .normalizedAuthoritative == true and .ydbDomainDualWrite == "disabled" and .ydbStateReadMode == "normalized" and .mediaStorage == "object-storage" and .mediaBucket == env.AUTO_SALE_MEDIA_BUCKET and (.telegramNotifications == "enabled" or .telegramNotifications == "disabled")' >/dev/null; then
               break
             fi
             test "$attempt" -lt 20 || exit 1
