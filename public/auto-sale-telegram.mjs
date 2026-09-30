@@ -24,38 +24,23 @@ const currentTelegram=telegramIdentity();
 window.__AUTO_SALE_TELEGRAM_USER__=currentTelegram;
 const botMessagingAvailable=Boolean(tg?.initData&&currentTelegram?.id);
 let managerRegistrationPromise=null;
-function currentStaffRole(){
-  try{return sessionStorage.getItem('auto-sale-role-v2')||''}catch{return''}
-}
 function teamRows(){return read('auto-sale-team-v1',[])}
 function registrationCandidate(){
-  const rows=teamRows().filter(item=>item&&item.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item.role||'')));
-  const already=rows.find(item=>String(item.telegramUserId||'')===String(currentTelegram?.id||''));
-  if(already)return already;
-  const role=currentStaffRole();
-  const desired=role==='owner'?'Директор':'Менеджер';
-  const matching=rows.filter(item=>item.role===desired);
-  return matching.length===1?matching[0]:null;
+  return teamRows().find(item=>item&&item.active!==false&&String(item.telegramUserId||'')===String(currentTelegram?.id||''))||null;
 }
 function showTelegramManagerStatus(data){
   const strip=document.querySelector('.auto-role-strip');
-  if(!strip)return;
+  if(!strip||!data?.ok)return;
   let badge=strip.querySelector('[data-telegram-manager-status]');
   if(!badge){badge=document.createElement('small');badge.dataset.telegramManagerStatus='1';strip.append(badge)}
-  if(data?.ok){badge.innerHTML='Telegram подключён · <b>'+esc(data.member?.name||currentTelegram?.displayName||'')+'</b>';badge.dataset.state='connected';return}
-  const rows=teamRows().filter(item=>item&&item.active!==false&&['Менеджер','Директор','Администратор'].includes(String(item.role||'')));
-  badge.dataset.state='pending';
-  badge.innerHTML='<span>Telegram: выберите сотрудника</span><select data-telegram-manager-select><option value="">Сотрудник…</option>'+rows.map(item=>'<option value="'+esc(item.id)+'">'+esc(item.name)+' · '+esc(item.role)+'</option>').join('')+'</select><button type="button" data-telegram-manager-bind>Привязать Telegram</button>';
+  badge.innerHTML='Telegram подтверждён · <b>'+esc(data.member?.name||currentTelegram?.displayName||'')+'</b>';
+  badge.dataset.state='connected';
 }
-async function registerCurrentManager(member=null){
+async function registerCurrentManager(){
   if(!botMessagingAvailable)return null;
-  const candidate=member||registrationCandidate();
-  if(!candidate){showTelegramManagerStatus(null);return null}
-  // Automatic enhancement must be read-only once this Telegram account is already linked.
-  // Re-registering on every server sync changed telegramLinkedAt, which triggered another
-  // state sync and created an endless save/re-render/conflict loop in the client card.
-  if(!member&&String(candidate.telegramUserId||'')===String(currentTelegram?.id||'')){
-    const data={ok:true,telegramUserId:String(candidate.telegramUserId),username:String(candidate.telegramUsername||currentTelegram?.username||''),member:{id:candidate.id,name:candidate.name,role:candidate.role}};
+  const candidate=registrationCandidate();
+  if(candidate){
+    const data={ok:true,unchanged:true,access:'admin',telegramUserId:String(candidate.telegramUserId),username:String(candidate.telegramUsername||currentTelegram?.username||''),member:{id:candidate.id,name:candidate.name,role:candidate.role}};
     window.__AUTO_SALE_TELEGRAM_MANAGER__=data;
     showTelegramManagerStatus(data);
     return data;
@@ -64,38 +49,30 @@ async function registerCurrentManager(member=null){
   managerRegistrationPromise=fetch('/api/auto-sale/telegram/register-manager',{
     method:'POST',
     headers:{'content-type':'application/json','x-telegram-init-data':tg.initData},
-    body:JSON.stringify({memberId:candidate.id,memberName:candidate.name})
+    body:JSON.stringify({})
   }).then(async response=>{
     const data=await response.json().catch(()=>({}));
+    if(response.status===403&&['admin_invite_required','manager_telegram_invite_mismatch'].includes(data.error))return null;
     if(!response.ok)throw Object.assign(new Error(data.error||'telegram_manager_registration_failed'),{data});
-    const rows=teamRows().map(item=>String(item.id)===String(data.member?.id)?{...item,telegramUserId:data.telegramUserId,telegramUsername:data.username||'',telegramLinkedAt:new Date().toISOString()}:item);
-    write('auto-sale-team-v1',rows);
     window.__AUTO_SALE_TELEGRAM_MANAGER__=data;
     showTelegramManagerStatus(data);
+    if(window.__AUTO_SALE_ACCESS__?.role!=='admin'&&data.access==='admin'){
+      try{sessionStorage.setItem('auto-sale-role-v2','manager')}catch{}
+      try{await window.__AUTO_SALE_REFRESH_STATE__?.()}catch{}
+      location.reload();
+      return data;
+    }
     window.dispatchEvent(new CustomEvent('auto-sale-telegram-manager-registered',{detail:data}));
     return data;
   }).catch(error=>{
     console.warn('AUTO SALE Telegram manager registration failed',error);
-    showTelegramManagerStatus(null);
     return null;
   }).finally(()=>{managerRegistrationPromise=null});
   return managerRegistrationPromise;
 }
-document.addEventListener('click',event=>{
-  const bindButton=event.target.closest?.('[data-telegram-manager-bind]');
-  if(bindButton){
-    event.preventDefault();event.stopPropagation();
-    const select=document.querySelector('[data-telegram-manager-select]');
-    const member=teamRows().find(item=>String(item.id)===String(select?.value||''));
-    if(member){bindButton.disabled=true;bindButton.textContent='Подключение…';registerCurrentManager(member).finally(()=>{if(document.body.contains(bindButton)){bindButton.disabled=false;bindButton.textContent='Привязать Telegram'}})}
-    return;
-  }
-  const roleButton=event.target.closest?.('[data-role="manager"],[data-role="owner"]');
-  if(roleButton)setTimeout(()=>registerCurrentManager(),0);
-},true);
-window.addEventListener('auto-sale-entity-synced',()=>{if(['manager','owner'].includes(currentStaffRole()))registerCurrentManager()});
-window.addEventListener('auto-sale-server-synced',()=>{if(['manager','owner'].includes(currentStaffRole()))registerCurrentManager()});
-try{if(['manager','owner'].includes(currentStaffRole()))setTimeout(()=>registerCurrentManager(),0)}catch{}
+window.addEventListener('auto-sale-entity-synced',()=>{if(window.__AUTO_SALE_ACCESS__?.role==='admin')registerCurrentManager()});
+window.addEventListener('auto-sale-server-synced',()=>{if(window.__AUTO_SALE_ACCESS__?.role==='admin')registerCurrentManager()});
+if(botMessagingAvailable)setTimeout(()=>registerCurrentManager(),0);
 
 function usernameFrom(value){const match=String(value||'').match(/(?:^|\s|\/)(?:@|t\.me\/)?([A-Za-z0-9_]{5,32})(?:$|\s|\?|\/)/i);return match?.[1]||''}
 function clientTelegram(lead){
