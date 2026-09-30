@@ -135,7 +135,7 @@ export function createTelegramService({
     return{ok:true,user:{...user,id:String(user.id)},authDate};
   }
 
-  function manualRecipient(state,{leadId,target,senderId}={}){
+  function manualRecipient(state,{leadId,target,senderId,isAdmin=false}={}){
     const lead=leadFor(state,leadId);
     if(!lead)return{ok:false,error:'lead_not_found'};
     const sender=clean(senderId);
@@ -155,11 +155,11 @@ export function createTelegramService({
     return{ok:false,error:'telegram_target_invalid'};
   }
 
-  async function sendManual(state,{leadId,target,text,senderId}={}){
+  async function sendManual(state,{leadId,target,text,senderId,isAdmin=false}={}){
     const body=clean(text);
     if(!body){const error=new Error('telegram_message_required');error.statusCode=400;throw error}
     if(body.length>1500){const error=new Error('telegram_message_too_long');error.statusCode=400;throw error}
-    const recipient=manualRecipient(state,{leadId,target,senderId});
+    const recipient=manualRecipient(state,{leadId,target,senderId,isAdmin});
     if(!recipient.ok){const error=new Error(recipient.error);error.statusCode=recipient.error==='lead_not_found'?404:recipient.error.includes('forbidden')?403:409;throw error}
     const lead=recipient.lead;
     const prefix=target==='client'
