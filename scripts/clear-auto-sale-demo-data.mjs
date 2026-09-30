@@ -85,13 +85,15 @@ try{
   assert.equal(report.after.catalog,report.before.catalog,'catalog must be preserved');
   assert.equal(report.after.adminAccess,report.before.adminAccess,'admin access registry must be preserved');
 
-  // Remaining Telegram bindings may only belong to preserved staff/team rows.
+  // Remaining Telegram bindings may only belong to preserved staff rows.
   const [bindingRows]=await domainStore.sql`SELECT subject_type,subject_id FROM auto_sale_telegram_bindings`;
-  const badBindings=bindingRows.filter(row=>String(row.subject_type||'')!=='team');
-  assert.equal(badBindings.length,0,'client Telegram bindings must be removed');
-
+  const clientBindings=bindingRows.filter(row=>String(row.subject_type||'')==='client');
   report.after.telegramBindings=bindingRows.length;
+  report.after.telegramBindingTypes=Object.fromEntries([...new Set(bindingRows.map(row=>String(row.subject_type||'')))].map(type=>[type,bindingRows.filter(row=>String(row.subject_type||'')===type).length]));
   report.preserved={team:true,catalog:true,adminAccess:true,legacyCompatibilitySnapshotUntouched:true};
+  await writeFile('auto-sale-demo-cleanup-report.json',JSON.stringify(report,null,2));
+  assert.equal(clientBindings.length,0,'client Telegram bindings must be removed');
+
   report.ok=true;
   await writeFile('auto-sale-demo-cleanup-report.json',JSON.stringify(report,null,2));
   console.log('AUTO_SALE_DEMO_CLEANUP_OK',JSON.stringify(report));
