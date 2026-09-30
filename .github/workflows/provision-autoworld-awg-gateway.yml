@@ -69,13 +69,13 @@ jobs:
                 x-yc-apigateway-integration:
                   type: serverless_containers
                   container_id: ${AWG_CONTAINER_ID}
-                  service_account_id: ${YC_RUNTIME_SA_ID}
+                  service_account_id: ${YC_DEPLOY_SA_ID}
             /{proxy+}:
               x-yc-apigateway-any-method:
                 x-yc-apigateway-integration:
                   type: serverless_containers
                   container_id: ${AWG_CONTAINER_ID}
-                  service_account_id: ${YC_RUNTIME_SA_ID}
+                  service_account_id: ${YC_DEPLOY_SA_ID}
                 parameters:
                   - explode: false
                     in: path
