@@ -61,7 +61,7 @@ test('new lead keeps responsible selection usable when team configuration is emp
   dom.window.close();
 });
 
-test('new lead allows entering a responsible person when no team or assignments exist',async()=>{
+test('new lead always offers the three canonical responsible managers even when team state is empty',async()=>{
   const dom=new JSDOM('<!doctype html><div id="app"></div>',{url:'https://example.test/manager-empty-all'});
   globalThis.window=dom.window;
   globalThis.document=dom.window.document;
@@ -76,15 +76,16 @@ test('new lead allows entering a responsible person when no team or assignments 
   localStorage.setItem('auto-sale-quotes-v2','[]');
   localStorage.setItem('auto-sale-orders-v2','[]');
   localStorage.setItem('auto-sale-team-v1','[]');
-  await import('../public/auto-sale-app-v3.mjs?responsible-manual-'+Date.now());
+  await import('../public/auto-sale-app-v3.mjs?responsible-canonical-'+Date.now());
   const root=document.querySelector('#app');
   root.querySelector('[data-role="manager"]').click();
   root.querySelector('[data-manager-new]').click();
   const field=root.querySelector('#requestForm [name="manager"]');
   assert.ok(field);
-  assert.equal(field.tagName,'INPUT');
+  assert.equal(field.tagName,'SELECT');
   assert.equal(field.required,true);
-  assert.match(field.getAttribute('placeholder')||'',/ответственного/i);
+  const values=[...field.options].map(x=>x.value);
+  for(const manager of ['Дмитрий','Алексей','Иван'])assert.ok(values.includes(manager),manager);
   dom.window.close();
 });
 
