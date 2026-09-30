@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  AWG_APP_URL: https://awg.viiversion.com/
+  AWG_APP_URL: https://autoworld.viiversion.com/
 
 jobs:
   configure:
