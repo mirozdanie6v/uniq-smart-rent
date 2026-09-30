@@ -141,6 +141,11 @@ jobs:
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
             "${EXTRA_ENV[@]}"
 
+      - name: Make AWG container public
+        run: |
+          set -euo pipefail
+          yc serverless container allow-unauthenticated-invoke --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
+
       - name: Verify AWG origin
         run: |
           set -euo pipefail
