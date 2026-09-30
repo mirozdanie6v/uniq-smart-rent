@@ -141,7 +141,7 @@ export function createTelegramService({
     const sender=clean(senderId);
     if(target==='client'){
       const allowedManagers=managerIds(lead,fallbackManagers,state);
-      if(!allowedManagers.includes(sender))return{ok:false,error:'telegram_sender_forbidden'};
+      if(!isAdmin&&!allowedManagers.includes(sender))return{ok:false,error:'telegram_sender_forbidden'};
       const chatId=clientId(lead);
       if(!chatId)return{ok:false,error:'client_telegram_not_linked'};
       return{ok:true,lead,chatId};
