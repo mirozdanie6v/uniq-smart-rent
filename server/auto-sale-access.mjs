@@ -9,16 +9,24 @@ export function staffMembers(state){
   return (Array.isArray(state?.team)?state.team:[]).filter(item=>item&&item.active!==false&&STAFF_ROLES.has(clean(item.role)));
 }
 
+function adminSlotEnabled(item){
+  if(item?.adminAccess===true)return true;
+  if(item?.adminAccess===false)return false;
+  return Boolean(telegramId(item?.telegramUserId));
+}
+export function adminSlotMembers(state){
+  return staffMembers(state).filter(adminSlotEnabled);
+}
 export function linkedAdminMembers(state){
-  return staffMembers(state).filter(item=>telegramId(item.telegramUserId));
+  return adminSlotMembers(state).filter(item=>telegramId(item.telegramUserId));
 }
 
 export function accessForState(state,{apiKey=false,telegramAuth=null}={}){
   if(apiKey)return{role:'admin',authenticated:true,authType:'api-key',member:null,user:null};
   const user=telegramAuth?.ok?telegramAuth.user:null;
   if(!user?.id)return{role:'public',authenticated:false,authType:'public',member:null,user:null};
-  const linked=linkedAdminMembers(state);
-  if(linked.length>MAX_ADMIN_ACCOUNTS)return{role:'client',authenticated:true,authType:'telegram',member:null,user,error:'admin_limit_exceeded'};
+  const slots=adminSlotMembers(state),linked=linkedAdminMembers(state);
+  if(slots.length>MAX_ADMIN_ACCOUNTS)return{role:'client',authenticated:true,authType:'telegram',member:null,user,error:'admin_limit_exceeded'};
   const member=linked.find(item=>telegramId(item.telegramUserId)===telegramId(user.id))||null;
   return{role:member?'admin':'client',authenticated:true,authType:'telegram',member,user};
 }
@@ -157,15 +165,34 @@ export function sanitizeAdminOperations(operations,{apiKey=false}={}){
   });
 }
 
+export function validateAdminSlotOperations(state,operations){
+  const team=(Array.isArray(state?.team)?state.team:[]).map(item=>({...item}));
+  for(const raw of Array.isArray(operations)?operations:[]){
+    if(clean(raw?.resource)!=='team')continue;
+    const action=clean(raw.operation),id=clean(raw.id||raw.input?.id),index=team.findIndex(item=>clean(item.id)===id);
+    if(action==='create'){
+      if(index<0)team.push({...raw.input,id:id||clean(raw.input?.id)});
+    }else if(action==='patch'&&index>=0){
+      team[index]={...team[index],...(raw.input||{}),id:team[index].id};
+    }else if(action==='delete'&&index>=0){
+      team.splice(index,1);
+    }
+  }
+  const slots=adminSlotMembers({team});
+  if(slots.length>MAX_ADMIN_ACCOUNTS)return{ok:false,status:409,error:'admin_limit_reached',max:MAX_ADMIN_ACCOUNTS,count:slots.length};
+  return{ok:true,count:slots.length,max:MAX_ADMIN_ACCOUNTS};
+}
+
 export function canBindAdminMember(state,member,user){
   if(!member||member.active===false||!STAFF_ROLES.has(clean(member.role)))return{ok:false,status:409,error:'manager_team_member_required'};
+  if(!adminSlotEnabled(member))return{ok:false,status:403,error:'admin_access_not_invited'};
   const userId=telegramId(user?.id),userName=username(user?.username);
   if(!userId)return{ok:false,status:401,error:'telegram_user_required'};
   const existing=telegramId(member.telegramUserId);
   if(existing)return existing===userId?{ok:true,unchanged:true}:{ok:false,status:409,error:'manager_telegram_already_linked'};
   const invited=username(member.telegram||member.telegramUsername);
   if(!invited||!userName||invited!==userName)return{ok:false,status:403,error:'manager_telegram_invite_mismatch'};
-  const linked=linkedAdminMembers(state);
-  if(linked.length>=MAX_ADMIN_ACCOUNTS)return{ok:false,status:409,error:'admin_limit_reached'};
+  const slots=adminSlotMembers(state);
+  if(slots.length>MAX_ADMIN_ACCOUNTS)return{ok:false,status:409,error:'admin_limit_reached'};
   return{ok:true,unchanged:false};
 }
