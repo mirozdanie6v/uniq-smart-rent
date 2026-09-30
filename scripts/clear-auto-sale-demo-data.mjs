@@ -2,12 +2,16 @@ import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {createYdbStateStore} from '../server/ydb-state.mjs';
 import {createYdbDomainStore} from '../server/ydb-domain-store.mjs';
+import {AccessTokenCredentialsProvider} from '@ydbjs/auth/access-token';
 
 const connectionString=String(process.env.YDB_CONNECTION_STRING||'').trim();
+const accessToken=String(process.env.YDB_ACCESS_TOKEN_CREDENTIALS||process.env.YC_IAM_TOKEN||'').trim();
 assert.ok(connectionString,'YDB_CONNECTION_STRING is required');
+assert.ok(accessToken,'YDB access token is required');
+const credentialsProvider=new AccessTokenCredentialsProvider({token:accessToken});
 
-const stateStore=await createYdbStateStore({connectionString,domainDualWrite:false,ensureSchema:false});
-const domainStore=await createYdbDomainStore({connectionString,ensureSchema:false});
+const stateStore=await createYdbStateStore({connectionString,credentialsProvider,domainDualWrite:false,ensureSchema:false});
+const domainStore=await createYdbDomainStore({connectionString,credentialsProvider,ensureSchema:false});
 const report={ok:false,at:new Date().toISOString(),before:{},after:{},preserved:{}};
 
 try{
