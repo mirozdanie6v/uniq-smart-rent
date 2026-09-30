@@ -90,7 +90,7 @@ try{
     method:'POST',
     body:{operations:[
       {resource:'lead',operation:'create',id:cascadeLeadId,input:{id:cascadeLeadId,name:'Cascade Delete Test',contact:'@cascade_test',model:'BMW X5',budget:50000,source:'Mini App',manager:'Дмитрий',status:'В работе',priority:'Средний',nextAction:new Date().toISOString().slice(0,10),createdAt:new Date().toISOString(),clientCreated:false}},
-      {resource:'quote',operation:'create',id:cascadeQuoteId,input:{id:cascadeQuoteId,leadId:cascadeLeadId,model:'BMW X5',status:'Согласован',version:1,total:50000}},
+      {resource:'quote',operation:'create',id:cascadeQuoteId,input:{id:cascadeQuoteId,leadId:cascadeLeadId,model:'BMW X5',status:'Черновик',version:1,total:0}},
       {resource:'order',operation:'create',id:cascadeOrderId,input:{id:cascadeOrderId,leadId:cascadeLeadId,customer:'Cascade Delete Test',model:'BMW X5',manager:'Дмитрий',stage:'Выкуп',total:50000,cost:45000,payments:[],paid:0,riskType:'Нет'}},
       {resource:'note',operation:'create',leadId:cascadeLeadId,input:{id:'N-'+suffix,text:'Cascade note'}},
       {resource:'payment',operation:'create',orderId:cascadeOrderId,input:{id:'P-'+suffix,amount:1000,date:new Date().toISOString().slice(0,10),method:'Банк'}}
