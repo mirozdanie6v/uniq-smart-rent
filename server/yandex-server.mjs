@@ -9,7 +9,7 @@ import {readAutoSaleState} from './ydb-read-mode.mjs';
 import {syncYdbState} from './ydb-sync.mjs';
 import {createObjectStorage} from './object-storage.mjs';
 import {createTelegramService} from './telegram-bot.mjs';
-import {addAutoSaleNote,addAutoSalePayment,mutateAutoSaleEntity,mutateAutoSaleEntityBatch,readAutoSaleEntity} from './ydb-entity-commands.mjs';
+import {addAutoSaleNote,addAutoSalePayment,deleteAutoSaleLeadCascade,mutateAutoSaleEntity,mutateAutoSaleEntityBatch,readAutoSaleEntity} from './ydb-entity-commands.mjs';
 import {MAX_ADMIN_ACCOUNTS,stateForAccess,rowVersionsForAccess,sanitizeClientOperations,sanitizeAdminOperations} from './auto-sale-access.mjs';
 
 const rootDir=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -354,10 +354,15 @@ const server=http.createServer(async(req,res)=>{
       if(req.method==='DELETE'&&id){
         const input=await parseJson(req);
         const entityStores=await getEntityStores();
-        const result=await mutateAutoSaleEntity({
-          ...entityStores,resource,operation:'delete',
-          id,expectedRowVersion:input?.baseRowVersion,prepareNotifications:null
-        });
+        const cascade=resource==='lead'&&url.searchParams.get('cascade')==='1';
+        const result=cascade
+          ?await deleteAutoSaleLeadCascade({
+              ...entityStores,id,expectedRowVersion:input?.baseRowVersion
+            })
+          :await mutateAutoSaleEntity({
+              ...entityStores,resource,operation:'delete',
+              id,expectedRowVersion:input?.baseRowVersion,prepareNotifications:null
+            });
         json(res,result.data,result.status);return;
       }
       json(res,{error:'entity_method_not_allowed'},405);return;
