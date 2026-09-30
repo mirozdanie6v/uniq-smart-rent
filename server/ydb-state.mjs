@@ -64,6 +64,15 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
         PRIMARY KEY (id)
       )
     `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS auto_sale_admin_access (
+        username Utf8 NOT NULL,
+        telegram_user_id Utf8 NOT NULL,
+        linked_at Utf8 NOT NULL,
+        last_seen_at Utf8 NOT NULL,
+        PRIMARY KEY (username)
+      )
+    `;
   
     const [rows]=await readQuery(()=>sql`SELECT id FROM auto_sale_state WHERE id = ${STATE_ID}`,'state-init');
     if(!rows.length){
@@ -268,6 +277,31 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     return results;
   }
 
+  async function adminAccessByUserId(userId){
+    const id=String(userId||'').trim();if(!id)return null;
+    const [rows]=await readQuery(()=>sql`SELECT username,telegram_user_id,linked_at,last_seen_at FROM auto_sale_admin_access WHERE telegram_user_id = ${id}`,'admin-access-by-user');
+    const row=rows[0];return row?{username:String(row.username||''),telegramUserId:String(row.telegram_user_id||''),linkedAt:String(row.linked_at||''),lastSeenAt:String(row.last_seen_at||'')}:null;
+  }
+  async function adminAccessByUsername(username){
+    const name=String(username||'').trim().replace(/^@/,'').toLowerCase();if(!name)return null;
+    const [rows]=await readQuery(()=>sql`SELECT username,telegram_user_id,linked_at,last_seen_at FROM auto_sale_admin_access WHERE username = ${name}`,'admin-access-by-username');
+    const row=rows[0];return row?{username:String(row.username||''),telegramUserId:String(row.telegram_user_id||''),linkedAt:String(row.linked_at||''),lastSeenAt:String(row.last_seen_at||'')}:null;
+  }
+  async function claimAdminAccess(username,userId){
+    const name=String(username||'').trim().replace(/^@/,'').toLowerCase(),id=String(userId||'').trim();
+    if(!name||!/^\d+$/.test(id))return{ok:false,error:'admin_identity_required'};
+    return sql.begin({isolation:'serializableReadWrite',idempotent:true},async tx=>{
+      const [byName]=await tx`SELECT username,telegram_user_id,linked_at,last_seen_at FROM auto_sale_admin_access WHERE username = ${name}`;
+      const existing=byName[0];
+      if(existing&&String(existing.telegram_user_id||'')!==id)return{ok:false,error:'admin_username_already_claimed'};
+      const [byId]=await tx`SELECT username,telegram_user_id FROM auto_sale_admin_access WHERE telegram_user_id = ${id}`;
+      if(byId[0]&&String(byId[0].username||'')!==name)return{ok:false,error:'admin_user_already_claimed'};
+      const now=new Date().toISOString(),linkedAt=existing?String(existing.linked_at||now):now;
+      await tx`UPSERT INTO auto_sale_admin_access (username,telegram_user_id,linked_at,last_seen_at) VALUES (${name},${id},${linkedAt},${now})`;
+      return{ok:true,username:name,telegramUserId:id,linkedAt};
+    });
+  }
+
   async function ping(){
     await readQuery(()=>sql`SELECT 1 AS ok`,'ping');
     return true;
@@ -277,5 +311,5 @@ export async function createYdbStateStore({connectionString,credentialsProvider=
     driver.close();
   }
 
-  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,notificationStatusByRevision,ping,close,domainDualWriteEnabled:domainDualWrite};
+  return{loadState,replaceState,commitDomainState,enqueueNotifications,pendingNotifications,pendingNotificationsByIds,markNotification,notificationStats,notificationStatus,notificationStatusByRevision,adminAccessByUserId,adminAccessByUsername,claimAdminAccess,ping,close,domainDualWriteEnabled:domainDualWrite};
 }
