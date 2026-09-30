@@ -106,6 +106,7 @@ jobs:
           export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
           export YDB_CONNECTION_STRING="$AWG_YDB_CONNECTION_STRING"
           npm run prepare:ydb-runtime
+          npm run initialize:ydb-domain
 
       - name: Build and push AWG image
         working-directory: autoworld
