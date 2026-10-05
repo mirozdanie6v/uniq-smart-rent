@@ -1,24 +1,24 @@
-name: Deploy private showreel processor via shared Cloudflare connection
+name: Render one owner-private showreel pilot
 on:
   push:
     branches: [codex/showreel-deploy]
-    paths: [.deploy-showreel/containers-ready]
+    paths: [.github/scripts/showreel-render-pilot.py]
 permissions:
   contents: read
 concurrency:
-  group: viiversion-showreel-processor
+  group: viiversion-showreel-pilot
   cancel-in-progress: false
 jobs:
-  deploy:
+  render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-        with: {node-version: 22}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
       - run: python -m pip install --quiet cryptography==46.0.5
-      - name: Decrypt private release, deploy isolated processor and verify vision
+      - name: Analyze six saved works and render private result
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: python .github/scripts/deploy-showreel.py
+        run: python .github/scripts/showreel-render-pilot.py
