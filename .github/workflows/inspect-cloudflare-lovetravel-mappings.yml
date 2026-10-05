@@ -26,5 +26,9 @@ jobs:
           set -euo pipefail
           echo '=== domains ==='
           curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select(.hostname=="integration.viiversion.com" or .hostname=="lovetravel.viiversion.com")|{hostname,service,environment,zone_name}]}'
+          echo '=== zone routes ==='
+          curl -sS "https://api.cloudflare.com/client/v4/zones/56fa9423ef85e05559f453af43ec400f/workers/routes" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            | jq '{success,errors,result:[.result[]?|select((.pattern//"")|test("integration\\.viiversion\\.com|lovetravel\\.viiversion\\.com";"i"))|{id,pattern,script}]}'
           echo '=== scripts ==='
-          curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select((.id//.name//"")|test("viiversion|love-travel|integration";"i"))|{id,etag,modified_on,handlers}]}'
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts?per_page=100"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select((.id//.name//"")|test("viiversion|love-travel|integration";"i"))|{id,etag,modified_on,handlers}]}'
