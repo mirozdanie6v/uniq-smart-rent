@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.deploy-lovetravel-client-release'
+      - '.github/workflows/deploy-lovetravel-client-release.yml'
   workflow_dispatch:
 
 permissions:
