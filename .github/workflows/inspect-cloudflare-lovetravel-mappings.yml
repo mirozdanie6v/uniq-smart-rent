@@ -36,5 +36,9 @@ jobs:
               -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
               | jq --arg host "$host" '{host:$host,success,errors,result:[.result[]?|{id,type,name,content,proxied,comment,tags}]}'
           done
+          echo '=== services ==='
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/services?per_page=100" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            | jq '{success,errors,result:[.result[]?|select((.name//.id//"")|test("viiversion|love|integration";"i"))|{id,name,default_environment,created_on,modified_on}]}'
           echo '=== scripts ==='
           curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts?per_page=100"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select((.id//.name//"")|test("viiversion|love-travel|integration";"i"))|{id,etag,modified_on,handlers}]}'
