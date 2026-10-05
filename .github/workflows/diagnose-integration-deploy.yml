@@ -1,0 +1,31 @@
+name: Diagnose integration deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.diagnose-integration-deploy'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Probe custom domain and workers.dev
+        shell: bash
+        run: |
+          set -u
+          for base in             'https://integration.viiversion.com'             'https://viiversion-integration.mirozdanie6v.workers.dev'
+          do
+            echo "=== $base/status ==="
+            code="$(curl -sS -o /tmp/status.json -w '%{http_code}' "$base/api/bokun/status?vendorId=137689" || true)"
+            echo "HTTP=$code"
+            cat /tmp/status.json 2>/dev/null | jq '{ok,vendorId,oauthConnected,restCredentialsReady,restCredentialSyncError,realBookingWriteEnabled,oneTimeBookingTestArmed}' || cat /tmp/status.json || true
+            echo "=== $base/demo marker ==="
+            code="$(curl -sS -o /tmp/demo.json -w '%{http_code}' -X POST "$base/internal/lovetravel/bokun/demo-submit?vendorId=137689&currency=USD" -H 'content-type: application/json' --data '{}' || true)"
+            echo "HTTP=$code"; cat /tmp/demo.json 2>/dev/null || true; echo
+          done
