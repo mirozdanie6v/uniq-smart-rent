@@ -1,0 +1,31 @@
+name: Diagnose LoveTravel integration route
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-lovetravel-integration-route.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Compare custom domain and workers.dev
+        shell: bash
+        run: |
+          set -u
+          for base in https://integration.viiversion.com https://viiversion-integration.mirozdanie6v.workers.dev; do
+            echo "=== $base status ==="
+            code="$(curl -sS -o /tmp/status.json -w '%{http_code}' "$base/api/bokun/status?vendorId=137689" || true)"
+            echo "HTTP=$code"
+            cat /tmp/status.json 2>/dev/null | jq '{ok,vendorId,oauthConnected,restCredentialsReady,realBookingWriteEnabled,oneTimeBookingTestArmed,error}' || cat /tmp/status.json 2>/dev/null || true
+            echo "=== $base demo endpoint ==="
+            code="$(curl -sS -o /tmp/demo.json -w '%{http_code}' -X POST "$base/internal/lovetravel/bokun/demo-submit?vendorId=137689&currency=USD" -H 'content-type: application/json' --data '{}' || true)"
+            echo "HTTP=$code"
+            cat /tmp/demo.json 2>/dev/null || true
+            echo
+          done
