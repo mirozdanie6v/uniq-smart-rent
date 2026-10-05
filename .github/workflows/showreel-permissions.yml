@@ -1,0 +1,38 @@
+name: Diagnose showreel deployment permissions
+on:
+  push:
+    branches: [codex/showreel-deploy]
+    paths: [.github/workflows/showreel-permissions.yml]
+permissions: {contents: read}
+jobs:
+  permissions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify token and exact API access (read only)
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: python
+        run: |
+          import os,json,urllib.request,urllib.error
+          token=os.environ["CF_TOKEN"];account=os.environ["CF_ACCOUNT"]
+          for label,path in [
+              ("Token status","/user/tokens/verify"),
+              ("Workers access","/accounts/"+account+"/workers/scripts"),
+              ("Containers access","/accounts/"+account+"/containers/applications"),
+              ("Legacy container access","/accounts/"+account+"/cloudchamber/applications"),
+              ("Account subscriptions","/accounts/"+account+"/subscriptions"),
+          ]:
+              req=urllib.request.Request("https://api.cloudflare.com/client/v4"+path,headers={"Authorization":"Bearer "+token})
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as response: data=json.load(response)
+                  out={"check":label,"http":200,"success":data.get("success")}
+                  if label=="Token status":out["status"]=data.get("result",{}).get("status")
+                  if label=="Account subscriptions":
+                      entries=data.get("result",[])
+                      out["workers_paid"]=any("worker" in str(x.get("rate_plan",{})).lower() and "free" not in str(x.get("rate_plan",{})).lower() for x in entries)
+                  print(json.dumps(out))
+              except urllib.error.HTTPError as error:
+                  data=json.load(error)
+                  print(json.dumps({"check":label,"http":error.code,"codes":[x.get("code") for x in data.get("errors",[])]}))
