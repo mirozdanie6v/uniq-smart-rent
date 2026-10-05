@@ -26,8 +26,8 @@ config={"name":"viiversion-showreel-ai","main":"relay.mjs","compatibility_date":
 (directory/"relay.json").write_text(json.dumps(config))
 secret_path.write_text(json.dumps({"SHOWREEL_PROCESSOR_KEY":runtime["SHOWREEL_PROCESSOR_KEY"]}))
 subprocess.run(["npm","ci","--no-fund","--no-audit"],cwd=directory,check=True)
-subprocess.run(["npx","wrangler","deploy","--config","relay.json"],cwd=directory,check=True)
-subprocess.run(["npx","wrangler","secret","bulk",str(secret_path),"--config","relay.json"],cwd=directory,check=True)
+
+
 url="https://viiversion-showreel-ai.mirozdanie6v.workers.dev"
 def chunk(name,data): return struct.pack(">I",len(data))+name+data+struct.pack(">I",zlib.crc32(name+data)&0xffffffff)
 png=b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",32,32,8,2,0,0,0))+chunk(b"IDAT",zlib.compress((b"\0"+b"\xff\0\0"*32)*32))+chunk(b"IEND",b"")
@@ -38,6 +38,10 @@ try:
     print("BINDING_VISION_PROBE="+json.dumps(result)[:2500],flush=True)
 except Exception as error:
     print("BINDING_VISION_PROBE_FAILED="+str(getattr(error,"code",type(error).__name__)),flush=True)
+    if hasattr(error,"read"):
+        body=error.read().decode(errors="replace")
+        for value in [token,*runtime.values()]:body=body.replace(value,"[redacted]")
+        print("RELAY_EDGE_ERROR="+body[:600],flush=True)
     raise SystemExit(1)
 finally: secret_path.unlink(missing_ok=True)
 print("AI_RELAY_URL="+url,flush=True)
