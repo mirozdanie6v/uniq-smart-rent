@@ -1,0 +1,90 @@
+name: Deploy LoveTravel client preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-lovetravel-client-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Checkout LoveTravel
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/LoveTravel-
+          ref: main
+          path: lovetravel
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Build and verify
+        working-directory: lovetravel
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-fund --no-audit
+          npm run check
+
+      - name: Prepare isolated preview config
+        working-directory: lovetravel
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const cfg=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          cfg.name='love-travel-client-preview';
+          cfg.workers_dev=true;
+          delete cfg.routes;
+          delete cfg.d1_databases;
+          delete cfg.r2_buckets;
+          delete cfg.triggers;
+          cfg.vars.APP_ENV='love-travel-v28';
+          cfg.vars.APP_URL='https://love-travel-client-preview.mirozdanie6v.workers.dev';
+          cfg.vars.BOKUN_INTEGRATION_BASE_URL='https://integration.viiversion.com';
+          fs.writeFileSync('wrangler.preview.jsonc',JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          npx wrangler deploy --dry-run --config wrangler.preview.jsonc
+
+      - name: Deploy preview
+        working-directory: lovetravel
+        run: npx wrangler deploy --config wrangler.preview.jsonc
+
+      - name: Read-only smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://love-travel-client-preview.mirozdanie6v.workers.dev'
+          for attempt in $(seq 1 20); do
+            if curl -fsS "$base/api/bokun/tours?locale=en" > /tmp/en.json; then
+              if jq -e '.ok == true and .source == "bokun" and ([.tours[].id]|sort)==["1287578","1287580"]' /tmp/en.json >/dev/null; then
+                break
+              fi
+            fi
+            test "$attempt" -lt 20 || exit 1
+            sleep 3
+          done
+          for locale in ru en vi zh ko; do
+            curl -fsS "$base/api/bokun/tours?locale=$locale" > "/tmp/tours-$locale.json"
+            jq -e '.ok == true and .source == "bokun" and ([.tours[].id]|sort)==["1287578","1287580"]' "/tmp/tours-$locale.json" >/dev/null
+          done
+          jq '{zh_titles:[.tours[].title]}' /tmp/tours-zh.json
+
+          payload="$(jq -nc --arg locale zh --arg message '请介绍目前可以预订的两条行程' '{locale:$locale,message:$message}')"
+          curl -fsS -X POST "$base/api/ai/chat" -H 'content-type: application/json' -H 'x-max-tour-locale: zh' --data "$payload" > /tmp/ai-zh.json
+          jq '{ok,source,tourId,reply}' /tmp/ai-zh.json
+          jq -e '.ok == true and ((.source // "")|contains("bokun"))' /tmp/ai-zh.json >/dev/null
+
+          code="$(curl -sS -o /tmp/demo.json -w '%{http_code}' -X POST "$base/api/bokun/client-demo/submit" -H 'content-type: application/json' --data '{}')"
+          test "$code" = 403
