@@ -1,4 +1,5 @@
 name: Audit LoveTravel two-tour booking journey
+# production custom-domain audit
 
 on:
   push:
@@ -33,7 +34,7 @@ jobs:
           import { chromium } from 'playwright';
           import fs from 'node:fs';
 
-          const base='https://love-travel-client-preview.mirozdanie6v.workers.dev';
+          const base='https://lovetravel.viiversion.com';
           const products=[
             {id:'1287578',locale:'en'},
             {id:'1287580',locale:'zh'},
