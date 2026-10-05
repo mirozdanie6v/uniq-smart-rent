@@ -1,0 +1,41 @@
+name: Audit LoveTravel AI locales
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/audit-lovetravel-ai-locales.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Verify five AI locales against Bókun-only catalogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://love-travel-client-preview.mirozdanie6v.workers.dev'
+          declare -A messages=(
+            [ru]='Какие две экскурсии сейчас доступны?'
+            [en]='Which two tours are currently available?'
+            [vi]='Hiện có hai tour nào?'
+            [zh]='目前有哪两条行程可以选择？'
+            [ko]='현재 어떤 두 투어가 있나요?'
+          )
+          for locale in ru en vi zh ko; do
+            payload="$(jq -nc --arg locale "$locale" --arg message "${messages[$locale]}" '{locale:$locale,message:$message}')"
+            curl -fsS -X POST "$base/api/ai/chat"               -H 'content-type: application/json'               -H "x-max-tour-locale: $locale"               --data "$payload" > "/tmp/ai-$locale.json"
+            jq -e '.ok == true and (.reply|type=="string") and (.reply|length>0) and (.tourId == "" or .tourId == "1287578" or .tourId == "1287580") and ((.source // "") | contains("bokun"))' "/tmp/ai-$locale.json" >/dev/null
+            echo "=== $locale ==="
+            jq '{source,tourId,reply}' "/tmp/ai-$locale.json"
+          done
+
+          ! jq -r '.reply' /tmp/ai-zh.json | grep -P '[А-Яа-яЁё]'
+          ! jq -r '.reply' /tmp/ai-en.json | grep -P '[А-Яа-яЁё]'
+          ! jq -r '.reply' /tmp/ai-vi.json | grep -P '[А-Яа-яЁё]'
+          ! jq -r '.reply' /tmp/ai-ko.json | grep -P '[А-Яа-яЁё]'
