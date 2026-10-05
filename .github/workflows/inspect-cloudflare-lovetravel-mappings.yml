@@ -1,0 +1,30 @@
+name: Inspect Cloudflare LoveTravel mappings
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-cloudflare-lovetravel-mappings.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Inspect Workers domains and services
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '=== domains ==='
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/domains"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select(.hostname=="integration.viiversion.com" or .hostname=="lovetravel.viiversion.com")|{hostname,service,environment,zone_name}]}'
+          echo '=== scripts ==='
+          curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select((.id//.name//"")|test("viiversion|love-travel|integration";"i"))|{id,etag,modified_on,handlers}]}'
