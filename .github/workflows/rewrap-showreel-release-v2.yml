@@ -1,0 +1,83 @@
+name: Rewrap showreel release for new Cloudflare credential
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/showreel-deploy]
+    paths:
+      - '.deploy-showreel/rewrap-key-v2.json'
+      - '.github/workflows/rewrap-showreel-release-v2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  rewrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Rewrap encrypted release without exposing runtime secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${CLOUDFLARE_API_TOKEN:-}"
+          python -m pip install --quiet cryptography==46.0.5
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+          token=os.environ["CLOUDFLARE_API_TOKEN"]
+          print("::add-mask::"+token)
+
+          old=json.load(open(".deploy-showreel/release.enc.json"))
+          sealed=base64.b64decode(old["sealed_private_key"])
+          old_key=hashlib.sha256(("showreel-deploy-v1:"+token).encode()).digest()
+          private_pem=AESGCM(old_key).decrypt(
+              sealed[:12],sealed[12:],b"showreel-deploy-v1")
+          private=serialization.load_pem_private_key(private_pem,password=None)
+          release_key=private.decrypt(
+              base64.b64decode(old["wrapped_key"]),
+              padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=b"showreel-release-v1"))
+          cipher=base64.b64decode(old["ciphertext"])
+          raw=AESGCM(release_key).decrypt(
+              cipher[:12],cipher[12:],b"showreel-release-v1")
+          assert hashlib.sha256(raw).hexdigest()==old["sha256"]
+
+          handoff=json.load(open(".deploy-showreel/rewrap-key-v2.json"))
+          public=serialization.load_pem_public_key(base64.b64decode(handoff["public_key"]))
+          new_key=os.urandom(32)
+          wrapped=public.encrypt(
+              new_key,
+              padding.OAEP(mgf=padding.MGF1(hashes.SHA256()),algorithm=hashes.SHA256(),label=b"showreel-release-v2"))
+          nonce=os.urandom(12)
+          new_cipher=nonce+AESGCM(new_key).encrypt(nonce,raw,b"showreel-release-v2")
+
+          payload=json.loads(raw)
+          result={
+              "version":2,
+              "source_commit":payload.get("source_commit",old.get("source_commit")),
+              "sha256":hashlib.sha256(raw).hexdigest(),
+              "sealed_private_key":handoff["sealed_private_key"],
+              "wrapped_key":base64.b64encode(wrapped).decode(),
+              "ciphertext":base64.b64encode(new_cipher).decode()
+          }
+          json.dump(result,open("release-v2.enc.json","w"),indent=2)
+          print(json.dumps({
+              "rewrapped":True,
+              "source_commit":result["source_commit"],
+              "payload_sha256":result["sha256"]
+          }))
+          PY
+
+      - name: Upload rewrapped release
+        uses: actions/upload-artifact@v4
+        with:
+          name: showreel-release-v2
+          path: release-v2.enc.json
+          retention-days: 1
