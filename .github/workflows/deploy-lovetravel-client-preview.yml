@@ -1,5 +1,5 @@
 name: Deploy LoveTravel client preview
-# Rebuild after LoveTravel localization fixes
+# Rebuild after dynamic i18n and two-tour home cleanup
 
 on:
   push:
