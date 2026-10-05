@@ -151,7 +151,9 @@ jobs:
             const resolution=await page.evaluate(()=>globalThis.LoveTravelBookingConfigurator?.resolution?.());
             const modes=resolution?.constraints?.dropoff?.modes||[];
             if(!modes.length) return;
-            await page.locator('[data-lt-step="dropoff"]').click();
+            const step=page.locator('[data-lt-step="dropoff"]');
+            if(!await step.count()) return;
+            await step.click();
             await page.waitForSelector('.lt-booking-sheet.is-open [data-lt-dropoff-mode]',{state:'visible',timeout:10000});
             if(modes.includes('NO_DROPOFF') && await page.locator('.lt-booking-sheet.is-open [data-lt-dropoff-mode="NO_DROPOFF"]').count()){
               await page.locator('.lt-booking-sheet.is-open [data-lt-dropoff-mode="NO_DROPOFF"]').click();
