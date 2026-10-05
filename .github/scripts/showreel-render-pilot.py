@@ -51,7 +51,9 @@ try:
     assert result["state"]=="ready"
     print("PILOT_READY="+json.dumps({"job":jid,"duration":result["result"]["duration"],"candidates":len(result["result"]["candidates"]),"timeline":len(result["result"]["timeline"])}),flush=True)
 except Exception as error:
-    print("PILOT_FAILED="+type(error).__name__+" status="+str(getattr(error,"code","none")),flush=True)
+    import traceback
+    print("PILOT_FAILED="+type(error).__name__+" status="+str(getattr(error,"code","none"))+" attribute="+str(getattr(error,"name",None)),flush=True)
+    print("PILOT_TRACE="+json.dumps([{"file":pathlib.Path(f.filename).name,"line":f.lineno,"function":f.name} for f in traceback.extract_tb(error.__traceback__)]),flush=True)
     raise SystemExit(1)
 finally:
     try: client.json("processor/heartbeat",{"ready":False,"detail":"Bounded pilot finished; permanent container pending"})
