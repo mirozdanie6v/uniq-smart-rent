@@ -1,4 +1,5 @@
 name: Audit LoveTravel mobile preview
+# Re-run after ZH shell localization
 
 on:
   push:
