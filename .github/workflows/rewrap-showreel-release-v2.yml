@@ -9,7 +9,7 @@ on:
       - '.github/workflows/rewrap-showreel-release-v2.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   rewrap:
@@ -74,6 +74,22 @@ jobs:
               "payload_sha256":result["sha256"]
           }))
           PY
+
+      - name: Persist encrypted v2 release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .deploy-showreel
+          cp release-v2.enc.json .deploy-showreel/release-v2.enc.json
+          git config user.name "showreel-release-bot"
+          git config user.email "showreel-release-bot@users.noreply.github.com"
+          git add .deploy-showreel/release-v2.enc.json
+          if git diff --cached --quiet; then
+            echo "Encrypted v2 release is already current."
+          else
+            git commit -m "Store token-rewrapped showreel release"
+            git push origin HEAD:codex/showreel-deploy
+          fi
 
       - name: Upload rewrapped release
         uses: actions/upload-artifact@v4
