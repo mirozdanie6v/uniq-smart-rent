@@ -30,5 +30,11 @@ jobs:
           curl -sS "https://api.cloudflare.com/client/v4/zones/56fa9423ef85e05559f453af43ec400f/workers/routes" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             | jq '{success,errors,result:[.result[]?|select((.pattern//"")|test("integration\\.viiversion\\.com|lovetravel\\.viiversion\\.com";"i"))|{id,pattern,script}]}'
+          echo '=== dns ==='
+          for host in integration.viiversion.com lovetravel.viiversion.com; do
+            curl -sS "https://api.cloudflare.com/client/v4/zones/56fa9423ef85e05559f453af43ec400f/dns_records?name=$host&per_page=100" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+              | jq --arg host "$host" '{host:$host,success,errors,result:[.result[]?|{id,type,name,content,proxied,comment,tags}]}'
+          done
           echo '=== scripts ==='
           curl -sS "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts?per_page=100"             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"             | jq '{success,errors,result:[.result[]?|select((.id//.name//"")|test("viiversion|love-travel|integration";"i"))|{id,etag,modified_on,handlers}]}'
