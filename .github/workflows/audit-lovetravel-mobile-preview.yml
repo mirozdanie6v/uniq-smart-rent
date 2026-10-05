@@ -42,8 +42,10 @@ jobs:
           });
           const consoleErrors=[];
           const pageErrors=[];
+          const failedResponses=[];
           page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(msg.text()); });
           page.on('pageerror',err=>pageErrors.push(String(err)));
+          page.on('response',res=>{ if(res.status()>=400) failedResponses.push({status:res.status(),url:res.url()}); });
 
           await page.goto(base,{waitUntil:'domcontentloaded',timeout:45000});
           await page.waitForTimeout(7000);
@@ -94,7 +96,13 @@ jobs:
           if(await zh.count()) {
             await zh.click();
             await page.waitForTimeout(2500);
-            await snapshot('ZH');
+            await snapshot('ZH/home');
+            const catalogNav=page.locator('button[data-nav="catalog"]').first();
+            if(await catalogNav.count()) {
+              await catalogNav.click();
+              await page.waitForTimeout(3500);
+              await snapshot('ZH/catalog');
+            }
           } else {
             console.log('ZH switch missing');
           }
@@ -103,6 +111,8 @@ jobs:
           console.log(JSON.stringify(consoleErrors,null,2));
           console.log('=== PAGE_ERRORS ===');
           console.log(JSON.stringify(pageErrors,null,2));
+          console.log('=== FAILED_RESPONSES ===');
+          console.log(JSON.stringify(failedResponses,null,2));
           await page.screenshot({path:'/tmp/lovetravel-mobile.png',fullPage:true});
           await browser.close();
           NODE
