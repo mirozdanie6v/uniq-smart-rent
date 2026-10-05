@@ -32,7 +32,7 @@ url="https://viiversion-showreel-ai.mirozdanie6v.workers.dev"
 def chunk(name,data): return struct.pack(">I",len(data))+name+data+struct.pack(">I",zlib.crc32(name+data)&0xffffffff)
 png=b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",32,32,8,2,0,0,0))+chunk(b"IDAT",zlib.compress((b"\0"+b"\xff\0\0"*32)*32))+chunk(b"IEND",b"")
 probe={"model":config["vars"]["CLOUDFLARE_VISION_MODEL"],"max_completion_tokens":120,"messages":[{"role":"user","content":[{"type":"text","text":"Identify the dominant image color in English. Return JSON with one field: color."},{"type":"image_url","image_url":{"url":"data:image/png;base64,"+base64.b64encode(png).decode()}}]}]}
-req=urllib.request.Request(url+"/infer",data=json.dumps(probe).encode(),headers={"Authorization":"Bearer "+runtime["SHOWREEL_PROCESSOR_KEY"],"Content-Type":"application/json"})
+req=urllib.request.Request(url+"/infer",data=json.dumps(probe).encode(),headers={"Authorization":"Bearer "+runtime["SHOWREEL_PROCESSOR_KEY"],"Content-Type":"application/json","User-Agent":"Mozilla/5.0 (compatible; VIIVERSION-Showreel/1.0; +https://viiversion.com)"})
 try:
     with urllib.request.urlopen(req,timeout=240) as response: result=json.load(response)
     print("BINDING_VISION_PROBE="+json.dumps(result)[:2500],flush=True)
