@@ -1,5 +1,5 @@
 name: Deploy LoveTravel client preview
-# Rebuild after LoveTravel AI session decoupling
+# Rebuild after LoveTravel localization fixes
 
 on:
   push:
