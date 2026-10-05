@@ -1,0 +1,51 @@
+name: Inspect LoveTravel card DOM
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-lovetravel-card-dom.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: |
+          npm init -y >/dev/null
+          npm install --no-fund --no-audit playwright@1.55.0
+          npx playwright install --with-deps chromium >/dev/null
+      - name: Inspect ZH card DOM
+        shell: bash
+        run: |
+          cat > inspect.mjs <<'NODE'
+          import { chromium } from 'playwright';
+          const browser=await chromium.launch({headless:true});
+          const page=await browser.newPage({viewport:{width:390,height:844}});
+          await page.goto('https://love-travel-client-preview.mirozdanie6v.workers.dev',{waitUntil:'domcontentloaded',timeout:45000});
+          await page.waitForFunction(()=>document.documentElement.classList.contains('love-travel-catalog-ready'),null,{timeout:45000});
+          await page.locator('.mt-language-switcher button[data-locale="zh"]').click();
+          await page.locator('button[data-nav="catalog"]').click();
+          await page.waitForTimeout(3000);
+          const result=await page.evaluate(()=>{
+            const card=document.querySelector('#catalogScreen .wide-card');
+            const nodes=card?[...card.querySelectorAll('*')].map(el=>({
+              tag:el.tagName,
+              cls:String(el.className||''),
+              text:(el.textContent||'').trim().replace(/\s+/g,' '),
+              before:getComputedStyle(el,'::before').content,
+              after:getComputedStyle(el,'::after').content,
+            })).filter(x=>/ВЫЕЗД|ФИНИШ/.test(x.text)||/ВЫЕЗД|ФИНИШ/.test(x.before+x.after)):[];
+            return {html:card?.outerHTML||'',nodes};
+          });
+          console.log(JSON.stringify(result,null,2));
+          await browser.close();
+          NODE
+          node inspect.mjs
