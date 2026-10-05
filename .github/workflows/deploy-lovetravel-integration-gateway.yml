@@ -1,0 +1,94 @@
+name: Deploy LoveTravel integration gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy-lovetravel-integration-gateway.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - name: Resolve production account
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl -fsS -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" 'https://api.cloudflare.com/client/v4/zones?name=viiversion.com')"
+          RESPONSE="$response" node <<'NODE'
+          const data=JSON.parse(process.env.RESPONSE||'{}');
+          const zone=(data.result||[]).find(z=>z.name==='viiversion.com');
+          if(!data.success||!zone?.account?.id) process.exit(1);
+          require('fs').appendFileSync(process.env.GITHUB_ENV,`VIIVERSION_ACCOUNT_ID=${zone.account.id}\n`);
+          NODE
+
+      - name: Checkout integration service
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/viiversion
+          ref: main
+          path: viiversion
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Verify integration code
+        working-directory: viiversion/integration-service
+        run: |
+          npm install --no-fund --no-audit
+          npm run typecheck
+          npm test
+
+      - name: Prepare cross-script gateway config
+        working-directory: viiversion/integration-service
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const cfg=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          cfg.name='viiversion-lovetravel-gateway';
+          cfg.workers_dev=true;
+          delete cfg.routes;
+          cfg.durable_objects={
+            bindings:[{
+              name:'STORE',
+              class_name:'IntegrationStore',
+              script_name:'viiversion-integration'
+            }]
+          };
+          delete cfg.migrations;
+          fs.writeFileSync('wrangler.gateway.jsonc',JSON.stringify(cfg,null,2)+'\n');
+          NODE
+          CLOUDFLARE_ACCOUNT_ID="$VIIVERSION_ACCOUNT_ID" npx wrangler deploy --dry-run --config wrangler.gateway.jsonc
+
+      - name: Deploy gateway
+        working-directory: viiversion/integration-service
+        shell: bash
+        run: CLOUDFLARE_ACCOUNT_ID="$VIIVERSION_ACCOUNT_ID" npx wrangler deploy --config wrangler.gateway.jsonc
+
+      - name: Verify inherited Bókun connection
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://viiversion-lovetravel-gateway.mirozdanie6v.workers.dev'
+          for attempt in $(seq 1 20); do
+            if curl -fsS "$base/api/bokun/status?vendorId=137689" > /tmp/status.json; then
+              if jq -e '.ok == true and .vendorId == "137689" and .oauthConnected == true and .restCredentialsReady == true' /tmp/status.json >/dev/null; then
+                code="$(curl -sS -o /tmp/demo.json -w '%{http_code}' -X POST "$base/internal/lovetravel/bokun/demo-submit?vendorId=137689&currency=USD" -H 'content-type: application/json' --data '{}')"
+                test "$code" = 401
+                jq '{ok,vendorId,oauthConnected,restCredentialsReady,realBookingWriteEnabled,oneTimeBookingTestArmed}' /tmp/status.json
+                exit 0
+              fi
+            fi
+            sleep 3
+          done
+          cat /tmp/status.json 2>/dev/null || true
+          exit 1
