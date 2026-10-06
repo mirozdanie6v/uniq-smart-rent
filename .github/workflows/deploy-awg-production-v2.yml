@@ -186,7 +186,6 @@ jobs:
           AWG_ORIGIN=$(yc serverless container get --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$AWG_ORIGIN" && test "$AWG_ORIGIN" != "null"
           echo "AWG_ORIGIN=$AWG_ORIGIN" >> "$GITHUB_ENV"
-          echo "AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL=$AWG_ORIGIN" >> "$GITHUB_ENV"
 
       - name: Create or update AWG API Gateway
         working-directory: autoworld
