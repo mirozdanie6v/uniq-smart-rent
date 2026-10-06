@@ -36,6 +36,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/prototype/auto-sale-usa'
     runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - name: Checkout canonical AutoWorld main
         uses: actions/checkout@v5
@@ -93,7 +94,7 @@ jobs:
           ok=false
           for attempt in 1 2 3 4; do
             rm -rf "$HOME/yandex-cloud" || true
-            if curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n; then
+            if curl --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n; then
               ok=true
               break
             fi
