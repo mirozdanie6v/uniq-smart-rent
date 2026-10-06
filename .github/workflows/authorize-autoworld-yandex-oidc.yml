@@ -82,7 +82,17 @@ jobs:
               [.[] | select((.issuer // "") == "https://token.actions.githubusercontent.com")][0]
               | (.id // empty)')
           fi
-          test -n "$FEDERATION_ID" || { echo "GitHub workload identity federation not found in production folder"; exit 1; }
+          if [ -z "$FEDERATION_ID" ]; then
+            CREATED=$($YC iam workload-identity oidc federation create \
+              --name autoworld-github \
+              --issuer "https://token.actions.githubusercontent.com" \
+              --audiences "https://github.com/mirozdanie6v" \
+              --jwks-url "https://token.actions.githubusercontent.com/.well-known/jwks" \
+              --folder-id "$YC_FOLDER_ID" \
+              --format json)
+            FEDERATION_ID=$(printf '%s' "$CREATED" | jq -r '.id // empty')
+          fi
+          test -n "$FEDERATION_ID" || { echo "Unable to create or locate AutoWorld GitHub workload identity federation"; exit 1; }
 
           EXISTS=$(printf '%s' "$CREDS" | jq -r --arg sub "$CANONICAL_SUBJECT" '
             any(.[]; (.external_subject_id // .externalSubjectId // "") == $sub)')
