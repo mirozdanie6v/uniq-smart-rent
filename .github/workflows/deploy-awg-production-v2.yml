@@ -188,6 +188,37 @@ jobs:
           echo "AWG_ORIGIN=$AWG_ORIGIN" >> "$GITHUB_ENV"
           echo "AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL=$AWG_ORIGIN" >> "$GITHUB_ENV"
 
+      - name: Create or update AWG API Gateway
+        working-directory: autoworld
+        run: |
+          set -euo pipefail
+          SPEC=infra/yandex/awg-production-gateway.yaml
+          if yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
+            yc serverless api-gateway update --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
+          else
+            yc serverless api-gateway create --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
+          fi
+          GW_JSON=$(yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          GW_ID=$(printf '%s' "$GW_JSON" | jq -r '.id')
+          GW_DOMAIN=$(printf '%s' "$GW_JSON" | jq -r '.domain')
+          test -n "$GW_ID" && test "$GW_ID" != "null"
+          test -n "$GW_DOMAIN" && test "$GW_DOMAIN" != "null"
+          echo "AWG_GATEWAY_ID=$GW_ID" >> "$GITHUB_ENV"
+          echo "AWG_GATEWAY_URL=https://$GW_DOMAIN/" >> "$GITHUB_ENV"
+          echo "AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL=https://$GW_DOMAIN/" >> "$GITHUB_ENV"
+
+      - name: Verify AWG gateway health
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled" and .telegramRoutingReady == true and (.telegramRoutableManagers|tonumber) >= 1' >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 30 || exit 1
+            sleep 5
+          done
+          curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
+
       - name: Deploy canonical Telegram relay and synchronize secrets
         working-directory: autoworld/cloudflare/telegram-relay
         env:
@@ -207,7 +238,7 @@ jobs:
           printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
           printf '%s' "$RELAY_SECRET" | npx wrangler secret put AUTOWORLD_RELAY_SECRET --config wrangler.toml
           WEBHOOK_KEY=$(node -e "const {createHmac}=require('crypto');process.stdout.write(createHmac('sha256',process.env.TELEGRAM_BOT_TOKEN).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32))")
-          printf '%s' "${AWG_ORIGIN%/}/api/auto-sale/telegram/webhook/$WEBHOOK_KEY" | npx wrangler secret put AUTOWORLD_YANDEX_WEBHOOK_URL --config wrangler.toml
+          printf '%s' "${AWG_GATEWAY_URL%/}/api/auto-sale/telegram/webhook/$WEBHOOK_KEY" | npx wrangler secret put AUTOWORLD_YANDEX_WEBHOOK_URL --config wrangler.toml
 
       - name: Configure AutoWorld Telegram Mini App and webhook
         working-directory: autoworld
@@ -217,36 +248,6 @@ jobs:
 
       - name: Verify Telegram relay health
         run: curl --fail --silent --show-error https://integration-telegram.viiversion.com/telegram/health | jq -e '.ok == true'
-
-      - name: Create or update AWG API Gateway
-        working-directory: autoworld
-        run: |
-          set -euo pipefail
-          SPEC=infra/yandex/awg-production-gateway.yaml
-          if yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1; then
-            yc serverless api-gateway update --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
-          else
-            yc serverless api-gateway create --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --spec "$SPEC"
-          fi
-          GW_JSON=$(yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
-          GW_ID=$(printf '%s' "$GW_JSON" | jq -r '.id')
-          GW_DOMAIN=$(printf '%s' "$GW_JSON" | jq -r '.domain')
-          test -n "$GW_ID" && test "$GW_ID" != "null"
-          test -n "$GW_DOMAIN" && test "$GW_DOMAIN" != "null"
-          echo "AWG_GATEWAY_ID=$GW_ID" >> "$GITHUB_ENV"
-          echo "AWG_GATEWAY_URL=https://$GW_DOMAIN/" >> "$GITHUB_ENV"
-
-      - name: Verify AWG gateway health
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 30); do
-            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled" and .telegramRoutingReady == true and (.telegramRoutableManagers|tonumber) >= 1' >/dev/null; then
-              break
-            fi
-            test "$attempt" -lt 30 || exit 1
-            sleep 5
-          done
-          curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
 
       - name: Verify canonical RU domain
         run: |
