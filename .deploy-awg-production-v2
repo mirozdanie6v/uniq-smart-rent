@@ -6,3 +6,4 @@ retry RU cutover after canonical verification fixes
 retry after Telegram webhook drain validation fix
 deploy automatic admin routing and two-client smoke
 verified autoworld manager routing build a3de9d3a1e7d
+retry canonical deploy after webhook readiness fix 3bebc3445b5a
