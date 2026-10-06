@@ -26,7 +26,7 @@ jobs:
             echo "=== $url ==="
             code=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/body -w '%{http_code}' "$url" || true)
             echo "HTTP $code"
-            cat /tmp/body 2>/dev/null | jq '{ok,service,persistence,telegramNotifications,telegramFallbackManagers,telegramRoutableManagers,telegramRoutingReady,normalizedAuthoritative,legacyStateWrite,ydbStateReadMode,mediaBucket}' 2>/dev/null || cat /tmp/body 2>/dev/null || true
+            cat /tmp/body 2>/dev/null | jq '{ok,service,persistence,telegramNotifications,telegramFallbackManagers,telegramRoutableManagers,telegramRoutingReady,linkedAdminAccounts,adminInvites,normalizedAuthoritative,legacyStateWrite,ydbStateReadMode,mediaBucket}' 2>/dev/null || cat /tmp/body 2>/dev/null || true
           done
           echo "=== DNS ==="
           getent ahosts awgcars.ru || true
