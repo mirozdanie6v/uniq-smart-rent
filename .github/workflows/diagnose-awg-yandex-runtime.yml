@@ -69,6 +69,6 @@ jobs:
           yc serverless container revision list --container-name autoworld-awg-prod --folder-id "$YC_FOLDER_ID" --format json \
             | jq '.[0:5] | map({id,created_at,status,image:.image.image_url,service_account_id,concurrency})'
           echo "=== recent runtime logs ==="
-          yc logging read --folder-id "$YC_FOLDER_ID" --since 30m --limit 500 --format json \
+          yc logging read --resource-ids=bba691o7au7epjqvs77b --since 30m --limit 500 --format json \
             | jq -c '.[] | select(((.message // "") | test("AUTO SALE|autoworld|Error|error|YDB|telegram";"i")) or ((.resource.type // "") | test("serverless|container";"i"))) | {timestamp,level,message,resource,labels}' \
             | tail -n 200 || true
