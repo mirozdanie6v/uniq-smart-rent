@@ -22,7 +22,7 @@ env:
   AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
   AWG_GATEWAY_NAME: autoworld-awg-prod
   AUTO_SALE_TELEGRAM_APP_URL: https://awgcars.ru/
-  AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://integration-telegram.viiversion.com/telegram/webhook
+  AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://awgcars.ru/
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
   AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
   AUTO_SALE_YDB_DUAL_WRITE: "false"
