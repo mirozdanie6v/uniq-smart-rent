@@ -10,3 +10,4 @@ retry canonical deploy after webhook readiness fix 3bebc3445b5a
 route Telegram webhook to AWG_ORIGIN; keep Mini App awgcars.ru; canonical e40bd5199133
 retry after gateway-before-webhook architecture; canonical 8d10f002e42f
 deploy serialized gateway-first webhook flow; canonical 9ac95532f457
+deploy after shared runtime module packaging fix fd1df7595d56
