@@ -1,0 +1,52 @@
+name: Diagnose AWG production
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .diagnose-awg-production
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Probe production endpoints
+        run: |
+          set -u
+          for url in \
+            "https://bba691o7au7epjqvs77b.containers.yandexcloud.net/api/health" \
+            "https://d5dbgio6limv03usvipl.s183zexc.apigw.yandexcloud.net/api/health" \
+            "https://awgcars.ru/api/health" \
+            "https://www.awgcars.ru/api/health"
+          do
+            echo "=== $url ==="
+            code=$(curl -sS --connect-timeout 10 --max-time 30 -o /tmp/body -w '%{http_code}' "$url" || true)
+            echo "HTTP $code"
+            cat /tmp/body 2>/dev/null | jq '{ok,service,persistence,telegramNotifications,telegramFallbackManagers,telegramRoutableManagers,telegramRoutingReady,normalizedAuthoritative,legacyStateWrite,ydbStateReadMode,mediaBucket}' 2>/dev/null || cat /tmp/body 2>/dev/null || true
+          done
+          echo "=== DNS ==="
+          getent ahosts awgcars.ru || true
+          getent ahosts www.awgcars.ru || true
+
+      - name: Probe Telegram webhook state
+        env:
+          TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$TOKEN"
+          INFO=$(curl -fsS "https://api.telegram.org/bot$TOKEN/getWebhookInfo")
+          printf '%s' "$INFO" | jq '{
+            ok,
+            configured:(.result.url|length>0),
+            ruDomain:(.result.url|startswith("https://awgcars.ru/")),
+            pending_update_count:.result.pending_update_count,
+            last_error_message:(.result.last_error_message // null),
+            last_error_date:(.result.last_error_date // null),
+            max_connections:(.result.max_connections // null)
+          }'
+          MENU=$(curl -fsS "https://api.telegram.org/bot$TOKEN/getChatMenuButton")
+          printf '%s' "$MENU" | jq '{ok,menuType:.result.type,webAppUrl:(.result.web_app.url // null)}'
