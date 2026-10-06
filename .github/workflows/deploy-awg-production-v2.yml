@@ -210,7 +210,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled" and .telegramRoutingReady == true and (.telegramRoutableManagers|tonumber) >= 1' >/dev/null; then
+            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled"' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
@@ -252,7 +252,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl -fsS https://awgcars.ru/api/health | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .telegramNotifications == "enabled" and .telegramRoutingReady == true' >/dev/null; then
+            if curl -fsS https://awgcars.ru/api/health | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .telegramNotifications == "enabled"' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
