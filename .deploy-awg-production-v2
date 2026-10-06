@@ -1,14 +1,7 @@
-.deploy-awg-production-v2
-rerun after AWG workflow test fix
-rerun after yc installer retry fix
-rerun after api gateway cli fix
-final deploy from canonical autoworld/main
-deploy catalog import runtime from autoworld main
-initialize normalized domain and redeploy
-production release 2026-10-06 from autoworld/main 309b5c9330dd7483c5f04ebda92f84e2a7031f65
-retry canonical production after yc profile fix; source autoworld/main 309b5c9330dd7483c5f04ebda92f84e2a7031f65
-retry canonical production after yc endpoint fix; source autoworld/main 06e7213f931e66d2f73e97291b5e289483c942f6
+force autoworld production deploy
+source autoworld/main 06e7213f931e66d2f73e97291b5e289483c942f6
 RU domain cutover awgcars.ru; deploy canonical autoworld/main after 45b22e8b93ca
 retry RU cutover with direct awgcars.ru Telegram webhook
 retry RU cutover after canonical verification fixes
 retry after Telegram webhook drain validation fix
+deploy automatic admin routing and two-client smoke
