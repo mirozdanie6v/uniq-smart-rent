@@ -8,3 +8,4 @@ deploy automatic admin routing and two-client smoke
 verified autoworld manager routing build a3de9d3a1e7d
 retry canonical deploy after webhook readiness fix 3bebc3445b5a
 route Telegram webhook to AWG_ORIGIN; keep Mini App awgcars.ru; canonical e40bd5199133
+retry after gateway-before-webhook architecture; canonical 8d10f002e42f
