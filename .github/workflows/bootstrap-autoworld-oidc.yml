@@ -1,0 +1,99 @@
+name: Bootstrap AutoWorld Yandex OIDC
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .bootstrap-autoworld-oidc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate target service account
+        run: |
+          set -euo pipefail
+          test -n "${YC_DEPLOY_SA_ID:-}" || { echo "Missing YC_DEPLOY_SA_ID"; exit 1; }
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Trusted bridge token exchange failed with HTTP $HTTP_CODE"
+            echo "$BODY" | jq -c '{error,error_description}' || true
+            exit 1
+          fi
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token // empty')
+          test -n "$IAM_TOKEN"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          set -euo pipefail
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Link canonical autoworld repository to existing federation
+        run: |
+          set -euo pipefail
+          LEGACY_SUBJECT="repo:mirozdanie6v/uniq-smart-rent:ref:refs/heads/main"
+          TARGET_SUBJECT="repo:mirozdanie6v/autoworld:ref:refs/heads/main"
+
+          CREDS=$(yc iam workload-identity federated-credential list \
+            --service-account-id "$YC_DEPLOY_SA_ID" \
+            --format json)
+
+          FEDERATION_ID=$(printf '%s' "$CREDS" | jq -r --arg s "$LEGACY_SUBJECT" '
+            .[] | select((.external_subject_id // .externalSubjectId) == $s) |
+            (.federation_id // .federationId)
+          ' | head -n1)
+
+          if [ -z "$FEDERATION_ID" ] || [ "$FEDERATION_ID" = "null" ]; then
+            echo "Could not resolve the existing federation used by the trusted bridge."
+            printf '%s' "$CREDS" | jq -c '[.[] | {federation:(.federation_id // .federationId), subject:(.external_subject_id // .externalSubjectId)}]'
+            exit 1
+          fi
+
+          EXISTS=$(printf '%s' "$CREDS" | jq -r --arg s "$TARGET_SUBJECT" '
+            any(.[]; (.external_subject_id // .externalSubjectId) == $s)
+          ')
+          if [ "$EXISTS" = "true" ]; then
+            echo "Canonical AutoWorld federated credential already exists."
+            exit 0
+          fi
+
+          yc iam workload-identity federated-credential create \
+            --service-account-id "$YC_DEPLOY_SA_ID" \
+            --federation-id "$FEDERATION_ID" \
+            --external-subject-id "$TARGET_SUBJECT"
+
+          echo "Canonical AutoWorld federated credential created."
