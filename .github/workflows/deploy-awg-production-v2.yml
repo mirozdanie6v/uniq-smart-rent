@@ -260,6 +260,24 @@ jobs:
           done
           curl -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
 
+
+      - name: Verify two-client production smoke
+        run: |
+          set -euo pipefail
+          SMOKE=$(curl -fsS -X POST \
+            -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
+            https://awgcars.ru/api/auto-sale/smoke/two-client)
+          printf '%s' "$SMOKE" | jq -e '
+            .ok == true
+            and .checks.distinctLeadIds == true
+            and .checks.firstClientOwnsOnlyFirst == true
+            and .checks.secondClientOwnsOnlySecond == true
+            and .checks.managerNotificationPlannedForBoth == true
+            and .checks.clientConfirmationPlannedForBoth == true
+            and .cleanup.ok == true
+          ' >/dev/null
+          printf '%s' "$SMOKE" | jq '{ok,checks,planned,cleanup}'
+
       - name: Verify Telegram Mini App points to RU domain
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
