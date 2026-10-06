@@ -21,7 +21,7 @@ env:
   AWG_YDB_CONNECTION_STRING: grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1ggsmuiq7tb2d27f89q/etn00ojk5iv1u7dgpdar
   AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
   AWG_GATEWAY_NAME: autoworld-awg-prod
-  AUTO_SALE_TELEGRAM_APP_URL: https://autoworld.viiversion.com/
+  AUTO_SALE_TELEGRAM_APP_URL: https://awgcars.ru/
   AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://integration-telegram.viiversion.com/telegram/webhook
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
   AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
@@ -247,6 +247,26 @@ jobs:
             sleep 5
           done
           curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
+
+      - name: Verify canonical RU domain
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            if curl -fsS https://awgcars.ru/api/health | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .telegramNotifications == "enabled" and .telegramRoutingReady == true' >/dev/null; then
+              break
+            fi
+            test "$attempt" -lt 30 || exit 1
+            sleep 5
+          done
+          curl -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
+
+      - name: Verify Telegram Mini App points to RU domain
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          MENU=$(curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChatMenuButton")
+          printf '%s' "$MENU" | jq -e '.ok == true and .result.type == "web_app" and .result.web_app.url == "https://awgcars.ru/"' >/dev/null
 
       - name: Publish AWG deployment result
         run: |
