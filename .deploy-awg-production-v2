@@ -5,3 +5,4 @@ retry RU cutover with direct awgcars.ru Telegram webhook
 retry RU cutover after canonical verification fixes
 retry after Telegram webhook drain validation fix
 deploy automatic admin routing and two-client smoke
+verified autoworld manager routing build a3de9d3a1e7d
