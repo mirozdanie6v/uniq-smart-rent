@@ -214,13 +214,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled"' >/dev/null; then
+            if curl --connect-timeout 10 --max-time 20 -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled"' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
             sleep 5
           done
-          curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
+          curl --connect-timeout 10 --max-time 20 -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
 
       - name: Deploy canonical Telegram relay and synchronize secrets
         working-directory: autoworld/cloudflare/telegram-relay
@@ -256,13 +256,13 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl -fsS https://awgcars.ru/api/health | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .telegramNotifications == "enabled"' >/dev/null; then
+            if curl --connect-timeout 10 --max-time 20 -fsS https://awgcars.ru/api/health | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .telegramNotifications == "enabled"' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
             sleep 5
           done
-          curl -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
+          curl --connect-timeout 10 --max-time 20 -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
 
 
       - name: Verify two-client production smoke
