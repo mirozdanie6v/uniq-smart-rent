@@ -5,3 +5,4 @@ rerun after api gateway cli fix
 final deploy from canonical autoworld/main
 deploy catalog import runtime from autoworld main
 initialize normalized domain and redeploy
+production release 2026-10-06 from autoworld/main 309b5c9330dd7483c5f04ebda92f84e2a7031f65
