@@ -1,0 +1,74 @@
+name: Diagnose AWG Yandex runtime
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .diagnose-awg-yandex-runtime
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl --connect-timeout 10 --max-time 30 -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY" | jq -c '{error,error_description}' || true; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token // empty')
+          test -n "$IAM_TOKEN"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install Yandex Cloud CLI
+        run: |
+          set -euo pipefail
+          curl --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Configure CLI
+        run: |
+          set -euo pipefail
+          yc config set endpoint api.cloud.yandex.net:443
+          yc config set token "$YC_IAM_TOKEN"
+          yc config set folder-id "$YC_FOLDER_ID"
+
+      - name: Inspect AutoWorld container revisions and runtime logs
+        run: |
+          set -euo pipefail
+          echo "=== revisions ==="
+          yc serverless container revision list --container-name autoworld-awg-prod --folder-id "$YC_FOLDER_ID" --format json \
+            | jq '.[0:5] | map({id,created_at,status,image:.image.image_url,service_account_id,concurrency})'
+          echo "=== recent runtime logs ==="
+          yc logging read --folder-id "$YC_FOLDER_ID" --since 30m --limit 500 --format json \
+            | jq -c '.[] | select(((.message // "") | test("AUTO SALE|autoworld|Error|error|YDB|telegram";"i")) or ((.resource.type // "") | test("serverless|container";"i"))) | {timestamp,level,message,resource,labels}' \
+            | tail -n 200 || true
