@@ -1,5 +1,9 @@
 name: Deploy isolated AWG production
 
+concurrency:
+  group: awg-yandex-production-writer
+  cancel-in-progress: false
+
 on:
   push:
     branches: [prototype/auto-sale-usa]
