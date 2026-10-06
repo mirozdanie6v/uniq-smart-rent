@@ -11,3 +11,4 @@ retry canonical production after yc endpoint fix; source autoworld/main 06e7213f
 RU domain cutover awgcars.ru; deploy canonical autoworld/main after 45b22e8b93ca
 retry RU cutover with direct awgcars.ru Telegram webhook
 retry RU cutover after canonical verification fixes
+retry after Telegram webhook drain validation fix
