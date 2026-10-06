@@ -1,0 +1,93 @@
+name: Authorize canonical AutoWorld Yandex OIDC
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .authorize-autoworld-yandex-oidc
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  CANONICAL_SUBJECT: repo:mirozdanie6v/autoworld:ref:refs/heads/main
+  LEGACY_SUBJECT: repo:mirozdanie6v/uniq-smart-rent:ref:refs/heads/prototype/auto-sale-usa
+
+jobs:
+  authorize:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate trusted executor configuration
+        run: |
+          set -euo pipefail
+          test -n "$YC_FOLDER_ID"
+          test -n "$YC_DEPLOY_SA_ID"
+
+      - name: Request trusted GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange trusted token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=$YC_DEPLOY_SA_ID" \
+            --data-urlencode "subject_token=$GITHUB_OIDC_TOKEN" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY" | jq -c '{error,error_description}' || true; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token // empty')
+          test -n "$IAM_TOKEN"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install and configure Yandex Cloud CLI
+        run: |
+          set -euo pipefail
+          curl --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+          "$HOME/yandex-cloud/bin/yc" config set endpoint api.cloud.yandex.net:443
+          "$HOME/yandex-cloud/bin/yc" config set token "$YC_IAM_TOKEN"
+          "$HOME/yandex-cloud/bin/yc" config set folder-id "$YC_FOLDER_ID"
+
+      - name: Link autoworld/main to the existing GitHub federation
+        run: |
+          set -euo pipefail
+          YC="$HOME/yandex-cloud/bin/yc"
+          CREDS=$($YC iam workload-identity federated-credential list --service-account-id "$YC_DEPLOY_SA_ID" --format json)
+          FEDERATION_ID=$(printf '%s' "$CREDS" | jq -r --arg sub "$LEGACY_SUBJECT" '
+            [.[] | select((.external_subject_id // .externalSubjectId // "") == $sub)][0]
+            | (.federation_id // .federationId // empty)')
+          if [ -z "$FEDERATION_ID" ]; then
+            FEDERATION_ID=$(printf '%s' "$CREDS" | jq -r '.[0] | (.federation_id // .federationId // empty)')
+          fi
+          test -n "$FEDERATION_ID" || { echo "No existing workload identity federation credential found"; exit 1; }
+
+          EXISTS=$(printf '%s' "$CREDS" | jq -r --arg sub "$CANONICAL_SUBJECT" '
+            any(.[]; (.external_subject_id // .externalSubjectId // "") == $sub)')
+          if [ "$EXISTS" != "true" ]; then
+            $YC iam workload-identity federated-credential create \
+              --service-account-id "$YC_DEPLOY_SA_ID" \
+              --federation-id "$FEDERATION_ID" \
+              --external-subject-id "$CANONICAL_SUBJECT" >/dev/null
+          fi
+
+          AFTER=$($YC iam workload-identity federated-credential list --service-account-id "$YC_DEPLOY_SA_ID" --format json)
+          printf '%s' "$AFTER" | jq -e --arg sub "$CANONICAL_SUBJECT" '
+            any(.[]; (.external_subject_id // .externalSubjectId // "") == $sub)' >/dev/null
+          echo "Canonical AutoWorld GitHub subject is linked to Yandex workload identity."
