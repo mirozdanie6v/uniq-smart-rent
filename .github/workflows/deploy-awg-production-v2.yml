@@ -21,7 +21,8 @@ env:
   AWG_YDB_CONNECTION_STRING: grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1ggsmuiq7tb2d27f89q/etn00ojk5iv1u7dgpdar
   AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
   AWG_GATEWAY_NAME: autoworld-awg-prod
-  AUTO_SALE_TELEGRAM_APP_URL: https://awg.viiversion.com/
+  AUTO_SALE_TELEGRAM_APP_URL: https://autoworld.viiversion.com/
+  AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: https://integration-telegram.viiversion.com/telegram/webhook
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
   AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
   AUTO_SALE_YDB_DUAL_WRITE: "false"
@@ -180,6 +181,43 @@ jobs:
             --environment "AUTO_SALE_MEDIA_BUCKET=$AWG_MEDIA_BUCKET" \
             "${EXTRA_ENV[@]}"
 
+      - name: Resolve deployed AWG origin
+        run: |
+          set -euo pipefail
+          AWG_ORIGIN=$(yc serverless container get --name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
+          test -n "$AWG_ORIGIN" && test "$AWG_ORIGIN" != "null"
+          echo "AWG_ORIGIN=$AWG_ORIGIN" >> "$GITHUB_ENV"
+
+      - name: Deploy canonical Telegram relay and synchronize secrets
+        working-directory: autoworld/cloudflare/telegram-relay
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+          RELAY_SECRET: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$TELEGRAM_BOT_TOKEN"
+          test -n "$RELAY_SECRET"
+          npm install
+          npm test
+          npx wrangler deploy --config wrangler.toml
+          printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
+          printf '%s' "$RELAY_SECRET" | npx wrangler secret put AUTOWORLD_RELAY_SECRET --config wrangler.toml
+          WEBHOOK_KEY=$(node -e "const {createHmac}=require('crypto');process.stdout.write(createHmac('sha256',process.env.TELEGRAM_BOT_TOKEN).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32))")
+          printf '%s' "${AWG_ORIGIN%/}/api/auto-sale/telegram/webhook/$WEBHOOK_KEY" | npx wrangler secret put AUTOWORLD_YANDEX_WEBHOOK_URL --config wrangler.toml
+
+      - name: Configure AutoWorld Telegram Mini App and webhook
+        working-directory: autoworld
+        env:
+          AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: node scripts/configure-autoworld-telegram-bot.mjs
+
+      - name: Verify Telegram relay health
+        run: curl --fail --silent --show-error https://integration-telegram.viiversion.com/telegram/health | jq -e '.ok == true'
+
       - name: Create or update AWG API Gateway
         working-directory: autoworld
         run: |
@@ -202,7 +240,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET' >/dev/null; then
+            if curl -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled" and .telegramRoutingReady == true and (.telegramRoutableManagers|tonumber) >= 1' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
