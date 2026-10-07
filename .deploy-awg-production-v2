@@ -18,3 +18,4 @@ deploy relay-backed bot command replies e4f6a0ae46f6
 retry relay-backed welcome after deterministic tests 030f5fd5cba2
 deploy exact-revision gated relay welcome 7a2a490e6d78
 deploy authenticated Telegram webhook relay ingress 022a809ba7f3
+retry Telegram webhook via workers.dev ingress dfe5872eef04
