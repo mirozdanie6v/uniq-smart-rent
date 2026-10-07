@@ -110,7 +110,6 @@ jobs:
           test -n "$MANAGER_ID"
           printf '%s' "$MANAGER_ID" > "$RUNNER_TEMP/audit-manager-id"
           chmod 600 "$RUNNER_TEMP/audit-manager-id"
-          echo "::add-mask::$MANAGER_ID"
 
       - name: Resolve real Flyer_kg client audit recipient
         env:
@@ -169,7 +168,6 @@ jobs:
 
           printf '%s' "$CLIENT_ID" > "$RUNNER_TEMP/audit-client-id"
           chmod 600 "$RUNNER_TEMP/audit-client-id"
-          echo "::add-mask::$CLIENT_ID"
 
       - name: Verify real non-admin client request E2E
         env:
