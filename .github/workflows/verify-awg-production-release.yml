@@ -59,6 +59,34 @@ jobs:
           "$HOME/yandex-cloud/bin/yc" config set token "$YC_IAM_TOKEN"
           "$HOME/yandex-cloud/bin/yc" config set folder-id "$YC_FOLDER_ID"
 
+      - name: Read current production API credential
+        run: |
+          set -euo pipefail
+          REVISIONS=$(yc serverless container revision list --container-name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          API_KEY=$(printf '%s' "$REVISIONS" | jq -r '[.[] | select(.status == "ACTIVE")][0].image.environment.AUTO_SALE_API_KEY // empty')
+          if [ -z "$API_KEY" ]; then
+            API_KEY=$(printf '%s' "$REVISIONS" | jq -r '.[0].image.environment.AUTO_SALE_API_KEY // empty')
+          fi
+          test -n "$API_KEY"
+          echo "::add-mask::$API_KEY"
+          echo "AUTO_SALE_API_KEY=$API_KEY" >> "$GITHUB_ENV"
+
+      - name: Inspect manager routing state
+        run: |
+          set -euo pipefail
+          STATE=$(curl --connect-timeout 10 --max-time 30 -fsS \
+            -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
+            https://awgcars.ru/api/auto-sale/state)
+          printf '%s' "$STATE" | jq '{
+            managers:[.team[]? | select(.active != false and .role == "Менеджер") | {
+              name,
+              role,
+              active,
+              telegramUsername:(.telegramUsername // .telegram // null),
+              persistedTelegramId:(if ((.telegramUserId // "")|tostring|test("^[0-9]+$")) then "present" else "absent" end)
+            }]
+          }'
+
       - name: Verify live health and manager routing
         run: |
           set -euo pipefail
@@ -73,18 +101,6 @@ jobs:
             and (.telegramRoutableManagers|tonumber) >= 1
             and .telegramRoutingReady == true
           ' >/dev/null
-
-      - name: Read current production API credential
-        run: |
-          set -euo pipefail
-          REVISIONS=$(yc serverless container revision list --container-name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json)
-          API_KEY=$(printf '%s' "$REVISIONS" | jq -r '[.[] | select(.status == "ACTIVE")][0].image.environment.AUTO_SALE_API_KEY // empty')
-          if [ -z "$API_KEY" ]; then
-            API_KEY=$(printf '%s' "$REVISIONS" | jq -r '.[0].image.environment.AUTO_SALE_API_KEY // empty')
-          fi
-          test -n "$API_KEY"
-          echo "::add-mask::$API_KEY"
-          echo "AUTO_SALE_API_KEY=$API_KEY" >> "$GITHUB_ENV"
 
       - name: Verify two-client production smoke
         run: |
