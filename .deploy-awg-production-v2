@@ -23,3 +23,4 @@ deploy relay webhook via workers.dev and bind integration route 8f1b3729310b
 deploy validated relay welcome fix 044b190e9d92
 deploy full Telegram relay/webhook audit source autoworld/main b6728693f2b8 client @Flyer_kg
 retry workers.dev-only relay topology canonical 6494dba66725 client @Flyer_kg
+deploy proven direct-gateway webhook + integration relay canonical f56d26a2feea client @Flyer_kg
