@@ -6,3 +6,4 @@ attempt=3
 full real-user Flyer_kg lifecycle with Dmitry 2026-10-07T16:30:07.405Z
 retry Flyer_kg full lifecycle via MTProto resolver 2026-10-07T16:38:09.621Z
 retry preserved Telegram IDs 2026-10-07T16:40:03.485Z
+retry private runner ID transport 2026-10-07T16:41:52.273Z
