@@ -1,0 +1,118 @@
+name: Verify AWG production release
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .verify-awg-production-release
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  AWG_CONTAINER_NAME: autoworld-awg-prod
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl --connect-timeout 10 --max-time 30 -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY" | jq -c '{error,error_description}' || true; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token // empty')
+          test -n "$IAM_TOKEN"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install and configure Yandex CLI
+        run: |
+          set -euo pipefail
+          curl --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+          "$HOME/yandex-cloud/bin/yc" config set endpoint api.cloud.yandex.net:443
+          "$HOME/yandex-cloud/bin/yc" config set token "$YC_IAM_TOKEN"
+          "$HOME/yandex-cloud/bin/yc" config set folder-id "$YC_FOLDER_ID"
+
+      - name: Verify live health and manager routing
+        run: |
+          set -euo pipefail
+          HEALTH=$(curl --connect-timeout 10 --max-time 30 -fsS https://awgcars.ru/api/health)
+          printf '%s' "$HEALTH" | jq '{ok,persistence,normalizedAuthoritative,telegramNotifications,linkedAdminAccounts,adminInvites,telegramFallbackManagers,telegramRoutableManagers,telegramRoutingReady}'
+          printf '%s' "$HEALTH" | jq -e '
+            .ok == true
+            and .persistence == "ydb-serverless"
+            and .normalizedAuthoritative == true
+            and .telegramNotifications == "enabled"
+            and (.linkedAdminAccounts|tonumber) >= 1
+            and (.telegramRoutableManagers|tonumber) >= 1
+            and .telegramRoutingReady == true
+          ' >/dev/null
+
+      - name: Read current production API credential
+        run: |
+          set -euo pipefail
+          REVISIONS=$(yc serverless container revision list --container-name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          API_KEY=$(printf '%s' "$REVISIONS" | jq -r '[.[] | select(.status == "ACTIVE")][0].image.environment.AUTO_SALE_API_KEY // empty')
+          if [ -z "$API_KEY" ]; then
+            API_KEY=$(printf '%s' "$REVISIONS" | jq -r '.[0].image.environment.AUTO_SALE_API_KEY // empty')
+          fi
+          test -n "$API_KEY"
+          echo "::add-mask::$API_KEY"
+          echo "AUTO_SALE_API_KEY=$API_KEY" >> "$GITHUB_ENV"
+
+      - name: Verify two-client production smoke
+        run: |
+          set -euo pipefail
+          BODY_FILE=$(mktemp)
+          HTTP_CODE=$(curl --connect-timeout 10 --max-time 60 -sS -o "$BODY_FILE" -w '%{http_code}' -X POST \
+            -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
+            https://awgcars.ru/api/auto-sale/smoke/two-client)
+          echo "two-client smoke HTTP $HTTP_CODE"
+          cat "$BODY_FILE" | jq '{ok,checks,planned,cleanup,error,detail}' 2>/dev/null || cat "$BODY_FILE"
+          test "$HTTP_CODE" = "200"
+          jq -e '
+            .ok == true
+            and .checks.distinctLeadIds == true
+            and .checks.firstClientOwnsOnlyFirst == true
+            and .checks.secondClientOwnsOnlySecond == true
+            and .checks.managerNotificationPlannedForBoth == true
+            and .checks.clientConfirmationPlannedForBoth == true
+            and .cleanup.ok == true
+          ' "$BODY_FILE" >/dev/null
+
+      - name: Verify Telegram Mini App and webhook
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          MENU=$(curl --connect-timeout 10 --max-time 30 -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChatMenuButton")
+          printf '%s' "$MENU" | jq -e '.ok == true and .result.type == "web_app" and .result.web_app.url == "https://awgcars.ru/"' >/dev/null
+          INFO=$(curl --connect-timeout 10 --max-time 30 -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo")
+          printf '%s' "$INFO" | jq '{ok,configured:(.result.url|length>0),pending_update_count:.result.pending_update_count,last_error_message:(.result.last_error_message // null)}'
+          printf '%s' "$INFO" | jq -e '.ok == true and (.result.url|length>0)' >/dev/null
