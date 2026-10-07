@@ -14,3 +14,4 @@ deploy after shared runtime module packaging fix fd1df7595d56
 deploy canonical team seed and linked-manager delivery gate 4c850e18d0f9
 retry after eliminating duplicate YDB schema creation ca97c9b6755f
 deploy canonical GitHub OIDC catalog auth af4cb27b12a3
+deploy relay-backed bot command replies e4f6a0ae46f6
