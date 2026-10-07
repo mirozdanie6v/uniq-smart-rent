@@ -8,3 +8,4 @@ retry Flyer_kg full lifecycle via MTProto resolver 2026-10-07T16:38:09.621Z
 retry preserved Telegram IDs 2026-10-07T16:40:03.485Z
 retry private runner ID transport 2026-10-07T16:41:52.273Z
 retry privacy-safe physical identity transport 2026-10-07T16:44:21.962Z
+retry corrected Telegram ID validator 2026-10-07T16:46:33.328Z
