@@ -121,6 +121,7 @@ jobs:
           export YDB_CONNECTION_STRING="$AWG_YDB_CONNECTION_STRING"
           npm run prepare:ydb-runtime
           npm run initialize:ydb-domain
+          npm run ensure:production-team
 
       - name: Build and push AWG image
         working-directory: autoworld
