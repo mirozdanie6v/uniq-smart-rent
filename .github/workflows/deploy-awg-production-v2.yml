@@ -26,8 +26,7 @@ env:
   AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
   AWG_GATEWAY_NAME: autoworld-awg-prod
   AUTO_SALE_TELEGRAM_APP_URL: https://awgcars.ru/
-  AUTO_SALE_TELEGRAM_RELAY_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/send
-  AUTO_SALE_TELEGRAM_WEBHOOK_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/webhook
+  AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
   AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
   AUTO_SALE_YDB_DUAL_WRITE: "false"
   AUTO_SALE_LEGACY_STATE_WRITE: "false"
@@ -226,27 +225,6 @@ jobs:
           done
           curl --connect-timeout 10 --max-time 20 -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq .
 
-      - name: Deploy canonical Telegram relay and synchronize secrets
-        working-directory: autoworld/cloudflare/telegram-relay
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
-          RELAY_SECRET: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
-        run: |
-          set -euo pipefail
-          test -n "$CLOUDFLARE_API_TOKEN"
-          test -n "$CLOUDFLARE_ACCOUNT_ID"
-          test -n "$TELEGRAM_BOT_TOKEN"
-          test -n "$RELAY_SECRET"
-          npm install
-          npm test
-          npx wrangler deploy --config wrangler.toml
-          printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
-          printf '%s' "$RELAY_SECRET" | npx wrangler secret put AUTOWORLD_RELAY_SECRET --config wrangler.toml
-          WEBHOOK_KEY=$(node -e "const {createHmac}=require('crypto');process.stdout.write(createHmac('sha256',process.env.TELEGRAM_BOT_TOKEN).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32))")
-          printf '%s' "${AWG_GATEWAY_URL%/}/api/auto-sale/telegram/webhook/$WEBHOOK_KEY" | npx wrangler secret put AUTOWORLD_YANDEX_WEBHOOK_URL --config wrangler.toml
-
       - name: Configure AutoWorld Telegram Mini App and webhook
         working-directory: autoworld
         env:
@@ -254,7 +232,7 @@ jobs:
         run: node scripts/configure-autoworld-telegram-bot.mjs
 
       - name: Verify Telegram relay health
-        run: curl --fail --silent --show-error https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/health | jq -e '.ok == true'
+        run: curl --fail --silent --show-error https://integration-telegram.viiversion.com/telegram/health | jq -e '.ok == true'
 
       - name: Verify canonical RU domain
         run: |
