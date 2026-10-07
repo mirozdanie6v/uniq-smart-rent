@@ -8,23 +8,31 @@ on:
       - '.deploy-autoworld-awg'
   workflow_dispatch:
 
+concurrency:
+  group: awg-yandex-production-writer
+  cancel-in-progress: false
+
 permissions:
   contents: read
   id-token: write
 
 env:
-  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
-  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
-  YC_RUNTIME_SA_ID: ${{ vars.YC_RUNTIME_SA_ID }}
-  YC_REGISTRY_ID: ${{ vars.YC_REGISTRY_ID }}
-  YDB_CONNECTION_STRING: ${{ vars.YDB_CONNECTION_STRING }}
-  AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AUTO_SALE_MANAGER_CHAT_IDS }}
-  AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
-  AUTOWORLD_RELAY_SECRET: ${{ secrets.AUTOWORLD_RELAY_SECRET }}
-  YC_CONTAINER_NAME: autoworld-awg
-  AUTO_SALE_MEDIA_BUCKET: viiversion-auto-sale-media
-  AUTO_SALE_TELEGRAM_APP_URL: https://awg.viiversion.com/
+  YC_FOLDER_ID: ${{ vars.AWG_YC_FOLDER_ID || vars.YC_FOLDER_ID || 'b1g8u8vqkgehvtbj8n13' }}
+  YC_DEPLOY_SA_ID: ${{ vars.AWG_YC_DEPLOY_SA_ID || vars.YC_DEPLOY_SA_ID || 'aje775bcl6hgp40eu8of' }}
+  YC_RUNTIME_SA_ID: ${{ vars.AWG_YC_RUNTIME_SA_ID || vars.YC_RUNTIME_SA_ID || 'aje8o9ric0d20k11521r' }}
+  YC_REGISTRY_ID: ${{ vars.AWG_YC_REGISTRY_ID || vars.YC_REGISTRY_ID || 'crptu0l7jn0iui8b8laa' }}
+  YC_CONTAINER_NAME: autoworld-awg-prod
+  AWG_GATEWAY_NAME: autoworld-awg-prod
+  YDB_CONNECTION_STRING: ${{ vars.AWG_YDB_CONNECTION_STRING || 'grpcs://ydb.serverless.yandexcloud.net:2135/?database=/ru-central1/b1ggsmuiq7tb2d27f89q/etn00ojk5iv1u7dgpdar' }}
+  AUTO_SALE_MEDIA_BUCKET: ${{ vars.AWG_MEDIA_BUCKET || 'viiversion-autoworld-awg-media' }}
+  AUTO_SALE_MANAGER_CHAT_IDS: ${{ vars.AWG_MANAGER_CHAT_IDS || vars.AUTO_SALE_MANAGER_CHAT_IDS || '' }}
+  AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AWG_TELEGRAM_BOT_TOKEN || secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+  AUTOWORLD_RELAY_SECRET: ${{ secrets.AWG_RELAY_SECRET || secrets.AUTOWORLD_RELAY_SECRET }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  AUTO_SALE_TELEGRAM_APP_URL: https://awgcars.ru/
   AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
+  AUTO_SALE_TELEGRAM_WEBHOOK_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/webhook
   AUTO_SALE_YDB_DUAL_WRITE: "false"
   AUTO_SALE_LEGACY_STATE_WRITE: "false"
   AUTO_SALE_YDB_READ_MODE: normalized
@@ -33,6 +41,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout canonical AutoWorld
         uses: actions/checkout@v5
@@ -49,10 +58,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YDB_CONNECTION_STRING; do
-            test -n "${!name:-}" || { echo "Missing GitHub repository variable: $name"; exit 1; }
+          for name in YC_FOLDER_ID YC_DEPLOY_SA_ID YC_RUNTIME_SA_ID YC_REGISTRY_ID YDB_CONNECTION_STRING AUTO_SALE_MEDIA_BUCKET; do
+            test -n "${!name:-}" || { echo "Missing production configuration: $name"; exit 1; }
           done
-          test -n "${AUTO_SALE_TELEGRAM_BOT_TOKEN:-}" || { echo "Missing GitHub secret: AUTO_SALE_TELEGRAM_BOT_TOKEN"; exit 1; }
+          for name in AUTO_SALE_TELEGRAM_BOT_TOKEN AUTOWORLD_RELAY_SECRET CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+            test -n "${!name:-}" || { echo "Missing bridge secret: $name"; exit 1; }
+          done
+          BOT_USERNAME=$(curl -fsS "https://api.telegram.org/bot${AUTO_SALE_TELEGRAM_BOT_TOKEN}/getMe" | jq -r '.result.username // empty')
+          test "$BOT_USERNAME" = "AutoWorld_Georgia_bot" || { echo "Unexpected Telegram bot: @$BOT_USERNAME"; exit 1; }
 
       - name: Validate canonical application
         working-directory: autoworld
@@ -93,17 +106,26 @@ jobs:
           echo "::add-mask::$IAM_TOKEN"
           echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
 
-      - name: Prepare normalized YDB schema
+      - name: Prepare current AWG YDB schema
         working-directory: autoworld
         run: |
           set -euo pipefail
           export YDB_ACCESS_TOKEN_CREDENTIALS="$YC_IAM_TOKEN"
           npm run prepare:ydb-runtime
+          npm run initialize:ydb-domain
+          npm run ensure:production-team
 
       - name: Install Yandex Cloud CLI
         run: |
-          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          curl --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
           echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+
+      - name: Configure Yandex Cloud CLI
+        run: |
+          set -euo pipefail
+          yc config set endpoint api.cloud.yandex.net:443
+          yc config set token "$YC_IAM_TOKEN"
+          yc config set folder-id "$YC_FOLDER_ID"
 
       - name: Build and push canonical image
         working-directory: autoworld
@@ -123,25 +145,19 @@ jobs:
           AUTO_SALE_API_KEY=$(openssl rand -hex 32)
           echo "::add-mask::$AUTO_SALE_API_KEY"
           echo "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" >> "$GITHUB_ENV"
-          printf '%s' "$AUTO_SALE_API_KEY" > "$RUNNER_TEMP/awg-api-key"
 
-      - name: Deploy separate AWG container
+      - name: Deploy canonical revision to current AWG container
         run: |
           set -euo pipefail
-          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null 2>&1 || \
-            yc serverless container create --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID"
-
+          yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" >/dev/null
           EXTRA_ENV=()
           EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_BOT_TOKEN=$AUTO_SALE_TELEGRAM_BOT_TOKEN")
           EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_APP_URL=$AUTO_SALE_TELEGRAM_APP_URL")
           EXTRA_ENV+=(--environment "AUTO_SALE_TELEGRAM_RELAY_URL=$AUTO_SALE_TELEGRAM_RELAY_URL")
-          if [ -n "${AUTOWORLD_RELAY_SECRET:-}" ]; then
-            EXTRA_ENV+=(--environment "AUTOWORLD_RELAY_SECRET=$AUTOWORLD_RELAY_SECRET")
-          fi
+          EXTRA_ENV+=(--environment "AUTOWORLD_RELAY_SECRET=$AUTOWORLD_RELAY_SECRET")
           if [ -n "${AUTO_SALE_MANAGER_CHAT_IDS:-}" ]; then
             EXTRA_ENV+=(--environment "AUTO_SALE_MANAGER_CHAT_IDS=$AUTO_SALE_MANAGER_CHAT_IDS")
           fi
-
           yc serverless container revision deploy \
             --container-name "$YC_CONTAINER_NAME" \
             --folder-id "$YC_FOLDER_ID" \
@@ -152,6 +168,7 @@ jobs:
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --environment "YDB_CONNECTION_STRING=$YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
+            --environment "AUTO_SALE_BUILD_SHA=$AUTOWORLD_SOURCE_SHA" \
             --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=false" \
             --environment "AUTO_SALE_LEGACY_STATE_WRITE=$AUTO_SALE_LEGACY_STATE_WRITE" \
             --environment "AUTO_SALE_YDB_DUAL_WRITE=$AUTO_SALE_YDB_DUAL_WRITE" \
@@ -160,21 +177,84 @@ jobs:
             --environment "AUTO_SALE_MEDIA_BUCKET=$AUTO_SALE_MEDIA_BUCKET" \
             "${EXTRA_ENV[@]}"
 
-      - name: Verify separate AWG origin
+      - name: Resolve and verify current AWG runtime
         run: |
           set -euo pipefail
           URL=$(yc serverless container get --name "$YC_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json | jq -r '.url')
           test -n "$URL" && test "$URL" != "null"
-          echo "AWG_ORIGIN=$URL"
-          echo "AWG_ORIGIN=$URL" >> "$GITHUB_ENV"
-          for attempt in $(seq 1 20); do
-            if curl -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized"' >/dev/null; then
+          echo "AWG_URL=$URL" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 30); do
+            if curl --connect-timeout 10 --max-time 20 -fsS "${URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .buildSha == env.AUTOWORLD_SOURCE_SHA' >/dev/null; then
               break
             fi
-            test "$attempt" -lt 20 || exit 1
+            test "$attempt" -lt 30 || exit 1
             sleep 5
           done
-          curl -fsS "${URL%/}/api/health" | jq .
-          echo "### AWG Yandex origin" >> "$GITHUB_STEP_SUMMARY"
-          echo "`$URL`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Canonical source: `mirozdanie6v/autoworld@${AUTOWORLD_SOURCE_SHA}`" >> "$GITHUB_STEP_SUMMARY"
+          curl -fsS "${URL%/}/api/health" | jq '{ok,persistence,buildSha,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
+
+      - name: Resolve production API Gateway
+        run: |
+          set -euo pipefail
+          GW_JSON=$(yc serverless api-gateway get --name "$AWG_GATEWAY_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          GW_DOMAIN=$(printf '%s' "$GW_JSON" | jq -r '.domain')
+          test -n "$GW_DOMAIN" && test "$GW_DOMAIN" != "null"
+          echo "AWG_GATEWAY_URL=https://$GW_DOMAIN/" >> "$GITHUB_ENV"
+
+      - name: Deploy and synchronize Telegram relay
+        working-directory: autoworld/cloudflare/telegram-relay
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.AWG_TELEGRAM_BOT_TOKEN || secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+          RELAY_SECRET: ${{ secrets.AWG_RELAY_SECRET || secrets.AUTOWORLD_RELAY_SECRET }}
+        run: |
+          set -euo pipefail
+          npm install
+          npx wrangler deploy --config wrangler.toml
+          printf '%s' "$TELEGRAM_BOT_TOKEN" | npx wrangler secret put TELEGRAM_BOT_TOKEN --config wrangler.toml
+          printf '%s' "$RELAY_SECRET" | npx wrangler secret put AUTOWORLD_RELAY_SECRET --config wrangler.toml
+          WEBHOOK_KEY=$(node -e "const {createHmac}=require('crypto');process.stdout.write(createHmac('sha256',process.env.TELEGRAM_BOT_TOKEN).update('auto-sale-telegram-webhook-v2').digest('hex').slice(0,32))")
+          printf '%s' "${AWG_GATEWAY_URL%/}/api/auto-sale/telegram/webhook/$WEBHOOK_KEY" | npx wrangler secret put AUTOWORLD_YANDEX_WEBHOOK_URL --config wrangler.toml
+          for endpoint in \
+            https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/health \
+            https://integration-telegram.viiversion.com/telegram/health; do
+            for attempt in $(seq 1 18); do
+              if curl --connect-timeout 10 --max-time 20 -fsS "$endpoint" | jq -e '.ok == true and .service == "viiversion-telegram-relay"' >/dev/null; then
+                break
+              fi
+              test "$attempt" -lt 18 || { echo "Telegram relay health failed: $endpoint"; exit 1; }
+              sleep 5
+            done
+          done
+
+      - name: Verify authenticated Telegram relay path
+        env:
+          RELAY_SECRET: ${{ secrets.AWG_RELAY_SECRET || secrets.AUTOWORLD_RELAY_SECRET }}
+        run: |
+          set -euo pipefail
+          PAYLOAD='{"chatId":"0","text":"autoworld bridge production relay probe"}'
+          TS=$(date +%s%3N)
+          SIG=$(printf '%s' "$TS.$PAYLOAD" | openssl dgst -sha256 -hmac "$RELAY_SECRET" -hex | awk '{print $2}')
+          CODE=$(curl -sS -o /tmp/relay-auth-probe.json -w '%{http_code}' -X POST \
+            -H 'content-type: application/json' \
+            -H "x-relay-timestamp: $TS" \
+            -H "x-relay-signature: $SIG" \
+            --data "$PAYLOAD" "$AUTO_SALE_TELEGRAM_RELAY_URL")
+          test "$CODE" = "502"
+          jq -e '.error == "telegram_api_error"' /tmp/relay-auth-probe.json >/dev/null
+
+      - name: Configure Telegram Mini App and webhook
+        working-directory: autoworld
+        env:
+          AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AWG_TELEGRAM_BOT_TOKEN || secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+          AUTO_SALE_TELEGRAM_WEBHOOK_BASE_URL: ${{ env.AWG_GATEWAY_URL }}
+        run: node scripts/configure-autoworld-telegram-bot.mjs
+
+      - name: Verify AWG production gates
+        run: |
+          set -euo pipefail
+          curl -fsS "https://awgcars.ru/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .buildSha == env.AUTOWORLD_SOURCE_SHA and .telegramNotifications == "enabled"' >/dev/null
+          SMOKE=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" https://awgcars.ru/api/auto-sale/smoke/two-client)
+          printf '%s' "$SMOKE" | jq -e '.ok == true and .checks.distinctLeadIds == true and .checks.firstClientOwnsOnlyFirst == true and .checks.secondClientOwnsOnlySecond == true and .checks.managerNotificationPlannedForBoth == true and .checks.clientConfirmationPlannedForBoth == true and .cleanup.ok == true' >/dev/null
+          DELIVERY=$(curl --connect-timeout 10 --max-time 45 -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" https://awgcars.ru/api/auto-sale/telegram/test-manager-delivery)
+          printf '%s' "$DELIVERY" | jq -e '.ok == true and (.messageId != null)' >/dev/null
+          echo "Canonical source: mirozdanie6v/autoworld@$AUTOWORLD_SOURCE_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Production: https://awgcars.ru/" >> "$GITHUB_STEP_SUMMARY"
