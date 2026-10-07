@@ -1,0 +1,162 @@
+name: Audit AWG Telegram lifecycle
+
+on:
+  push:
+    branches: [prototype/auto-sale-usa]
+    paths:
+      - .audit-awg-telegram-lifecycle
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  YC_FOLDER_ID: ${{ vars.YC_FOLDER_ID }}
+  YC_DEPLOY_SA_ID: ${{ vars.YC_DEPLOY_SA_ID }}
+  AWG_CONTAINER_NAME: autoworld-awg-prod
+  STAGING_URL: https://awgcars.ru
+
+jobs:
+  audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout canonical AutoWorld main
+        uses: actions/checkout@v5
+        with:
+          repository: mirozdanie6v/autoworld
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Request GitHub OIDC token
+        uses: actions/github-script@v7
+        id: oidc
+        with:
+          script: |
+            const token = await core.getIDToken('https://github.com/mirozdanie6v')
+            core.setSecret(token)
+            core.setOutput('token', token)
+
+      - name: Exchange OIDC token for Yandex IAM token
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: |
+          set -euo pipefail
+          RESPONSE=$(curl --connect-timeout 10 --max-time 30 -sS -w '\n%{http_code}' -H 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'grant_type=urn:ietf:params:oauth:grant-type:token-exchange' \
+            --data-urlencode 'requested_token_type=urn:ietf:params:oauth:token-type:access_token' \
+            --data-urlencode "audience=${YC_DEPLOY_SA_ID}" \
+            --data-urlencode "subject_token=${GITHUB_OIDC_TOKEN}" \
+            --data-urlencode 'subject_token_type=urn:ietf:params:oauth:token-type:id_token' \
+            https://auth.yandex.cloud/oauth/token)
+          HTTP_CODE=$(printf '%s' "$RESPONSE" | tail -n1)
+          BODY=$(printf '%s' "$RESPONSE" | sed '$d')
+          test "$HTTP_CODE" = "200" || { echo "$BODY" | jq -c '{error,error_description}' || true; exit 1; }
+          IAM_TOKEN=$(printf '%s' "$BODY" | jq -r '.access_token // empty')
+          test -n "$IAM_TOKEN"
+          echo "::add-mask::$IAM_TOKEN"
+          echo "YC_IAM_TOKEN=$IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Install and configure Yandex CLI
+        run: |
+          set -euo pipefail
+          curl --connect-timeout 10 --max-time 120 --retry 5 --retry-all-errors --retry-delay 2 -fsSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -n
+          echo "$HOME/yandex-cloud/bin" >> "$GITHUB_PATH"
+          "$HOME/yandex-cloud/bin/yc" config set endpoint api.cloud.yandex.net:443
+          "$HOME/yandex-cloud/bin/yc" config set token "$YC_IAM_TOKEN"
+          "$HOME/yandex-cloud/bin/yc" config set folder-id "$YC_FOLDER_ID"
+
+      - name: Read live production credentials
+        run: |
+          set -euo pipefail
+          REVISIONS=$(yc serverless container revision list --container-name "$AWG_CONTAINER_NAME" --folder-id "$YC_FOLDER_ID" --format json)
+          ACTIVE=$(printf '%s' "$REVISIONS" | jq -c '[.[] | select(.status == "ACTIVE")][0] // .[0]')
+          API_KEY=$(printf '%s' "$ACTIVE" | jq -r '.image.environment.AUTO_SALE_API_KEY // empty')
+          YDB=$(printf '%s' "$ACTIVE" | jq -r '.image.environment.YDB_CONNECTION_STRING // empty')
+          test -n "$API_KEY"
+          test -n "$YDB"
+          echo "::add-mask::$API_KEY"
+          echo "AUTO_SALE_API_KEY=$API_KEY" >> "$GITHUB_ENV"
+          echo "YDB_CONNECTION_STRING=$YDB" >> "$GITHUB_ENV"
+          echo "YDB_ACCESS_TOKEN_CREDENTIALS=$YC_IAM_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Resolve linked Dmitry audit recipient
+        run: |
+          set -euo pipefail
+          MANAGER_ID=$(node --input-type=module <<'NODE'
+          import {createYdbStateStore} from './server/ydb-state.mjs';
+          const store=await createYdbStateStore({connectionString:process.env.YDB_CONNECTION_STRING,ensureSchema:false});
+          try{
+            const pins=await store.adminAccessList();
+            const pin=pins.find(item=>String(item?.username||'').replace(/^@/,'').toLowerCase()==='flyer_flyer'&&/^\d+$/.test(String(item?.telegramUserId||'')));
+            if(!pin)process.exit(2);
+            process.stdout.write(String(pin.telegramUserId));
+          }finally{
+            await store.close();
+          }
+          NODE
+          )
+          test -n "$MANAGER_ID"
+          echo "::add-mask::$MANAGER_ID"
+          echo "AUDIT_MANAGER_TELEGRAM_ID=$MANAGER_ID" >> "$GITHUB_ENV"
+
+      - name: Audit role model and notification targets
+        run: |
+          node --input-type=module <<'NODE'
+          import {readFile,writeFile} from 'node:fs/promises';
+          const app=await readFile('public/auto-sale-app-v3.mjs','utf8');
+          const bot=await readFile('server/telegram-bot.mjs','utf8');
+          const uiRoles=['client','manager','owner'].filter(role=>new RegExp(role+":").test(app));
+          const targets=['client','manager','owner'].filter(role=>bot.includes("target:'"+role+"'")||bot.includes('target:"'+role+'"'));
+          const report={
+            uiRoles,
+            telegramTargets:targets,
+            ownerDirectorRoutable:targets.includes('owner'),
+            note:targets.includes('owner')?'owner/director has a Telegram route':'owner/director UI role has no Telegram notification target in current implementation'
+          };
+          console.log(JSON.stringify(report,null,2));
+          await writeFile('telegram-role-audit.json',JSON.stringify(report,null,2));
+          NODE
+
+      - name: Verify live health and bot command scenarios
+        run: |
+          set -euo pipefail
+          curl -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,linkedAdminAccounts,telegramRoutableManagers,telegramRoutingReady}'
+          BOT=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" https://awgcars.ru/api/auto-sale/telegram/test-bot-scenarios)
+          printf '%s' "$BOT" | jq .
+          printf '%s' "$BOT" | jq -e '.ok == true' >/dev/null
+
+      - name: Verify real manager delivery
+        run: |
+          set -euo pipefail
+          DELIVERY=$(curl -fsS -X POST -H "x-auto-sale-key: $AUTO_SALE_API_KEY" https://awgcars.ru/api/auto-sale/telegram/test-manager-delivery)
+          printf '%s' "$DELIVERY" | jq '{ok,member,messageId}'
+          printf '%s' "$DELIVERY" | jq -e '.ok == true and (.messageId != null)' >/dev/null
+
+      - name: Run full production Telegram lifecycle
+        run: node scripts/test-telegram-lifecycle.mjs
+
+      - name: Summarize lifecycle receipts
+        if: always()
+        run: |
+          if [ -f telegram-lifecycle-report.json ]; then
+            jq '{ok,count,perRole,logicalRoles,physicalRecipients,finalRevision,cleanup,events:(.receipts|group_by(.event)|map({event:.[0].event,count:length,roles:(map(.target)|unique)}))}' telegram-lifecycle-report.json
+          fi
+
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: awg-telegram-lifecycle-audit
+          path: |
+            telegram-lifecycle-report.json
+            telegram-role-audit.json
+          if-no-files-found: error
