@@ -16,3 +16,4 @@ retry after eliminating duplicate YDB schema creation ca97c9b6755f
 deploy canonical GitHub OIDC catalog auth af4cb27b12a3
 deploy relay-backed bot command replies e4f6a0ae46f6
 retry relay-backed welcome after deterministic tests 030f5fd5cba2
+deploy exact-revision gated relay welcome 7a2a490e6d78
