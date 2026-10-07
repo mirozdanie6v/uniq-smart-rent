@@ -1,1 +1,4 @@
-Deploy canonical mirozdanie6v/autoworld main to isolated Yandex container autoworld-awg.
+Deploy canonical mirozdanie6v/autoworld main to current AWG production.
+requested_at=2026-10-07T20:56:00+07:00
+reason=telegram-relay-webhook-audit
+test_client=@Flyer_kg
