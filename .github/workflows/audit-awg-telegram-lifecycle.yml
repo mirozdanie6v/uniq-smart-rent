@@ -108,8 +108,8 @@ jobs:
           NODE
           )
           test -n "$MANAGER_ID"
-          echo "::add-mask::$MANAGER_ID"
           echo "AUDIT_MANAGER_TELEGRAM_ID=$MANAGER_ID" >> "$GITHUB_ENV"
+          echo "::add-mask::$MANAGER_ID"
 
       - name: Resolve real Flyer_kg client audit recipient
         env:
@@ -154,7 +154,6 @@ jobs:
           PY
           )
           test -n "$CLIENT_ID"
-          echo "::add-mask::$CLIENT_ID"
 
           # Cross-check the MTProto result with the actual AutoWorld bot before using it.
           VERIFY=$(curl --connect-timeout 10 --max-time 20 -fsS -X POST \
@@ -169,6 +168,7 @@ jobs:
 
           echo "AUDIT_CLIENT_TELEGRAM_ID=$CLIENT_ID" >> "$GITHUB_ENV"
           echo "AUDIT_CLIENT_TELEGRAM_USERNAME=Flyer_kg" >> "$GITHUB_ENV"
+          echo "::add-mask::$CLIENT_ID"
 
       - name: Verify real non-admin client request E2E
         env:
