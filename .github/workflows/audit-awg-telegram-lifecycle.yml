@@ -92,8 +92,10 @@ jobs:
         run: |
           set -euo pipefail
           MANAGER_ID=$(node --input-type=module <<'NODE'
+          import {AccessTokenCredentialsProvider} from '@ydbjs/auth/access-token';
           import {createYdbStateStore} from './server/ydb-state.mjs';
-          const store=await createYdbStateStore({connectionString:process.env.YDB_CONNECTION_STRING,ensureSchema:false});
+          const credentialsProvider=new AccessTokenCredentialsProvider({token:process.env.YC_IAM_TOKEN});
+          const store=await createYdbStateStore({connectionString:process.env.YDB_CONNECTION_STRING,credentialsProvider,ensureSchema:false});
           try{
             const pins=await store.adminAccessList();
             const pin=pins.find(item=>String(item?.username||'').replace(/^@/,'').toLowerCase()==='flyer_flyer'&&/^\d+$/.test(String(item?.telegramUserId||'')));
