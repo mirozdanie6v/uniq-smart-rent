@@ -110,6 +110,60 @@ jobs:
           echo "::add-mask::$MANAGER_ID"
           echo "AUDIT_MANAGER_TELEGRAM_ID=$MANAGER_ID" >> "$GITHUB_ENV"
 
+      - name: Resolve real Flyer_kg client audit recipient
+        env:
+          AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          CLIENT_ID=$(node --input-type=module <<'NODE'
+          import {AccessTokenCredentialsProvider} from '@ydbjs/auth/access-token';
+          import {createYdbStateStore} from './server/ydb-state.mjs';
+
+          const token=String(process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'').trim();
+          if(!token)throw new Error('AUTO_SALE_TELEGRAM_BOT_TOKEN is required');
+          const credentialsProvider=new AccessTokenCredentialsProvider({token:process.env.YC_IAM_TOKEN});
+          const store=await createYdbStateStore({connectionString:process.env.YDB_CONNECTION_STRING,credentialsProvider,ensureSchema:false});
+          try{
+            const cutoff=Date.now()-4*60*60*1000;
+            const recipients=await store.recentBotCommandRecipients(100);
+            const seen=new Set();
+            const matches=[];
+            for(const row of recipients){
+              const chatId=String(row.chatId||'');
+              const at=Date.parse(row.createdAt||'');
+              if(!/^\d+$/.test(chatId)||seen.has(chatId)||!Number.isFinite(at)||at<cutoff)continue;
+              seen.add(chatId);
+              const response=await fetch('https://api.telegram.org/bot'+token+'/getChat',{
+                method:'POST',
+                headers:{'content-type':'application/json'},
+                body:JSON.stringify({chat_id:chatId}),
+                signal:AbortSignal.timeout(10000)
+              });
+              const data=await response.json().catch(()=>({}));
+              if(!response.ok||data?.ok!==true)continue;
+              const chat=data.result||{};
+              if(String(chat.username||'').replace(/^@/,'').toLowerCase()!=='flyer_kg')continue;
+              if(String(chat.type||'')!=='private')continue;
+              matches.push(String(chat.id));
+            }
+            const unique=[...new Set(matches)];
+            if(unique.length!==1)throw new Error('Expected exactly one recent private @Flyer_kg identity, got '+unique.length);
+            process.stdout.write(unique[0]);
+          }finally{
+            await store.close();
+          }
+          NODE
+          )
+          test -n "$CLIENT_ID"
+          echo "::add-mask::$CLIENT_ID"
+          echo "AUDIT_CLIENT_TELEGRAM_ID=$CLIENT_ID" >> "$GITHUB_ENV"
+          echo "AUDIT_CLIENT_TELEGRAM_USERNAME=Flyer_kg" >> "$GITHUB_ENV"
+
+      - name: Verify real non-admin client request E2E
+        env:
+          AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
+        run: node scripts/test-real-telegram-client-e2e.mjs
+
       - name: Audit role model and notification targets
         run: |
           node --input-type=module <<'NODE'
@@ -160,5 +214,6 @@ jobs:
           name: awg-telegram-lifecycle-audit
           path: |
             telegram-lifecycle-report.json
+            real-client-e2e-report.json
             telegram-role-audit.json
           if-no-files-found: error
