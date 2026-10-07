@@ -108,7 +108,8 @@ jobs:
           NODE
           )
           test -n "$MANAGER_ID"
-          echo "AUDIT_MANAGER_TELEGRAM_ID=$MANAGER_ID" >> "$GITHUB_ENV"
+          printf '%s' "$MANAGER_ID" > "$RUNNER_TEMP/audit-manager-id"
+          chmod 600 "$RUNNER_TEMP/audit-manager-id"
           echo "::add-mask::$MANAGER_ID"
 
       - name: Resolve real Flyer_kg client audit recipient
@@ -166,14 +167,22 @@ jobs:
             and ((.result.username // "") | ascii_downcase) == "flyer_kg"
           ' >/dev/null
 
-          echo "AUDIT_CLIENT_TELEGRAM_ID=$CLIENT_ID" >> "$GITHUB_ENV"
-          echo "AUDIT_CLIENT_TELEGRAM_USERNAME=Flyer_kg" >> "$GITHUB_ENV"
+          printf '%s' "$CLIENT_ID" > "$RUNNER_TEMP/audit-client-id"
+          chmod 600 "$RUNNER_TEMP/audit-client-id"
           echo "::add-mask::$CLIENT_ID"
 
       - name: Verify real non-admin client request E2E
         env:
           AUTO_SALE_TELEGRAM_BOT_TOKEN: ${{ secrets.AUTO_SALE_TELEGRAM_BOT_TOKEN }}
-        run: node scripts/test-real-telegram-client-e2e.mjs
+        run: |
+          set -euo pipefail
+          CLIENT_ID=$(cat "$RUNNER_TEMP/audit-client-id")
+          MANAGER_ID=$(cat "$RUNNER_TEMP/audit-manager-id")
+          AUDIT_CLIENT_TELEGRAM_ID="$CLIENT_ID" \
+          AUDIT_CLIENT_TELEGRAM_USERNAME="Flyer_kg" \
+          AUDIT_MANAGER_TELEGRAM_ID="$MANAGER_ID" \
+          AUDIT_MANAGER_NAME="Дмитрий" \
+          node scripts/test-real-telegram-client-e2e.mjs
 
       - name: Audit role model and notification targets
         run: |
@@ -209,7 +218,15 @@ jobs:
           printf '%s' "$DELIVERY" | jq -e '.ok == true and (.messageId != null)' >/dev/null
 
       - name: Run full production Telegram lifecycle
-        run: node scripts/test-telegram-lifecycle.mjs
+        run: |
+          set -euo pipefail
+          CLIENT_ID=$(cat "$RUNNER_TEMP/audit-client-id")
+          MANAGER_ID=$(cat "$RUNNER_TEMP/audit-manager-id")
+          AUDIT_CLIENT_TELEGRAM_ID="$CLIENT_ID" \
+          AUDIT_CLIENT_TELEGRAM_USERNAME="Flyer_kg" \
+          AUDIT_MANAGER_TELEGRAM_ID="$MANAGER_ID" \
+          AUDIT_MANAGER_NAME="Дмитрий" \
+          node scripts/test-telegram-lifecycle.mjs
 
       - name: Summarize lifecycle receipts
         if: always()
