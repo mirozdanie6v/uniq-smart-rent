@@ -77,8 +77,26 @@ jobs:
           STATE=$(curl --connect-timeout 10 --max-time 30 -fsS \
             -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
             https://awgcars.ru/api/auto-sale/state)
+          LEGACY=$(curl --connect-timeout 10 --max-time 30 -fsS \
+            -H "x-auto-sale-key: $AUTO_SALE_API_KEY" \
+            https://awgcars.ru/api/auto-sale/admin/legacy-snapshot)
+          echo "=== normalized team ==="
           printf '%s' "$STATE" | jq '{
-            managers:[.team[]? | select(.active != false and .role == "Менеджер") | {
+            revision,
+            team:[.team[]? | {
+              id,
+              name,
+              role,
+              active,
+              telegramUsername:(.telegramUsername // .telegram // null),
+              persistedTelegramId:(if ((.telegramUserId // "")|tostring|test("^[0-9]+$")) then "present" else "absent" end)
+            }]
+          }'
+          echo "=== legacy team ==="
+          printf '%s' "$LEGACY" | jq '{
+            revision,
+            team:[.state.team[]? | {
+              id,
               name,
               role,
               active,
