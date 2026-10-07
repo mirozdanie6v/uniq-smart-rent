@@ -178,6 +178,7 @@ jobs:
             --service-account-id "$YC_RUNTIME_SA_ID" \
             --environment "YDB_CONNECTION_STRING=$AWG_YDB_CONNECTION_STRING" \
             --environment "AUTO_SALE_API_KEY=$AUTO_SALE_API_KEY" \
+            --environment "AUTO_SALE_BUILD_SHA=$AWG_SOURCE_SHA" \
             --environment "AUTO_SALE_PUBLIC_DEMO_WRITE=false" \
             --environment "AUTO_SALE_LEGACY_STATE_WRITE=$AUTO_SALE_LEGACY_STATE_WRITE" \
             --environment "AUTO_SALE_YDB_DUAL_WRITE=$AUTO_SALE_YDB_DUAL_WRITE" \
@@ -216,7 +217,7 @@ jobs:
         run: |
           set -euo pipefail
           for attempt in $(seq 1 30); do
-            if curl --connect-timeout 10 --max-time 20 -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled"' >/dev/null; then
+            if curl --connect-timeout 10 --max-time 20 -fsS "${AWG_GATEWAY_URL%/}/api/health" | jq -e '.ok == true and .persistence == "ydb-serverless" and .normalizedAuthoritative == true and .legacyStateWrite == "retired" and .ydbStateReadMode == "normalized" and .mediaBucket == env.AWG_MEDIA_BUCKET and .telegramNotifications == "enabled" and .buildSha == env.AWG_SOURCE_SHA' >/dev/null; then
               break
             fi
             test "$attempt" -lt 30 || exit 1
@@ -264,7 +265,7 @@ jobs:
             test "$attempt" -lt 30 || exit 1
             sleep 5
           done
-          curl --connect-timeout 10 --max-time 20 -fsS https://awgcars.ru/api/health | jq '{ok,persistence,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
+          curl --connect-timeout 10 --max-time 20 -fsS https://awgcars.ru/api/health | jq '{ok,persistence,buildSha,telegramNotifications,telegramRoutingReady,telegramRoutableManagers}'
 
 
       - name: Verify two-client production smoke
