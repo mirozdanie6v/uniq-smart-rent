@@ -26,7 +26,7 @@ env:
   AWG_MEDIA_BUCKET: viiversion-autoworld-awg-media
   AWG_GATEWAY_NAME: autoworld-awg-prod
   AUTO_SALE_TELEGRAM_APP_URL: https://awgcars.ru/
-  AUTO_SALE_TELEGRAM_RELAY_URL: https://integration-telegram.viiversion.com/telegram/send
+  AUTO_SALE_TELEGRAM_RELAY_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/send
   AUTO_SALE_TELEGRAM_WEBHOOK_URL: https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/webhook
   AUTO_SALE_ADMIN_TELEGRAM_USERNAMES: Flyer_Flyer,smit44744,Ivan_AWG
   AUTO_SALE_YDB_DUAL_WRITE: "false"
@@ -254,7 +254,7 @@ jobs:
         run: node scripts/configure-autoworld-telegram-bot.mjs
 
       - name: Verify Telegram relay health
-        run: curl --fail --silent --show-error https://integration-telegram.viiversion.com/telegram/health | jq -e '.ok == true'
+        run: curl --fail --silent --show-error https://viiversion-telegram-relay.mirozdanie6v.workers.dev/telegram/health | jq -e '.ok == true'
 
       - name: Verify canonical RU domain
         run: |
