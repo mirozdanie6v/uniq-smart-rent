@@ -22,3 +22,4 @@ retry Telegram webhook via workers.dev ingress dfe5872eef04
 deploy relay webhook via workers.dev and bind integration route 8f1b3729310b
 deploy validated relay welcome fix 044b190e9d92
 deploy full Telegram relay/webhook audit source autoworld/main b6728693f2b8 client @Flyer_kg
+retry workers.dev-only relay topology canonical 6494dba66725 client @Flyer_kg
