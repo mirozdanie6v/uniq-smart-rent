@@ -121,6 +121,18 @@ jobs:
 
           const token=String(process.env.AUTO_SALE_TELEGRAM_BOT_TOKEN||'').trim();
           if(!token)throw new Error('AUTO_SALE_TELEGRAM_BOT_TOKEN is required');
+          const direct=await fetch('https://api.telegram.org/bot'+token+'/getChat',{
+            method:'POST',
+            headers:{'content-type':'application/json'},
+            body:JSON.stringify({chat_id:'@Flyer_kg'}),
+            signal:AbortSignal.timeout(10000)
+          });
+          const directData=await direct.json().catch(()=>({}));
+          if(direct.ok&&directData?.ok===true&&String(directData.result?.type||'')==='private'){
+            process.stdout.write(String(directData.result.id));
+            process.exit(0);
+          }
+          console.error('Direct @username getChat unavailable:',String(directData?.description||direct.status));
           const credentialsProvider=new AccessTokenCredentialsProvider({token:process.env.YC_IAM_TOKEN});
           const store=await createYdbStateStore({connectionString:process.env.YDB_CONNECTION_STRING,credentialsProvider,ensureSchema:false});
           try{
