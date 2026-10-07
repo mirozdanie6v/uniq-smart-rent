@@ -306,12 +306,12 @@ jobs:
           {
             echo "## AWG production origin ready"
             echo
-            echo "- Source: `mirozdanie6v/autoworld@$AWG_SOURCE_SHA`"
-            echo "- Container: `$AWG_CONTAINER_ID`"
-            echo "- Gateway: `$AWG_GATEWAY_ID`"
-            echo "- Gateway URL: `$AWG_GATEWAY_URL`"
-            echo "- YDB: `etn00ojk5iv1u7dgpdar`"
-            echo "- Media: `$AWG_MEDIA_BUCKET`"
+            printf '%s\n' "- Source: mirozdanie6v/autoworld@$AWG_SOURCE_SHA"
+            printf '%s\n' "- Container: $AWG_CONTAINER_ID"
+            printf '%s\n' "- Gateway: $AWG_GATEWAY_ID"
+            printf '%s\n' "- Gateway URL: $AWG_GATEWAY_URL"
+            printf '%s\n' "- YDB: etn00ojk5iv1u7dgpdar"
+            printf '%s\n' "- Media: $AWG_MEDIA_BUCKET"
             echo
             echo "Legacy demo resources were not modified."
           } | tee -a "$GITHUB_STEP_SUMMARY"
