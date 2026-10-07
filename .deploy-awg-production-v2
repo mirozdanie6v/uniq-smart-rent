@@ -20,3 +20,4 @@ deploy exact-revision gated relay welcome 7a2a490e6d78
 deploy authenticated Telegram webhook relay ingress 022a809ba7f3
 retry Telegram webhook via workers.dev ingress dfe5872eef04
 deploy relay webhook via workers.dev and bind integration route 8f1b3729310b
+deploy validated relay welcome fix 044b190e9d92
